@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { sfPro } from "@/fonts";
 import "./globals.css";
+import AuthProvider from "@/components/providers/SessionProvider";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,7 +18,11 @@ export default function RootLayout({
       lang="en"
       className={`${sfPro.className} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#f5f5f5]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#f5f5f5]">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

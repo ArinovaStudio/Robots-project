@@ -1,32 +1,63 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 import { Mail } from "lucide-react";
 import { FaFacebook as Facebook } from "react-icons/fa";
 import RightSection from "@/components/auth/RightSection";
+
 export default function LoginPage() {
+  const router = useRouter();
+  const { status } = useSession();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (res?.error) {
+      setError("Invalid email or password");
+      setLoading(false);
+    } else {
+      router.refresh();
+      router.push("/dashboard"); 
+    }
+  };
+
+  if (status === "loading") {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
   return (
     <div className="p-4 md:p-6">
-      <div className="mx-auto py-0 flex w-full max-w-7xl rounded-[32px] border-none shadow-none">
+      <div className="mx-auto flex w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
         <div className="grid w-full grid-cols-1 p-0 lg:grid-cols-2">
           {/* LEFT SIDE */}
           <div className="flex flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
             <div className="mx-auto flex w-full max-w-md flex-col">
+              
               {/* Heading */}
               <div className="mb-12">
                 <h1 className="text-4xl font-bold tracking-tight text-[#0f172a]">
                   Welcome Back 👋
                 </h1>
-
                 <p className="mt-4 text-sm leading-6 text-slate-500">
                   Today is a new day. It&apos;s your day. You shape it.
                   <br />
@@ -35,17 +66,20 @@ export default function LoginPage() {
               </div>
 
               {/* Form */}
-              <form className="space-y-5">
+              <form onSubmit={handleCredentialsLogin} className="space-y-5">
+                {error && <p className="text-sm text-red-500">{error}</p>}
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
                     Email
                   </label>
-
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
                     <Input
                       type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="Example@email.com"
                       className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-10 focus-visible:ring-1"
                     />
@@ -56,25 +90,30 @@ export default function LoginPage() {
                   <label className="text-sm font-medium text-slate-700">
                     Password
                   </label>
-
                   <Input
                     type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 8 characters"
                     className="h-12 rounded-xl border-slate-200 bg-slate-50"
                   />
-
                   <div className="flex justify-end">
                     <Link
                       href="#"
-                      className="text-sm font-medium text-[#4f46e5] hover:underline"
+                      className="text-sm font-medium text-[#3F6FFF] hover:underline"
                     >
                       Forgot Password?
                     </Link>
                   </div>
                 </div>
 
-                <Button className="h-12 w-full rounded-xl bg-[#0f2230] text-base font-medium hover:bg-[#132c3d]">
-                  Sign in
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className="h-12 w-full rounded-xl bg-[#0f2230] text-base font-medium hover:bg-[#132c3d]"
+                >
+                  {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
 
@@ -88,6 +127,8 @@ export default function LoginPage() {
               {/* Social Buttons */}
               <div className="space-y-4">
                 <Button
+                  type="button"
+                  onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
                   variant="outline"
                   className="h-12 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
@@ -101,6 +142,8 @@ export default function LoginPage() {
                 </Button>
 
                 <Button
+                  type="button"
+                  onClick={() => signIn("facebook", { callbackUrl: "/dashboard" })}
                   variant="outline"
                   className="h-12 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
@@ -113,8 +156,8 @@ export default function LoginPage() {
               <p className="mt-14 text-center text-sm text-slate-500">
                 Don&apos;t you have an account?{" "}
                 <Link
-                  href="#"
-                  className="font-semibold text-[#4f46e5] hover:underline"
+                  href="/signup"
+                  className="font-semibold text-[#3F6FFF] hover:underline"
                 >
                   Sign up
                 </Link>
@@ -122,12 +165,12 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-10 text-center text-sm text-slate-400">
-              © 2026 Arinova Studio
+              © {new Date().getFullYear()} Arinova Studio
             </div>
           </div>
 
           {/* RIGHT SIDE */}
-          <RightSection/>
+          <RightSection />
         </div>
       </div>
     </div>

@@ -19,13 +19,16 @@ export async function syncVectors(userId: string, description: string, dealIn: s
     const needsText = lookingFor.length > 0 ? lookingFor.join(" ") : "general business growth";
     const needsVector = await generateEmbedding(needsText);
 
-    await prisma.$queryRaw`
+    const formattedOffering = `[${offeringVector.join(",")}]`;
+    const formattedNeeds = `[${needsVector.join(",")}]`;
+
+    await prisma.$executeRaw`
       UPDATE "CompanyProfile" 
-      SET "offeringVector" = ${offeringVector}::vector, "needsVector" = ${needsVector}::vector 
+      SET "offeringVector" = ${formattedOffering}::vector, "needsVector" = ${formattedNeeds}::vector 
       WHERE "userId" = ${userId}
     `;
     
-  } catch {
-    console.error("Vector Sync Error:");
+  } catch (error) {
+    console.error("Vector Sync Error:", error);
   }
 }
