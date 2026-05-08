@@ -1,9 +1,11 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
+  extensions = [vector]
 }
 
 enum Role {
@@ -53,13 +55,16 @@ model CompanyProfile {
   companyName String
   description String @db.Text
   logoUrl String?
-  size String
+  size Int
   type String
   yearOfEstablishment Int
   dealIn String[]
   website String?  
   location String?
   lookingFor String[]
+
+  offeringVector Unsupported("vector(768)")?
+  needsVector Unsupported("vector(768)")?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -21,3 +21,21 @@ export async function getUser() {
     return { user: null, error: "Internal server error" };
   }
 }
+
+export async function getAdmin(){
+  try {
+    const user = await getUser();
+
+    if (user.error || !user.user) {
+      return { user: null, error: user.error || "Unauthorized" };
+    }
+
+    if (user.user.role !== "ADMIN") {
+      return { user: null, error: "Unauthorized" };
+    }
+
+    return { user, error: null };
+  } catch {
+    return { user: null, error: "Internal server error" };
+  }
+}
