@@ -26,6 +26,10 @@ model User {
 
   accounts Account[]
   company CompanyProfile?
+  followers Follow[] @relation("Followers")
+  following Follow[] @relation("Following")
+  sentConnections Connection[] @relation("SentConnections")
+  receivedConnections Connection[] @relation("ReceivedConnections")
 }
 
 model Account {
@@ -86,4 +90,38 @@ model Otp {
   createdAt DateTime @default(now())
 
   @@unique([email, type]) 
+}
+
+model Follow {
+  id String @id @default(uuid())
+  followerId String
+  followingId String
+  createdAt DateTime @default(now())
+
+  follower User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Connection {
+  id String @id @default(uuid())
+  senderId String
+  receiverId String
+  status ConnectionStatus @default(PENDING)
+  message String? @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender User @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
 }
