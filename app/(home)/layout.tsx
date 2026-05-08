@@ -12,8 +12,8 @@ export default function DashboardLayout({
   rightSidebar: React.ReactNode;
 }) {
   const segment = useSelectedLayoutSegment();
-
-  const showRightSidebar = segment === "explore" || segment === "search";
+  const listItems = ["explore","search"];
+  const showRightSidebar = segment && listItems.includes(segment);
 
   return (
     <div className="min-h-screen">
