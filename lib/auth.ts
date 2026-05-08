@@ -39,3 +39,21 @@ export async function getAdmin(){
     return { user: null, error: "Internal server error" };
   }
 }
+
+export async function getOnboardedUser() {
+  try {
+    const { user, error } = await getUser();
+
+    if (error || !user) {
+      return { user: null, error: error || "Unauthorized" };
+    }
+
+    if (!user.isOnboarded) {
+      return { user: null, error: "company profile not found" };
+    }
+
+    return { user, error: null };
+  } catch {
+    return { user: null, error: "Internal server error" };
+  }
+}
