@@ -3,22 +3,6 @@ import { getAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
-export async function GET() {
-  try {
-    const { user, error } = await getAdmin();
-    if (error || !user) {
-      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 403 });
-    }
-
-    const plans = await prisma.plan.findMany({ orderBy: { createdAt: 'desc' } });
-
-    return NextResponse.json({ success: true, data: plans }, { status: 200 });
-
-  } catch {
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
-  }
-}
-
 const planSchema = z.object({
   name: z.string().min(1, "Plan name is required"),
   description: z.string().optional(),

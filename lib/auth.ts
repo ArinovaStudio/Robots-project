@@ -16,6 +16,10 @@ export async function getUser() {
       return { user: null, error: "User not found" };
     }
 
+    if (user.status === "SUSPENDED") {
+      return { user: null, error: "Your account has been suspended" };
+    }
+
     return { user, error: null };
   } catch {
     return { user: null, error: "Internal server error" };

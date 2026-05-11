@@ -13,6 +13,11 @@ enum Role {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 model User {
   id String @id @default(uuid())
   name String?
@@ -22,7 +27,11 @@ model User {
   image String?
 
   role Role @default(USER)
-  isOnboarded Boolean @default(false) 
+  status UserStatus @default(ACTIVE)
+  isOnboarded Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   accounts Account[]
   company CompanyProfile?
@@ -31,6 +40,7 @@ model User {
   sentConnections Connection[] @relation("SentConnections")
   receivedConnections Connection[] @relation("ReceivedConnections")
   subscriptions Subscription[]
+  transactions Transaction[]
 }
 
 model Account {
@@ -142,6 +152,7 @@ model Plan {
   updatedAt DateTime @updatedAt
 
   subscriptions Subscription[]
+  transactions Transaction[]
 }
 
 enum SubscriptionStatus {
@@ -159,6 +170,30 @@ model Subscription {
   startDate DateTime @default(now())
   endDate DateTime
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Transaction {
+  id String @id @default(uuid())
+  userId String
+  planId String
+  amount Float
+  currency String @default("INR")
+  razorpayOrderId String @unique
+  razorpayPaymentId String? @unique
+  razorpaySignature String?
+  status TransactionStatus @default(PENDING)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
