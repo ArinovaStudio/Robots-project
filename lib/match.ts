@@ -17,8 +17,8 @@ export async function getSimilarCompanies(userId: string): Promise<CompanyProfil
     FROM "CompanyProfile"
     WHERE "userId" != ${userId} 
     AND ("dealIn" && ${userProfile.dealIn}::text[] OR "type" = ${userProfile.type})
-    ORDER BY similarity DESC
-    LIMIT 10
+    ORDER BY "isBoosted" DESC, similarity DESC
+    LIMIT 40
   `;
 }
 
@@ -35,8 +35,8 @@ export async function getSuggestedCompanies(userId: string): Promise<CompanyProf
     ))) as similarity
     FROM "CompanyProfile"
     WHERE "userId" != ${userId}
-    ORDER BY similarity DESC
-    LIMIT 10
+    ORDER BY "isBoosted" DESC, similarity DESC
+    LIMIT 40
   `;
 }
 
@@ -48,7 +48,15 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
     const candidates = matchType === "similar" ? await getSimilarCompanies(userId) : await getSuggestedCompanies(userId);
     if (candidates.length === 0) return [];
 
-    const cleanMatches = candidates.map((company) => {
+    const boostedCompanies = candidates.filter(c => c.isBoosted);
+    const freeCompanies = candidates.filter(c => !c.isBoosted);
+
+    const shuffledBoosted = boostedCompanies.sort(() => 0.5 - Math.random());
+    const shuffledFree = freeCompanies.sort(() => 0.5 - Math.random());
+
+    const finalFeed = [...shuffledBoosted, ...shuffledFree].slice(0, 10);
+
+    const cleanMatches = finalFeed.map((company) => {
       const { offeringVector, needsVector, ...safeData } = company;
       return safeData;
     });
