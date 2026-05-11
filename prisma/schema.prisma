@@ -30,6 +30,7 @@ model User {
   following Follow[] @relation("Following")
   sentConnections Connection[] @relation("SentConnections")
   receivedConnections Connection[] @relation("ReceivedConnections")
+  subscriptions Subscription[]
 }
 
 model Account {
@@ -69,6 +70,8 @@ model CompanyProfile {
 
   offeringVector Unsupported("vector(768)")?
   needsVector Unsupported("vector(768)")?
+
+  isBoosted Boolean @default(false)
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -124,4 +127,41 @@ model Connection {
   receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+}
+
+model Plan {
+  id String @id @default(uuid())
+  name String
+  description String?
+  price Float
+  duration Int
+  isActive Boolean @default(true)
+  givesBoost Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model Subscription {
+  id String @id @default(uuid())
+  userId String
+  planId String
+  status SubscriptionStatus @default(ACTIVE)
+  
+  startDate DateTime @default(now())
+  endDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
 }
