@@ -25,7 +25,6 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
             throw Error(res.message);
           }
           const user = res.data || {};
-          console.log(user);
           setUser({email: user.email, id: user.id, name: user.name, image: user.image, role: user.role});
         }
       }catch(error: any){
