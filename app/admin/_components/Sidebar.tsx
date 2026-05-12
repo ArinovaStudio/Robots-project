@@ -14,7 +14,7 @@ import {
 import { navItems } from "@/config";
 
 import { cn } from "@/lib/utils";
-
+import { useLogout } from "@/helpers/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,13 +23,9 @@ interface Props {
   collapsed: boolean;
   mobileOpen: boolean;
 
-  setCollapsed: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
+  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 
-  setMobileOpen: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
+  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
   pathname: string;
 }
@@ -41,6 +37,7 @@ export default function Sidebar({
   setMobileOpen,
   pathname,
 }: Props) {
+  const { handleLogout } = useLogout();
   return (
     <>
       {/* Mobile Overlay */}
@@ -66,9 +63,7 @@ export default function Sidebar({
         <div
           className={cn(
             "relative flex h-16 shrink-0 items-center border-b px-4",
-            collapsed
-              ? "justify-center"
-              : "justify-between"
+            collapsed ? "justify-center" : "justify-between"
           )}
         >
           {/* Logo */}
@@ -100,9 +95,7 @@ export default function Sidebar({
           <Button
             size="icon"
             variant="ghost"
-            onClick={() =>
-              setCollapsed((prev) => !prev)
-            }
+            onClick={() => setCollapsed((prev) => !prev)}
             className={cn(
               "hidden md:flex",
               collapsed &&
@@ -131,10 +124,7 @@ export default function Sidebar({
         <ScrollArea className="flex-1 px-3 py-4">
           <div className="space-y-6">
             {navItems.map((group) => (
-              <div
-                key={group.title}
-                className="space-y-2"
-              >
+              <div key={group.title} className="space-y-2">
                 {!collapsed && (
                   <div className="px-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -144,63 +134,51 @@ export default function Sidebar({
                 )}
 
                 <div className="space-y-1">
-                  {group.items.map(
-                    ({
-                      label,
-                      href,
-                      icon: Icon,
-                    }) => {
-                      const active =
-                        pathname === href;
+                  {group.items.map(({ label, href, icon: Icon }) => {
+                    const active = pathname === href;
 
-                      return (
-                        <Link
-                          key={label}
-                          href={href}
-                          title={
-                            collapsed
-                              ? label
-                              : undefined
-                          }
+                    return (
+                      <Link
+                        key={label}
+                        href={href}
+                        title={collapsed ? label : undefined}
+                        className={cn(
+                          "group relative flex items-center rounded-xl text-sm transition-all duration-200",
+                          collapsed
+                            ? "justify-center px-2 py-3"
+                            : "gap-3 px-3 py-2.5",
+                          active
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {/* Active Indicator */}
+                        {active && (
+                          <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary-foreground/80" />
+                        )}
+
+                        <Icon
+                          size={18}
                           className={cn(
-                            "group relative flex items-center rounded-xl text-sm transition-all duration-200",
-                            collapsed
-                              ? "justify-center px-2 py-3"
-                              : "gap-3 px-3 py-2.5",
-                            active
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            "shrink-0 transition-transform duration-200",
+                            !active && "group-hover:scale-110"
                           )}
-                        >
-                          {/* Active Indicator */}
-                          {active && (
-                            <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary-foreground/80" />
-                          )}
+                        />
 
-                          <Icon
-                            size={18}
-                            className={cn(
-                              "shrink-0 transition-transform duration-200",
-                              !active &&
-                                "group-hover:scale-110"
+                        {!collapsed && (
+                          <>
+                            <span className="flex-1 truncate font-medium">
+                              {label}
+                            </span>
+
+                            {active && (
+                              <ChevronRight className="h-4 w-4 opacity-80" />
                             )}
-                          />
-
-                          {!collapsed && (
-                            <>
-                              <span className="flex-1 truncate font-medium">
-                                {label}
-                              </span>
-
-                              {active && (
-                                <ChevronRight className="h-4 w-4 opacity-80" />
-                              )}
-                            </>
-                          )}
-                        </Link>
-                      );
-                    }
-                  )}
+                          </>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -215,18 +193,13 @@ export default function Sidebar({
             variant="ghost"
             className={cn(
               "h-11 w-full rounded-xl text-muted-foreground hover:text-red-500",
-              collapsed
-                ? "justify-center px-0"
-                : "justify-start gap-3 px-3"
+              collapsed ? "justify-center px-0" : "justify-start gap-3 px-3"
             )}
+            onClick={handleLogout}
           >
             <LogOut className="h-4 w-4 shrink-0" />
 
-            {!collapsed && (
-              <span className="font-medium">
-                Log out
-              </span>
-            )}
+            {!collapsed && <span className="font-medium">Log out</span>}
           </Button>
         </div>
       </aside>

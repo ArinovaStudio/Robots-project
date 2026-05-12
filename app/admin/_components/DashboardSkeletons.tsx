@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">

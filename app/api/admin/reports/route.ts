@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       author: post.author,
       totalReports: post._count.reports,
       recentReports: post.reports,
-      createdAt: post.createdAt
+      createdAt: post.createdAt,
     }));
 
     return NextResponse.json({

@@ -2,9 +2,7 @@
 
 import useSWR from "swr";
 
-import {
-  DashboardSkeleton,
-} from "./_components/DashboardSkeletons";
+import { DashboardSkeleton } from "./_components/DashboardSkeletons";
 
 import {
   Activity,
