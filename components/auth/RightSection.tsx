@@ -41,7 +41,9 @@ export default function RightSection() {
                     </p>
 
                     <div className="mt-5 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-400 to-violet-600" />
+                      <div className="h-10 w-10 rounded-full relative rounded-full overflow-hidden">
+                        <Image src={"https://plus.unsplash.com/premium_photo-1664476788423-7899ac87bd7f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bWFsZXxlbnwwfHwwfHx8MA%3D%3D"} alt="Loading..." fill className="object-cover"/>
+                      </div>
 
                       <div>
                         <h4 className="text-sm font-semibold text-white">

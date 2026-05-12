@@ -13,10 +13,12 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
 export async function syncVectors(userId: string, description: string, dealIn: string[], lookingFor: string[]) {
   try {
-    const offeringText = `${description} ${dealIn.join(" ")}`;
+    const offeringText = `Services offered: ${dealIn.join(", ")}. Keywords: ${dealIn.join(" ")}. Business Description: ${description}`;
     const offeringVector = await generateEmbedding(offeringText);
 
-    const needsText = lookingFor.length > 0 ? lookingFor.join(" ") : "general business growth";
+    const needsText = lookingFor.length > 0 
+      ? `Looking for services in: ${lookingFor.join(", ")}. Required skills: ${lookingFor.join(" ")}.` 
+      : "general business growth networking partnership";
     const needsVector = await generateEmbedding(needsText);
 
     const formattedOffering = `[${offeringVector.join(",")}]`;

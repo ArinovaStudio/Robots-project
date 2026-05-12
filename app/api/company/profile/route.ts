@@ -5,21 +5,6 @@ import { getUser } from "@/lib/auth";
 import { uploadImage, deleteFile } from "@/lib/uploads";
 import { syncVectors } from "@/lib/embeddings";
 
-export async function GET() {
-  try {
-    const { user, error } = await getUser();
-    if (error || !user){
-      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
-    }
-
-    const profile = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
-
-    return NextResponse.json({ success: true, data: profile }, { status: 200 });
-  } catch {
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
-  }
-}
-
 const profileSchema = z.object({
   companyName: z.string().min(2),
   description: z.string().min(10),

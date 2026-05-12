@@ -13,6 +13,11 @@ enum Role {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 model User {
   id String @id @default(uuid())
   name String?
@@ -21,9 +26,28 @@ model User {
   emailVerified DateTime?
   image String?
   role Role @default(USER)
-  isOnboarded Boolean @default(false) 
+  status UserStatus @default(ACTIVE)
+  isOnboarded Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   accounts Account[]
   company CompanyProfile?
+  followers Follow[] @relation("Followers")
+  following Follow[] @relation("Following")
+  sentConnections Connection[] @relation("SentConnections")
+  receivedConnections Connection[] @relation("ReceivedConnections")
+  subscriptions Subscription[]
+  transactions Transaction[]
+  posts Post[]
+  comments Comment[]
+  postReactions PostReaction[]
+  commentReactions CommentReaction[]
+  savedPosts SavedPost[]
+  conversationsAsUser1 Conversation[] @relation("ConversationUser1")
+  conversationsAsUser2 Conversation[] @relation("ConversationUser2")
+  sentMessages DirectMessage[] @relation("MessageSender")
 }
 
 model Account {
@@ -61,6 +85,7 @@ model CompanyProfile {
   lookingFor String[]
   offeringVector Unsupported("vector(768)")?
   needsVector Unsupported("vector(768)")?
+  isBoosted Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -80,4 +105,221 @@ model Otp {
   createdAt DateTime @default(now())
 
   @@unique([email, type]) 
+}
+
+model Follow {
+  id String @id @default(uuid())
+  followerId String
+  followingId String
+  createdAt DateTime @default(now())
+
+  follower User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Connection {
+  id String @id @default(uuid())
+  senderId String
+  receiverId String
+  status ConnectionStatus @default(PENDING)
+  message String? @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender User @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+}
+
+model Plan {
+  id String @id @default(uuid())
+  name String
+  description String?
+  price Float
+  duration Int
+  isActive Boolean @default(true)
+  givesBoost Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  transactions Transaction[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model Subscription {
+  id String @id @default(uuid())
+  userId String
+  planId String
+  status SubscriptionStatus @default(ACTIVE)
+  
+  startDate DateTime @default(now())
+  endDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Transaction {
+  id String @id @default(uuid())
+  userId String
+  planId String
+  amount Float
+  currency String @default("INR")
+  razorpayOrderId String @unique
+  razorpayPaymentId String? @unique
+  razorpaySignature String?
+  status TransactionStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+model Post {
+  id String @id @default(uuid())
+  authorId String
+  content String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  media PostMedia[]
+  comments Comment[]
+  reactions PostReaction[]
+  savedBy SavedPost[]
+}
+
+model PostMedia {
+  id String @id @default(uuid())
+  postId String
+  url String
+  type MediaType
+  
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id String @id @default(uuid())
+  postId String
+  authorId String
+  content String @db.Text
+  
+  parentId String?     
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+  reactions CommentReaction[]
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model PostReaction {
+  id String @id @default(uuid())
+  postId String
+  userId String
+  type ReactionType
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId]) 
+}
+
+model CommentReaction {
+  id String @id @default(uuid())
+  commentId String
+  userId String
+  type ReactionType
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId]) 
+}
+
+model SavedPost {
+  id String @id @default(uuid())
+  userId String
+  postId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Conversation {
+  id String @id @default(uuid())
+  user1Id String
+  user2Id String
+  lastMessage String? @db.Text
+  lastMessageAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user1 User @relation("ConversationUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("ConversationUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages DirectMessage[]
+
+  @@unique([user1Id, user2Id]) 
+}
+
+model DirectMessage {
+  id String @id @default(uuid())
+  conversationId String
+  senderId String
+  content String @db.Text
+  isEdited Boolean @default(false)
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 }
