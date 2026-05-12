@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage, deleteFile } from "@/lib/uploads";
+import { validateTextContent } from "@/lib/textFilter";
 
 export async function GET( req: NextRequest, { params }: { params: Promise<{ id: string }> } ) {
   try {
     const { id } = await params;
 
     const post = await prisma.post.findUnique({
-      where: { id },
+      where: { id, status: "ACTIVE" },
       include: {
         media: true,
         author: {
@@ -57,8 +58,23 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 403 });
     }
 
+    if (existingPost.status === "SUSPENDED") {
+        return NextResponse.json({ success: false, message: "This post is suspended and cannot be edited" }, { status: 403 });
+    }
+
     const formData = await req.formData();
     const content = formData.get("content")?.toString() || null;
+
+    if (content) {
+      const textValidation = validateTextContent(content);
+      if (!textValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Your edit contains inappropriate language that violates our community guidelines" 
+        }, { status: 400 });
+      }
+    }
+
     const newMediaFiles = formData.getAll("newMedia") as File[];
     const deletedMediaIdsStr = formData.get("deletedMediaIds")?.toString() || "[]";
 

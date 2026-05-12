@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import { getUserStatusEmail } from "@/lib/template";
 
 const statusSchema = z.object({
   status: z.enum(["ACTIVE", "SUSPENDED"])
@@ -35,6 +37,14 @@ export async function PATCH( req: NextRequest, { params }: { params: Promise<{ i
     const action = validation.data.status;
 
     await prisma.user.update({ where: { id }, data: { status: action } });
+
+    if (existingUser.email){
+      sendEmail({
+        to: existingUser.email, 
+        subject: action === "SUSPENDED" ? "Important: Your account has been suspended" : "Update: Your account is now active",
+        html: getUserStatusEmail(existingUser.name || "User", action)
+      });
+    }
 
     return NextResponse.json({ success: true, message: `User account is ${action.toLowerCase()}` }, { status: 200 });
 

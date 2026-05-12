@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
     const [savedPostsData, totalCount] = await Promise.all([
       prisma.savedPost.findMany({
-        where: { userId: user.id },
+        where: { userId: user.id, post: { status: "ACTIVE" } },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },

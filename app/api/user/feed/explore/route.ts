@@ -16,10 +16,10 @@ export async function GET(req: Request) {
     const targetUserId = searchParams.get("userId");
     const skip = (page - 1) * limit;
 
-    let whereClause: any = {};
+    let whereClause: any = { };
 
     if (targetUserId) {
-      whereClause = { authorId: targetUserId };
+      whereClause = { authorId: targetUserId, status: "ACTIVE" };
     } else {
 
       const followingRecords = await prisma.follow.findMany({
@@ -39,14 +39,14 @@ export async function GET(req: Request) {
 
       if (uniqueMatchedIds.length > 0) {
         whereClause = {
-          authorId: { notIn: followingIds },
+          authorId: { notIn: followingIds }, status: "ACTIVE",
           OR: [
             { authorId: { in: uniqueMatchedIds } },
             { author: { company: { isBoosted: true } } } 
           ]
         };
       } else {
-        whereClause = { authorId: { notIn: followingIds } };
+        whereClause = { authorId: { notIn: followingIds }, status: "ACTIVE" };
       }
     }
 

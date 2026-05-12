@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { validateTextContent } from "@/lib/textFilter";
 
 const updateSchema = z.object({
   content: z.string().min(1, "Comment cannot be empty").max(1000, "Comment is too long"),
@@ -31,9 +32,22 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: "You can only edit your own comments" }, { status: 403 });
     }
 
+    const { content } = validation.data;
+
+    if (content){
+      const textValidation = validateTextContent(content);
+      
+      if (!textValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Your comment contains inappropriate language that violates our community guidelines" 
+        }, { status: 400 });
+      }
+    }
+
     await prisma.comment.update({
       where: { id: commentId },
-      data: { content: validation.data.content }
+      data: { content: content }
     });
 
     return NextResponse.json({ success: true, message: "Comment updated successfully" }, { status: 200 });

@@ -11,7 +11,7 @@ export async function POST( req: NextRequest, { params }: { params: Promise<{ id
 
     const { id: postId } = await params;
 
-    const existingPost = await prisma.post.findUnique({ where: { id: postId } });
+    const existingPost = await prisma.post.findUnique({ where: { id: postId, status: "ACTIVE" } });
     if (!existingPost) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
     }

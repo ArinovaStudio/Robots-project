@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     const targetUserId = searchParams.get("userId");
     const skip = (page - 1) * limit;
 
-    let whereClause: any = {};
+    let whereClause: any = { };
 
     if (targetUserId) {
-      whereClause = { authorId: targetUserId };
+      whereClause = { authorId: targetUserId, status: "ACTIVE" };
     } else {
       const followingRecords = await prisma.follow.findMany({
         where: { followerId: user.id },
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       
       followingIds.push(user.id);
 
-      whereClause = { authorId: { in: followingIds } };
+      whereClause = { authorId: { in: followingIds }, status: "ACTIVE" };
     }
 
     const [posts, totalCount] = await Promise.all([
