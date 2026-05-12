@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage } from "@/lib/uploads";
+import { validateTextContent } from "@/lib/textFilter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +17,17 @@ export async function POST(req: NextRequest) {
 
     if (!content && files.length === 0) {
       return NextResponse.json( { success: false, message: "Post must contain text or media" }, { status: 400 });
+    }
+
+    if (content) {
+      const textValidation = validateTextContent(content);
+      
+      if (!textValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Your post contains inappropriate language that violates our community guidelines" 
+        }, { status: 400 });
+      }
     }
 
     const uploadPromises = files.map(async (file) => {

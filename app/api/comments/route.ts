@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { validateTextContent } from "@/lib/textFilter";
 
 export async function GET(req: NextRequest) {
   try {
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const { postId, content, parentId } = validation.data;
 
-    const postExists = await prisma.post.findUnique({ where: { id: postId } });
+    const postExists = await prisma.post.findUnique({ where: { id: postId, status: "ACTIVE" } });
     if (!postExists) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
     }
@@ -91,6 +92,17 @@ export async function POST(req: NextRequest) {
       }
       if (parentExists.postId !== postId) {
         return NextResponse.json({ success: false, message: "Parent comment belongs to a different post" }, { status: 400 });
+      }
+    }
+
+    if (content){
+      const textValidation = validateTextContent(content);
+            
+      if (!textValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Your comment contains inappropriate language that violates our community guidelines" 
+        }, { status: 400 });
       }
     }
 

@@ -49,7 +49,6 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           isOnboarded: user.isOnboarded,
-          role: user.role,
         };
       }
     })
