@@ -12,12 +12,14 @@ export async function getSimilarCompanies(userId: string): Promise<CompanyProfil
   if (!userProfile) return [];
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
-    SELECT *, 
-    (1 - ("offeringVector" <=> (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
-    FROM "CompanyProfile"
-    WHERE "userId" != ${userId} 
-    AND ("dealIn" && ${userProfile.dealIn}::text[] OR "type" = ${userProfile.type})
-    ORDER BY "isBoosted" DESC, similarity DESC
+   SELECT cp.*, 
+    (1 - (cp."offeringVector" <=> (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
+    FROM "CompanyProfile" cp
+    INNER JOIN "User" u ON cp."userId" = u.id
+    WHERE cp."userId" != ${userId} 
+    AND u.status = 'ACTIVE'
+    AND (cp."dealIn" && ${userProfile.dealIn}::text[] OR cp."type" = ${userProfile.type})
+    ORDER BY cp."isBoosted" DESC, similarity DESC
     LIMIT 40
   `;
 }
@@ -28,14 +30,16 @@ export async function getSuggestedCompanies(userId: string): Promise<CompanyProf
   if (!userProfile) return [];
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
-    SELECT *, 
-    (1 - ("offeringVector" <=> COALESCE(
+    SELECT cp.*, 
+    (1 - (cp."offeringVector" <=> COALESCE(
       (SELECT "needsVector" FROM "CompanyProfile" WHERE "userId" = ${userId}),
       (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId})
     ))) as similarity
-    FROM "CompanyProfile"
-    WHERE "userId" != ${userId}
-    ORDER BY "isBoosted" DESC, similarity DESC
+    FROM "CompanyProfile" cp
+    INNER JOIN "User" u ON cp."userId" = u.id
+    WHERE cp."userId" != ${userId}
+    AND u.status = 'ACTIVE'
+    ORDER BY cp."isBoosted" DESC, similarity DESC
     LIMIT 40
   `;
 }

@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -60,18 +60,16 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.isOnboarded = user.isOnboarded;
-        token.role = user.role;
       } else if (token.email) {
 
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { id: true, isOnboarded: true, role: true },
+          select: { id: true, isOnboarded: true },
         });
         
         if (dbUser) {
           token.id = dbUser.id;
           token.isOnboarded = dbUser.isOnboarded;
-          token.role = dbUser.role;
         }
       }
       return token;
@@ -80,7 +78,6 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.isOnboarded = token.isOnboarded as boolean;
-        session.user.role = token.role as string;
       }
       return session;
     },

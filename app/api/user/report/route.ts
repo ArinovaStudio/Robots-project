@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const { postId, reason, details } = validation.data;
 
     const targetPost = await prisma.post.findUnique({
-      where: { id: postId },
+      where: { id: postId, status: "ACTIVE" },
       select: { id: true, authorId: true }
     });
 

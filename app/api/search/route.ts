@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
     const whereClause: any = {};
     const AND: any[] = [];
 
+    AND.push({ user: { status: "ACTIVE" } });
+
     if (user) {
       AND.push({ userId: { not: user.id } });
     }

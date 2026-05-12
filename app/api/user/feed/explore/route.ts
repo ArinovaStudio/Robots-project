@@ -76,11 +76,20 @@ export async function GET(req: Request) {
       prisma.post.count({ where: whereClause })
     ]);
 
-    const shuffledPosts = targetUserId ? posts : posts.sort(() => 0.5 - Math.random());
+    let finalPosts = posts;
+
+    if (!targetUserId) {
+      const boostedPosts = posts.filter(p => p.author.company?.isBoosted);
+      const regularPosts = posts.filter(p => !p.author.company?.isBoosted);
+
+      const shuffledRegulars = regularPosts.sort(() => 0.5 - Math.random());
+
+      finalPosts = [...boostedPosts, ...shuffledRegulars];
+    }
 
     return NextResponse.json({
       success: true,
-      data: shuffledPosts,
+      data: finalPosts,
       pagination: {
         total: totalCount,
         page,
