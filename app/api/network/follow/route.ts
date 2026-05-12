@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
@@ -7,7 +7,7 @@ const followSchema = z.object({
   targetUserId: z.string().min(1, "Target User ID is required"),
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { user, error } = await getOnboardedUser();
     if (error || !user) {
