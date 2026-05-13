@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOnboardedUser } from "@/lib/auth";
+import { getOnboardedUser, getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage, deleteFile } from "@/lib/uploads";
 import { validateTextContent } from "@/lib/textFilter";
 
 export async function GET( req: NextRequest, { params }: { params: Promise<{ id: string }> } ) {
   try {
+    const { user } = await getUser();
     const { id } = await params;
 
     const post = await prisma.post.findUnique({
@@ -21,15 +22,29 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
         },
         _count: {
           select: { comments: true, reactions: true }
-        }
+        },
+        ...(user?.id ? {
+          reactions: { where: { userId: user.id }, select: { type: true } },
+          savedBy: { where: { userId: user.id }, select: { id: true } }
+        } : {})
       }
     });
 
-    if (!post){
-        return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
+    if (!post) {
+      return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: post }, { status: 200 });
+    const formattedPost = {
+      ...post,
+      userReaction: (post as any).reactions?.[0]?.type || null,
+      isSaved: (post as any).savedBy?.length > 0,
+      likesCount: post._count.reactions
+    };
+
+    delete (formattedPost as any).reactions;
+    delete (formattedPost as any).savedBy;
+
+    return NextResponse.json({ success: true, data: formattedPost }, { status: 200 });
 
   } catch {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });

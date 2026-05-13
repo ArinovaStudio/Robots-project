@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,20 @@ import ErrorLoading from "@/components/ErrorLoading";
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const { page, setPage, nextPage, prevPage } = usePagination();
-  const query = `/api/admin/users?page=${page}&limit=10&search=${search}`;
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [search]);
+
+  const query = `/api/admin/users?page=${page}&limit=10&search=${debouncedSearch}`;
   const { data, error, isLoading, mutate } = useSWR(query, fetcher);
 
   return (
@@ -44,7 +56,7 @@ export default function AdminUsersPage() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(1);
+                  setPage(1); 
                 }}
                 className="h-11 rounded-xl pl-10"
               />

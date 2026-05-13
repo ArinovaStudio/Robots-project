@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await getUser();
+    const { user: currentUser } = await getUser();
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
@@ -13,13 +13,10 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "12", 10)));
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {};
-    const AND: any[] = [];
+    const AND: any[] = [{ user: { status: "ACTIVE" } }];
 
-    AND.push({ user: { status: "ACTIVE" } });
-
-    if (user) {
-      AND.push({ userId: { not: user.id } });
+    if (currentUser) {
+      AND.push({ userId: { not: currentUser.id } });
     }
 
     if (type) {
@@ -36,16 +33,14 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (AND.length > 0) {
-      whereClause.AND = AND;
-    }
+    const whereClause = { AND };
 
     const [companies, totalCount] = await Promise.all([
       prisma.companyProfile.findMany({
         where: whereClause,
         skip,
         take: limit,
-        orderBy: [ { isBoosted: 'desc' }, { updatedAt: 'desc' } ],
+        orderBy: [{ isBoosted: 'desc' }, { updatedAt: 'desc' }],
         select: {
           id: true,
           userId: true,
@@ -53,16 +48,33 @@ export async function GET(req: NextRequest) {
           description: true,
           logoUrl: true,
           type: true,
-          dealIn: true,
-          location: true,
+          size: true,
+          yearOfEstablishment: true,
+          user: {
+            select: {
+              _count: {
+                select: {
+                  followers: true, 
+                  receivedConnections: { where: { status: "ACCEPTED" } },
+                  sentConnections: { where: { status: "ACCEPTED" } }
+                }
+              }
+            }
+          }
         }
       }),
       prisma.companyProfile.count({ where: whereClause })
     ]);
 
+    const formatted = companies.map(c => ({
+      ...c,
+      followersCount: c.user._count.followers,
+      connectionsCount: c.user._count.receivedConnections + c.user._count.sentConnections
+    }));
+
     return NextResponse.json({
       success: true,
-      data: companies,
+      data: formatted,
       pagination: {
         total: totalCount,
         page,
@@ -72,6 +84,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch {
-    return NextResponse.json( { success: false, message: "Internal server error" }, { status: 500 } );
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }

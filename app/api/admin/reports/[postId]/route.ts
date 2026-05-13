@@ -46,7 +46,7 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ pos
     if (action === "DISMISS") {
 
       await prisma.$transaction([
-        prisma.postReport.updateMany({ where: { postId }, data: { status: "DISMISSED" } }),
+        prisma.postReport.deleteMany({ where: { postId } }),
         prisma.post.update({ where: { id: postId }, data: { status: "ACTIVE" } })
       ]);
 

@@ -7,38 +7,43 @@ interface Props {
   category: string;
 }
 
-export default function CompanyCard({ title, category }: Props) {
+export default function CompanyCard({ company }: { company: any }) {
   return (
-    <div className="rounded-[28px] bg-background p-5">
+    <div className="rounded-[28px] bg-background p-5 shadow-sm border border-slate-50">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex gap-2 items-center">
-          <Image
-            src="/logo.png"
-            alt={title}
-            width={60}
-            height={60}
-            className="size-[80px] object-contain"
-          />
+        <div className="flex gap-4 items-center">
+          <div className="size-[80px] relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-50">
+            {company.logoUrl ? (
+              <Image src={company.logoUrl} alt={company.companyName} fill className="object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center font-bold text-xl text-slate-400">
+                {company.companyName.charAt(0)}
+              </div>
+            )}
+          </div>
 
           <div>
-            <h3 className="text-2xl font-bold leading-none">{title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{category}</p>
+            <h3 className="text-2xl font-bold leading-none">{company.companyName}</h3>
+            <p className="mt-2 text-sm text-muted-foreground font-medium">{company.type}</p>
           </div>
         </div>
-
-        <EllipsisVertical className="size-5" />
+        <EllipsisVertical className="size-5 text-slate-400 cursor-pointer" />
       </div>
 
-      <p className="mt-5 text-sm leading-6 text-muted-foreground">
-        Lorem ipsum dolor sit amet consectetur. Lacus nec suscipit eget semper.
-        Ipsum fermentum venenatis tortor at nulla. Senectus tristique quis sed
-        tellus...
-        <span className="cursor-pointer font-medium text-blue-500">
+      <p className="mt-5 text-sm leading-6 text-slate-600 line-clamp-3">
+        {company.description}
+        {/* <span className="cursor-pointer ml-1 font-semibold text-[#5667ff] hover:underline">
           Read More
-        </span>
+        </span> */}
       </p>
 
-      <CompanyStats />
+      <CompanyStats 
+        size={company.size}
+        type={company.type}
+        followers={company.followersCount}
+        connections={company.connectionsCount}
+        year={company.yearOfEstablishment}
+      />
     </div>
   );
 }

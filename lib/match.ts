@@ -12,21 +12,25 @@ export async function getSimilarCompanies(userId: string): Promise<CompanyProfil
   if (!userProfile) return [];
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
-   SELECT cp.*, 
-    (1 - (cp."offeringVector" <=> (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
-    FROM "CompanyProfile" cp
-    INNER JOIN "User" u ON cp."userId" = u.id
-    WHERE cp."userId" != ${userId} 
-    AND u.status = 'ACTIVE'
-    AND (cp."dealIn" && ${userProfile.dealIn}::text[] OR cp."type" = ${userProfile.type})
-    ORDER BY cp."isBoosted" DESC, similarity DESC
-    LIMIT 40
+    SELECT cp.*, 
+     (1 - (cp."offeringVector" <=> (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
+     FROM "CompanyProfile" cp
+     INNER JOIN "User" u ON cp."userId" = u.id
+     WHERE cp."userId" != ${userId} 
+     AND u.status = 'ACTIVE'
+     AND (cp."dealIn" && ${userProfile.dealIn}::text[] OR cp."type" = ${userProfile.type})
+     AND NOT EXISTS (
+       SELECT 1 FROM "Connection" c
+       WHERE (c."senderId" = ${userId} AND c."receiverId" = cp."userId")
+          OR (c."senderId" = cp."userId" AND c."receiverId" = ${userId})
+     )
+     ORDER BY cp."isBoosted" DESC, similarity DESC
+     LIMIT 40
   `;
 }
 
 export async function getSuggestedCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
   const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
-  
   if (!userProfile) return [];
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
@@ -39,6 +43,11 @@ export async function getSuggestedCompanies(userId: string): Promise<CompanyProf
     INNER JOIN "User" u ON cp."userId" = u.id
     WHERE cp."userId" != ${userId}
     AND u.status = 'ACTIVE'
+    AND NOT EXISTS (
+      SELECT 1 FROM "Connection" c
+      WHERE (c."senderId" = ${userId} AND c."receiverId" = cp."userId")
+         OR (c."senderId" = cp."userId" AND c."receiverId" = ${userId})
+    )
     ORDER BY cp."isBoosted" DESC, similarity DESC
     LIMIT 40
   `;
@@ -67,6 +76,42 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
 
     return cleanMatches;
 
+  } catch {
+    return [];
+  }
+}
+
+
+export async function getSuggestedFeedAuthors(userId: string): Promise<string[]> {
+  try {
+    const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
+    
+    if (!userProfile) {
+      const activeAuthors = await prisma.post.findMany({
+        where: { status: 'ACTIVE', author: { status: 'ACTIVE' } },
+        select: { authorId: true },
+        distinct: ['authorId'],
+        take: 20,
+      });
+      return activeAuthors.map(a => a.authorId);
+    }
+
+    const candidates = await prisma.$queryRaw<{userId: string}[]>`
+      SELECT cp."userId"
+      FROM "CompanyProfile" cp
+      INNER JOIN "User" u ON cp."userId" = u.id
+      WHERE cp."userId" != ${userId} 
+      AND u.status = 'ACTIVE'
+      AND EXISTS (SELECT 1 FROM "Post" p WHERE p."authorId" = cp."userId" AND p.status = 'ACTIVE')
+      ORDER BY cp."isBoosted" DESC, 
+      (1 - (cp."offeringVector" <=> COALESCE(
+        (SELECT "needsVector" FROM "CompanyProfile" WHERE "userId" = ${userId}),
+        (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId})
+      ))) DESC
+      LIMIT 40
+    `;
+
+    return candidates.map(c => c.userId);
   } catch {
     return [];
   }

@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "20", 10)));
     const skip = (page - 1) * limit;
@@ -17,21 +18,28 @@ export async function GET(req: NextRequest) {
     
     const whereClause: any = { reports: { some: {} }};
 
-    if (postStatusFilter) {
+    if (postStatusFilter && postStatusFilter !== "ALL") {
       whereClause.status = postStatusFilter;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { content: { contains: search, mode: "insensitive" } },
+        { author: { company: { companyName: { contains: search, mode: "insensitive" } } } }
+      ];
     }
 
     const [reportedPosts, totalCount] = await Promise.all([
       prisma.post.findMany({
-        where: whereClause, skip,
+        where: whereClause, 
+        skip,
         take: limit,
         orderBy: { reports: { _count: 'desc' } },
         include: {
-          author: { select: { id: true, name: true, company: { select: { companyName: true } } } },
+          author: { select: { id: true, company: { select: { companyName: true, logoUrl: true } } } },
           media: true, 
           _count: { select: { reports: true } },
           reports: {
-            take: 3,
             orderBy: { createdAt: 'desc' },
             select: { reason: true, details: true, status: true, createdAt: true }
           }
@@ -40,16 +48,31 @@ export async function GET(req: NextRequest) {
       prisma.post.count({ where: whereClause })
     ]);
 
-    const formattedData = reportedPosts.map(post => ({
-      postId: post.id,
-      postStatus: post.status,
-      content: post.content,
-      media: post.media,
-      author: post.author,
-      totalReports: post._count.reports,
-      recentReports: post.reports,
-      createdAt: post.createdAt,
-    }));
+    const formattedData = reportedPosts.map(post => {
+      const pendingReportsCount = post.reports.filter(r => r.status === "PENDING").length;
+
+      const reportCounts = post.reports.reduce((acc: any, report) => {
+        acc[report.reason] = (acc[report.reason] || 0) + 1;
+        return acc;
+      }, {});
+
+      const groupedReports = Object.entries(reportCounts).map(([reason, count]) => ({ reason, count }));
+
+      return {
+        postId: post.id,
+        postStatus: post.status,
+        content: post.content,
+        media: post.media,
+        author: post.author,
+        totalReports: post._count.reports,
+        pendingReportsCount, 
+        groupedReports, 
+        recentReports: post.reports.slice(0, 3),
+        createdAt: post.createdAt,
+      };
+    });
+
+    formattedData.sort((a, b) => b.pendingReportsCount - a.pendingReportsCount);
 
     return NextResponse.json({
       success: true,

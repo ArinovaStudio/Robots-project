@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOnboardedUser } from "@/lib/auth";
+import { getOnboardedUser, getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { validateTextContent } from "@/lib/textFilter";
 
 export async function GET(req: NextRequest) {
   try {
+    const { user } = await getUser();
+
     const { searchParams } = new URL(req.url);
     const postId = searchParams.get("postId");
     const parentId = searchParams.get("parentId");
@@ -36,15 +38,25 @@ export async function GET(req: NextRequest) {
               company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
             }
           },
-          _count: { select: { replies: true, reactions: true } }
+          _count: { select: { replies: true, reactions: true } },
+          ...(user?.id ? { reactions: { where: { userId: user.id }, select: { type: true } } } : {})
         }
       }),
       prisma.comment.count({ where: whereClause })
     ]);
 
+    const formattedComments = comments.map(comment => {
+      const formatted = {
+        ...comment,
+        userReaction: (comment as any).reactions?.[0]?.type || null
+      };
+      delete (formatted as any).reactions; 
+      return formatted;
+    });
+
     return NextResponse.json({
       success: true,
-      data: comments,
+      data: formattedComments,
       pagination: {
         total: totalCount,
         page,

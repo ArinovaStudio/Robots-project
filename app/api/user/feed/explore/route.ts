@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getMatches } from "@/lib/match";
+import { getSuggestedFeedAuthors } from "@/lib/match";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { user, error } = await getOnboardedUser();
     if (error || !user) {
@@ -16,80 +16,84 @@ export async function GET(req: Request) {
     const targetUserId = searchParams.get("userId");
     const skip = (page - 1) * limit;
 
-    let whereClause: any = { };
+    const whereClause: any = { status: "ACTIVE" };
 
     if (targetUserId) {
-      whereClause = { authorId: targetUserId, status: "ACTIVE" };
+      whereClause.authorId = targetUserId;
     } else {
-
       const followingRecords = await prisma.follow.findMany({
         where: { followerId: user.id },
         select: { followingId: true }
       });
+
       const followingIds = followingRecords.map(f => f.followingId);
-      followingIds.push(user.id);
 
-      const [similarCompanies, suggestedCompanies] = await Promise.all([
-        getMatches(user.id, "similar"),
-        getMatches(user.id, "suggested")
-      ]);
+      const aiMatchedUserIds = await getSuggestedFeedAuthors(user.id);
 
-      const aiMatchedUserIds = [...similarCompanies, ...suggestedCompanies].map(c => c.userId);
-      const uniqueMatchedIds = [...new Set(aiMatchedUserIds)].filter(id => !followingIds.includes(id));
-
-      if (uniqueMatchedIds.length > 0) {
-        whereClause = {
-          authorId: { notIn: followingIds }, status: "ACTIVE",
-          OR: [
-            { authorId: { in: uniqueMatchedIds } },
-            { author: { company: { isBoosted: true } } } 
-          ]
-        };
-      } else {
-        whereClause = { authorId: { notIn: followingIds }, status: "ACTIVE" };
-      }
+      whereClause.OR = [
+        { authorId: user.id },
+        { authorId: { in: followingIds } },
+        { authorId: { in: aiMatchedUserIds } },
+        { author: { company: { isBoosted: true } } }
+      ];
     }
 
-    const [posts, totalCount] = await Promise.all([
-      prisma.post.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        orderBy: [
-          { author: { company: { isBoosted: 'desc' } } }, 
-          { createdAt: 'desc' }
-        ],
-        include: {
-          media: true,
-          author: {
-            select: {
-              id: true,
-              name: true,
-              company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
-            }
-          },
-          _count: {
-            select: { comments: true, reactions: true }
+    const fetchPosts = async (currentWhere: any) => {
+      return await Promise.all([
+        prisma.post.findMany({
+          where: currentWhere,
+          skip,
+          take: limit,
+          orderBy: [
+            { author: { company: { isBoosted: 'desc' } } }, 
+            { createdAt: 'desc' }
+          ],
+          include: {
+            media: true,
+            author: {
+              select: {
+                id: true,
+                name: true,
+                company: { 
+                  select: { 
+                    companyName: true, 
+                    logoUrl: true, 
+                    isBoosted: true,
+                    website: true,
+                    location: true,
+                    lookingFor: true
+                  } 
+                }
+              }
+            },
+            _count: { select: { comments: true, reactions: true } },
+            reactions: { where: { userId: user.id }, select: { type: true } },
+            savedBy: { where: { userId: user.id }, select: { id: true } }
           }
-        }
-      }),
-      prisma.post.count({ where: whereClause })
-    ]);
+        }),
+        prisma.post.count({ where: currentWhere })
+      ]);
+    };
 
-    let finalPosts = posts;
+    let [posts, totalCount] = await fetchPosts(whereClause);
 
-    if (!targetUserId) {
-      const boostedPosts = posts.filter(p => p.author.company?.isBoosted);
-      const regularPosts = posts.filter(p => !p.author.company?.isBoosted);
-
-      const shuffledRegulars = regularPosts.sort(() => 0.5 - Math.random());
-
-      finalPosts = [...boostedPosts, ...shuffledRegulars];
+    if (posts.length === 0 && !targetUserId) {
+      const fallbackWhere = { status: "ACTIVE" }; 
+      const [fallbackPosts, fallbackCount] = await fetchPosts(fallbackWhere);
+      posts = fallbackPosts;
+      totalCount = fallbackCount;
     }
+
+    const formattedPosts = posts.map(post => ({
+      ...post,
+      userReaction: post.reactions[0]?.type || null, 
+      isSaved: post.savedBy?.length > 0,
+      likesCount: post._count.reactions
+    }));
 
     return NextResponse.json({
       success: true,
-      data: finalPosts,
+      data: formattedPosts,
       pagination: {
         total: totalCount,
         page,
