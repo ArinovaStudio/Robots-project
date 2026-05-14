@@ -24,11 +24,20 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const cleanSearch = search.replace(/^#/, '').trim();
+      const searchWithSpaces = cleanSearch.replace(/-/g, ' ');
+      const titleCaseSearch = searchWithSpaces.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+      
+      const arrayVariations = [ search, cleanSearch, searchWithSpaces, titleCaseSearch, searchWithSpaces.toUpperCase() ];
+
       AND.push({
         OR: [
-          { companyName: { contains: search, mode: "insensitive" } },
-          { dealIn: { hasSome: [search] } },
-          { description: { contains: search, mode: "insensitive" } }
+          { companyName: { contains: cleanSearch, mode: "insensitive" } },
+          { description: { contains: cleanSearch, mode: "insensitive" } },
+          { type: { contains: cleanSearch, mode: "insensitive" } },
+          { location: { contains: cleanSearch, mode: "insensitive" } },
+          { dealIn: { hasSome: arrayVariations } },
+          { lookingFor: { hasSome: arrayVariations } }
         ]
       });
     }
@@ -40,7 +49,7 @@ export async function GET(req: NextRequest) {
         where: whereClause,
         skip,
         take: limit,
-        orderBy: [{ isBoosted: 'desc' }, { updatedAt: 'desc' }],
+        orderBy: [{ isBoosted: 'desc' }, { createdAt: 'desc' }],
         select: {
           id: true,
           userId: true,
@@ -71,6 +80,39 @@ export async function GET(req: NextRequest) {
       followersCount: c.user._count.followers,
       connectionsCount: c.user._count.receivedConnections + c.user._count.sentConnections
     }));
+
+    // saving analytics
+    const logPromises = [];
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (search.trim()) {
+      const isTag = search.trim().startsWith("#");
+      const queryTerm = search.trim().toLowerCase();
+
+      logPromises.push(
+        prisma.searchStat.upsert({
+          where: { query_date_isTag: { query: queryTerm, date: today, isTag } },
+          update: { count: { increment: 1 } },
+          create: { query: queryTerm, date: today, isTag }
+        })
+      );
+    }
+
+    if (companies.length > 0) {
+      for (const c of companies) {
+        logPromises.push(
+          prisma.searchImpressionStat.upsert({
+            where: { companyId_date: { companyId: c.id, date: today } },
+            update: { count: { increment: 1 } },
+            create: { companyId: c.id, date: today }
+          })
+        );
+      }
+    }
+
+    Promise.all(logPromises);
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,69 @@ import { prisma } from "@/lib/prisma";
 import { getUser } from "@/lib/auth";
 import { uploadImage, deleteFile } from "@/lib/uploads";
 import { syncVectors } from "@/lib/embeddings";
+import { startOfMonth } from "date-fns";
+
+export async function GET() {
+  try {
+    const { user, error } = await getUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const monthStart = startOfMonth(new Date());
+
+    const company = await prisma.companyProfile.findUnique({
+      where: { userId: user.id },
+      include: {
+        user: {
+          select: {
+            _count: {
+              select: {
+                followers: true,
+                receivedConnections: { where: { status: "ACCEPTED" } },
+                sentConnections: { where: { status: "ACCEPTED" } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!company) {
+      return NextResponse.json({ success: false, message: "Profile not found" }, { status: 404 });
+    }
+
+    const [viewsData, impressionsData] = await Promise.all([
+      prisma.profileViewStat.aggregate({
+        where: { companyId: company.id, date: { gte: monthStart } },
+        _sum: { count: true }
+      }),
+      prisma.searchImpressionStat.aggregate({
+        where: { companyId: company.id, date: { gte: monthStart } },
+        _sum: { count: true }
+      })
+    ]);
+
+    const profileViewers = viewsData._sum.count || 0;
+    const impressions = impressionsData._sum.count || 0;
+    const connectionsCount = company.user._count.receivedConnections + company.user._count.sentConnections;
+    const followersCount = company.user._count.followers;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...company,
+        profileViewers,
+        impressions,
+        connectionsCount,
+        followersCount
+      }
+    }, { status: 200 });
+
+  } catch {
+    return NextResponse.json({ success: false, message: "Internal Server Error" }, { status: 500 });
+  }
+}
 
 const profileSchema = z.object({
   companyName: z.string().min(2),

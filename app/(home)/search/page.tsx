@@ -3,19 +3,26 @@
 import CompanyCard from "@/components/home/search/company-card";
 import CompanySearch from "@/components/home/search/company-search";
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
 export default function TopRatedCompanies() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
+  const queryParam = searchParams.get("search") || "";
+  
   const [companies, setCompanies] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(queryParam);
 
   const fetchCompanies = async (query = "") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?search=${query}`);
+      const res = await fetch(`/api/search?search=${encodeURIComponent(query)}`);
       const json = await res.json();
       if (json.success) {
         setCompanies(json.data);
@@ -27,15 +34,26 @@ export default function TopRatedCompanies() {
   };
 
   useEffect(() => {
-    fetchCompanies();
-  }, []);
+    setSearchQuery(queryParam);
+    fetchCompanies(queryParam);
+  }, [queryParam]);
+
+  const handleSearch = () => {
+    const params = new URLSearchParams(searchParams);
+    if (searchQuery) {
+      params.set("search", searchQuery);
+    } else {
+      params.delete("search");
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       <CompanySearch 
         value={searchQuery} 
         onChange={setSearchQuery} 
-        onSearch={() => fetchCompanies(searchQuery)} 
+        onSearch={handleSearch} 
       />
 
       <div className="flex items-center justify-between">

@@ -5,7 +5,6 @@ import { getUser } from "@/lib/auth";
 export async function GET( req: NextRequest, { params }: { params: Promise<{ userId: string }> } ) {
   try {
     const { userId } = await params;
-
     const { user: currentUser } = await getUser();
 
     const targetUser = await prisma.user.findUnique({
@@ -55,6 +54,17 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       if (connectionRecord) {
         connectionStatus = connectionRecord.status;
       }
+
+      if (targetUser.company) {
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        await prisma.profileViewStat.upsert({
+          where: { companyId_date: { companyId: targetUser.company.id, date: today } },
+          update: { count: { increment: 1 } },
+          create: { companyId: targetUser.company.id, date: today }
+        });
+      }
     }
 
     const profileData = {
@@ -70,7 +80,8 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       },
       viewerState: {
         isFollowing,
-        connectionStatus
+        connectionStatus,
+        isOwnProfile: currentUser?.id === userId
       }
     };
 

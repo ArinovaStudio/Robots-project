@@ -12,7 +12,8 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   const [loadingReplies, setLoadingReplies] = useState(false);
 
   const [reaction, setReaction] = useState<"LIKE" | "DISLIKE" | null>(comment.userReaction || null);
-  const [likesCount, setLikesCount] = useState(comment._count?.reactions || 0);
+  const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
+  const [dislikesCount, setDislikesCount] = useState(comment.dislikesCount || 0);
   
   const [showMenu, setShowMenu] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -28,11 +29,21 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
     if (reaction === type) {
       setReaction(null);
       if (type === "LIKE") setLikesCount((prev: any) => prev - 1);
+      if (type === "DISLIKE") setDislikesCount((prev: any) => prev - 1);
     } else {
-      if (reaction === "LIKE" && type === "DISLIKE") setLikesCount((prev: any) => prev - 1);
-      if (reaction !== "LIKE" && type === "LIKE") setLikesCount((prev: any) => prev + 1);
+      if (reaction === "LIKE" && type === "DISLIKE") {
+        setLikesCount((prev: any) => prev - 1);
+        setDislikesCount((prev: any) => prev + 1);
+      } else if (reaction === "DISLIKE" && type === "LIKE") {
+        setDislikesCount((prev: any) => prev - 1);
+        setLikesCount((prev: any) => prev + 1);
+      } else if (!reaction) {
+        if (type === "LIKE") setLikesCount((prev: any) => prev + 1);
+        if (type === "DISLIKE") setDislikesCount((prev: any) => prev + 1);
+      }
       setReaction(type);
     }
+
     try {
       await fetch(`/api/comments/${comment.id}/react`, {
         method: "POST",
@@ -203,13 +214,17 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {/* Action Bar (Like, Dislike, Reply) */}
         {!isEditing && (
           <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500">
+            {/* FIX 3: Display likes count accurately */}
             <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-[#5667ff] ${reaction === "LIKE" ? "text-[#5667ff]" : ""}`}>
               <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> 
               {likesCount > 0 && likesCount}
             </button>
+            {/* FIX 4: Display dislikes count accurately */}
             <button onClick={() => handleReact("DISLIKE")} className={`flex items-center gap-1.5 transition hover:text-red-500 ${reaction === "DISLIKE" ? "text-red-500" : ""}`}>
               <ThumbsDown size={14} className={reaction === "DISLIKE" ? "fill-current" : ""} />
+              {dislikesCount > 0 && dislikesCount}
             </button>
+
             <button onClick={() => setIsReplying(!isReplying)} className="hover:text-slate-800 transition">
               Reply
             </button>

@@ -38,18 +38,31 @@ export async function GET(req: NextRequest) {
               company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
             }
           },
-          _count: { select: { replies: true, reactions: true } },
+          _count: { select: { replies: true } },
           ...(user?.id ? { reactions: { where: { userId: user.id }, select: { type: true } } } : {})
         }
       }),
       prisma.comment.count({ where: whereClause })
     ]);
 
+    const commentIds = comments.map(c => c.id);
+    const reactionCounts = commentIds.length > 0 ? await prisma.commentReaction.groupBy({
+      by: ['commentId', 'type'],
+      where: { commentId: { in: commentIds } },
+      _count: { type: true }
+    }) : [];
+
     const formattedComments = comments.map(comment => {
+      const likes = reactionCounts.find(r => r.commentId === comment.id && r.type === "LIKE")?._count.type || 0;
+      const dislikes = reactionCounts.find(r => r.commentId === comment.id && r.type === "DISLIKE")?._count.type || 0;
+
       const formatted = {
         ...comment,
+        likesCount: likes,
+        dislikesCount: dislikes,
         userReaction: (comment as any).reactions?.[0]?.type || null
       };
+      
       delete (formatted as any).reactions; 
       return formatted;
     });
