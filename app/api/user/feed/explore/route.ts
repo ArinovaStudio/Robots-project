@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
           take: limit,
           orderBy: [
             { author: { company: { isBoosted: 'desc' } } }, 
-            { createdAt: 'desc' }
+            { updatedAt: 'desc' }
           ],
           include: {
             media: true,
