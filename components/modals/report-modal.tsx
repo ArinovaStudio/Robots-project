@@ -1,6 +1,7 @@
 "use client";
 import { X, AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function ReportModal({ postId, onClose }: { postId: string, onClose: () => void }) {
   const [reason, setReason] = useState("");
@@ -18,13 +19,13 @@ export default function ReportModal({ postId, onClose }: { postId: string, onClo
       });
       const data = await res.json();
       if (data.success) {
-        alert("Report submitted successfully.");
+        toast.success("Report submitted successfully.");
         onClose();
       } else {
-        alert(data.message);
+        toast.error(data.message);
       }
     } catch {
-      alert("Failed to submit report.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

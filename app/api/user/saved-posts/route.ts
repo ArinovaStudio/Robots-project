@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { user, error } = await getOnboardedUser();
     if (error || !user) {
@@ -22,24 +22,55 @@ export async function GET(req: Request) {
         orderBy: { createdAt: 'desc' },
         include: {
           post: {
-            include: { media: true,
+            include: { 
+              media: true,
               author: {
-                select: { id: true, name: true, company: { select: { companyName: true, logoUrl: true, isBoosted: true } } }
+                select: { 
+                  id: true, 
+                  name: true, 
+                  company: { 
+                    select: { 
+                      companyName: true, 
+                      logoUrl: true, 
+                      isBoosted: true,
+                      website: true,
+                      location: true,
+                      lookingFor: true 
+                    } 
+                  } 
+                }
               },
-              _count: {
-                select: { comments: true, reactions: true }
-              }
+              _count: { select: { comments: true } },
+              reactions: { where: { userId: user.id }, select: { type: true } },
             }
           }
         }
       }),
-      prisma.savedPost.count({ where: { userId: user.id } })
+      prisma.savedPost.count({ where: { userId: user.id, post: { status: "ACTIVE" } } })
     ]);
 
-    const formattedPosts = savedPostsData.map(savedRecord => ({
-      savedAt: savedRecord.createdAt,
-      ...savedRecord.post
-    }));
+    const postIds = savedPostsData.map(sp => sp.postId);
+    const reactionCounts = postIds.length > 0 ? await prisma.postReaction.groupBy({
+      by: ['postId', 'type'],
+      where: { postId: { in: postIds } },
+      _count: { type: true }
+    }) : [];
+
+    const formattedPosts = savedPostsData.map(savedRecord => {
+      const post = savedRecord.post;
+      
+      const likes = reactionCounts.find(r => r.postId === post.id && r.type === "LIKE")?._count.type || 0;
+      const dislikes = reactionCounts.find(r => r.postId === post.id && r.type === "DISLIKE")?._count.type || 0;
+
+      return {
+        ...post,
+        savedAt: savedRecord.createdAt,
+        userReaction: post.reactions[0]?.type || null, 
+        isSaved: true, 
+        likesCount: likes,
+        dislikesCount: dislikes
+      };
+    });
 
     return NextResponse.json({
       success: true,

@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
       });
       
       const followingIds = followingRecords.map(f => f.followingId);
-      
       followingIds.push(user.id);
 
       whereClause = { authorId: { in: followingIds }, status: "ACTIVE" };
@@ -44,20 +43,49 @@ export async function GET(req: NextRequest) {
             select: {
               id: true,
               name: true,
-              company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
+              company: { 
+                select: { 
+                  companyName: true, 
+                  logoUrl: true, 
+                  isBoosted: true,
+                  website: true,
+                  location: true,
+                  lookingFor: true
+                } 
+              }
             }
           },
-          _count: {
-            select: { comments: true, reactions: true }
-          }
+          _count: { select: { comments: true } },
+          reactions: { where: { userId: user.id }, select: { type: true } },
+          savedBy: { where: { userId: user.id }, select: { id: true } }
         }
       }),
       prisma.post.count({ where: whereClause })
     ]);
 
+    const postIds = posts.map(p => p.id);
+    const reactionCounts = postIds.length > 0 ? await prisma.postReaction.groupBy({
+      by: ['postId', 'type'],
+      where: { postId: { in: postIds } },
+      _count: { type: true }
+    }) : [];
+
+    const formattedPosts = posts.map(post => {
+      const likes = reactionCounts.find(r => r.postId === post.id && r.type === "LIKE")?._count.type || 0;
+      const dislikes = reactionCounts.find(r => r.postId === post.id && r.type === "DISLIKE")?._count.type || 0;
+
+      return {
+        ...post,
+        userReaction: post.reactions[0]?.type || null, 
+        isSaved: post.savedBy?.length > 0,
+        likesCount: likes,
+        dislikesCount: dislikes
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: posts,
+      data: formattedPosts,
       pagination: {
         total: totalCount,
         page,

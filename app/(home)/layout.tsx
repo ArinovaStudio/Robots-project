@@ -3,6 +3,7 @@
 import Navbar from "@/components/home/navbar";
 import LeftSidebar from "@/components/home/left-sidebar";
 import { useSelectedLayoutSegment } from "next/navigation";
+import { SessionSync } from "@/components/SessionSync";
 
 export default function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default function DashboardLayout({
   const showRightSidebar = segment && listItems.includes(segment);
 
   return (
+    <SessionSync>
     <div className="min-h-screen">
       <Navbar />
 
@@ -45,5 +47,6 @@ export default function DashboardLayout({
         )}
       </div>
     </div>
+    </SessionSync>
   );
 }
