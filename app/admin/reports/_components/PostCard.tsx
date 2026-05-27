@@ -130,7 +130,7 @@ export function PostCardSkeleton() {
     <div className="rounded-3xl bg-white p-5 shadow-sm space-y-4 border border-slate-100">
       <div className="flex justify-between">
         <div className="flex gap-3">
-          <Skeleton circle className="h-10 w-10" />
+          <Skeleton className="h-10 w-10" />
           <div className="flex flex-col justify-center">
             <Skeleton className="h-4 w-32 mb-1" />
             <Skeleton className="h-3 w-20" />

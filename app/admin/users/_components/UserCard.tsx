@@ -114,7 +114,7 @@ export function UserCard({ user, mutateUsers }: UserCardProps) {
           <div className="space-y-2">
             <div>
               <h2 className="text-lg font-bold text-[#050a30]">
-                {user.name || "Unnamed User"}
+                {user.company?.companyName || user.name || "Unnamed User"}
               </h2>
 
               <p className="text-sm text-muted-foreground">{user.email}</p>

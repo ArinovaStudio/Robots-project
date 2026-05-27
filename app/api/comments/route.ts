@@ -67,6 +67,8 @@ export async function GET(req: NextRequest) {
       return formatted;
     });
 
+    formattedComments.sort((a, b) => b.likesCount - a.likesCount);
+
     return NextResponse.json({
       success: true,
       data: formattedComments,
