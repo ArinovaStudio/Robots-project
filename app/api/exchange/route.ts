@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
 
     if (crossConnections.length > 0) {
       const syntheticNeedsText = `Offering services in: ${crossConnections.join(", ")}`;
+      console.log(syntheticNeedsText);
       searchVector = await generateEmbedding(syntheticNeedsText);
     } else if (currentCompany.needsVector) {
       searchVector = JSON.parse(currentCompany.needsVector);

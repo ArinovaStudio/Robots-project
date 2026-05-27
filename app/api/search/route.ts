@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
           type: true,
           size: true,
           yearOfEstablishment: true,
+          isBoosted: true,
           user: {
             select: {
               _count: {

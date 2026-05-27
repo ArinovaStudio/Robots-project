@@ -9,6 +9,7 @@ import ConfirmModal from "../modals/confirm-modal";
 import EditPostModal from "../modals/edit-post-modal";
 import PostComments from "./post-comments";
 import MediaSlider from "./media-slider";
+import Link from "next/link";
 
 export default function FeedCard({ post, currentUser }: { post: any, currentUser: any }) {
   const [isDeleted, setIsDeleted] = useState(false);
@@ -96,13 +97,19 @@ export default function FeedCard({ post, currentUser }: { post: any, currentUser
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {currentPost.author?.company?.logoUrl ? (
-              <img src={currentPost.author.company.logoUrl} className="h-10 w-10 rounded-full object-cover" alt="Logo" />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF0FF] text-base font-bold text-[#5667ff]">
-                {authorInitials}
-              </div>
-            )}
+            <Link href={`/profile/${currentPost.author?.id}`} className="shrink-0 block">
+              {currentPost.author?.company?.logoUrl ? (
+                <img 
+                  src={currentPost.author.company.logoUrl} 
+                  className="h-10 w-10 rounded-full object-cover hover:opacity-80 transition" 
+                  alt="Logo" 
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF0FF] text-base font-bold text-[#5667ff] hover:opacity-80 transition">
+                  {authorInitials}
+                </div>
+              )}
+            </Link>
             <div>
               <h3 className="text-lg font-semibold">{authorName}</h3>
               <div className="flex items-center gap-1.5">

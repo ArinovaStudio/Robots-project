@@ -9,7 +9,7 @@ export default function ExchangeCard({ company }: { company: any }) {
       {/* Header Section */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-4 items-center">
-          <Link href={`/profile/${company.author.id}`} className="size-[80px] relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-50 shrink-0">
+          <Link href={`/profile/${company.author?.id || ""}`} className="size-[80px] relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-50 shrink-0">
             {company.logoUrl ? (
               <Image src={company.logoUrl} alt={company.companyName} fill className="object-cover" />
             ) : (
@@ -20,9 +20,16 @@ export default function ExchangeCard({ company }: { company: any }) {
           </Link>
 
           <div>
-            <Link href={`/profile/${company.author.id}`} className="text-2xl font-bold leading-none hover:text-[#5667ff] transition">
-              {company.companyName}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href={`/profile/${company.author?.id || ""}`} className="text-2xl font-bold leading-none hover:text-[#5667ff] transition">
+                {company.companyName}
+              </Link>
+              {company.isBoosted && (
+                <span className="px-2 py-0.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-[10px] uppercase font-bold text-yellow-900 rounded-full shadow-sm">
+                  Boosted
+                </span>
+              )}
+            </div>
             <p className="mt-2 text-sm text-muted-foreground font-medium">{company.type}</p>
           </div>
         </div>
