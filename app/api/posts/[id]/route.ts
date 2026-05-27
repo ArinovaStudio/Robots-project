@@ -17,12 +17,19 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
           select: {
             id: true,
             name: true,
-            company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
+            company: { 
+              select: { 
+                companyName: true, 
+                logoUrl: true, 
+                isBoosted: true,
+                website: true,
+                location: true,
+                lookingFor: true
+              } 
+            }
           }
         },
-        _count: {
-          select: { comments: true, reactions: true }
-        },
+        _count: { select: { comments: true } },
         ...(user?.id ? {
           reactions: { where: { userId: user.id }, select: { type: true } },
           savedBy: { where: { userId: user.id }, select: { id: true } }
@@ -34,11 +41,21 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
     }
 
+    const reactionCounts = await prisma.postReaction.groupBy({
+      by: ['type'],
+      where: { postId: id },
+      _count: { type: true }
+    });
+
+    const likes = reactionCounts.find(r => r.type === "LIKE")?._count.type || 0;
+    const dislikes = reactionCounts.find(r => r.type === "DISLIKE")?._count.type || 0;
+
     const formattedPost = {
       ...post,
       userReaction: (post as any).reactions?.[0]?.type || null,
       isSaved: (post as any).savedBy?.length > 0,
-      likesCount: post._count.reactions
+      likesCount: likes,
+      dislikesCount: dislikes 
     };
 
     delete (formattedPost as any).reactions;
@@ -136,6 +153,7 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
       where: { id },
       data: {
         content,
+        isEdited: true,
         media: { create: uploadedMediaData }
       },
     });

@@ -12,6 +12,8 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  console.log(currentUser);
+
   const fetchComments = async (pageNum: number, append = false) => {
     try {
       const res = await fetch(`/api/comments?postId=${postId}&page=${pageNum}&limit=10`);
@@ -70,13 +72,13 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
       <div className="flex gap-3 mb-6">
         {currentUser?.image || currentUser?.company?.logoUrl ? (
           <img 
-            src={currentUser.image || currentUser.company.logoUrl} 
-            alt={currentUser?.name || "User"} 
+            src={currentUser.company.logoUrl || currentUser.image} 
+            alt={currentUser?.company?.companyName || currentUser?.name || "User"} 
             className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
           />
         ) : (
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF0FF] text-sm font-bold text-[#5667ff]">
-            {currentUser?.name?.charAt(0) || "U"}
+            {(currentUser?.company?.companyName || currentUser?.name || "U").charAt(0).toUpperCase()}
           </div>
         )}
         <div className="flex-1 relative">

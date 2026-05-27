@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUserStore } from "@/store/AuthStore";
 import { Loader2, ArrowLeft } from "lucide-react";
 import FeedCard from "@/components/home/feed-card";
 
 export default function SinglePostPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user } = useUserStore();
   
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +70,7 @@ export default function SinglePostPage() {
         <ArrowLeft size={16} /> Back to feed
       </button>
 
-      <FeedCard post={post} currentUser={session?.user} />
+      <FeedCard post={post} currentUser={user} />
     </div>
   );
 }

@@ -47,7 +47,7 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
 
     await prisma.comment.update({
       where: { id: commentId },
-      data: { content: content }
+      data: { content: content, isEdited: true },
     });
 
     return NextResponse.json({ success: true, message: "Comment updated successfully" }, { status: 200 });

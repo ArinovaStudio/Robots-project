@@ -25,7 +25,16 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
             throw Error(res.message);
           }
           const user = res.data || {};
-          setUser({email: user.email, id: user.id, name: user.name, image: user.image, role: user.role});
+          const displayName = user.name || user.email?.split('@')[0] || "User";
+
+          setUser({
+            email: user.email, 
+            id: user.id, 
+            name: displayName, 
+            image: user.image, 
+            role: user.role,
+            company: user.company 
+          });
         }
       }catch(error: any){
         setError(error.message);

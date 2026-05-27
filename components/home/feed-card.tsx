@@ -105,9 +105,14 @@ export default function FeedCard({ post, currentUser }: { post: any, currentUser
             )}
             <div>
               <h3 className="text-lg font-semibold">{authorName}</h3>
-              <p className="text-xs text-slate-400">
-                {new Date(currentPost.createdAt).toLocaleDateString()}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs text-slate-400">
+                  {new Date(currentPost.isEdited ? currentPost.updatedAt : currentPost.createdAt).toLocaleDateString()}
+                </p>
+                {currentPost.isEdited && (
+                  <span className="text-[10px] italic text-slate-400">(edited)</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -189,7 +194,9 @@ export default function FeedCard({ post, currentUser }: { post: any, currentUser
             setCurrentPost({ 
                ...currentPost, 
                content: newContent, 
-               media: newMergedMedia 
+               media: newMergedMedia,
+               isEdited: true,
+               updatedAt: new Date().toISOString()
             });
             setShowEdit(false);
           }} 

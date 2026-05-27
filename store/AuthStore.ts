@@ -8,6 +8,7 @@ export interface User {
   image?: string | null;
   role?: "USER" | "ADMIN";
   isVerified?: boolean;
+  company?: any;
 }
 
 interface UserStore {

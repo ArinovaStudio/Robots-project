@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import AchievementPost from "@/components/home/achievements-post";
 import FeedCard from "@/components/home/feed-card";
-import { useSession } from "next-auth/react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { useUserStore } from "@/store/AuthStore";
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { user } = useUserStore();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -83,7 +83,7 @@ export default function DashboardPage() {
             <FeedCard 
               key={post.id} 
               post={post} 
-              currentUser={session?.user} 
+              currentUser={user} 
             />
           ))}
 

@@ -75,7 +75,9 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         body: JSON.stringify({ content: editContent })
       });
       if (res.ok) {
-        comment.content = editContent; 
+        comment.content = editContent;
+        comment.isEdited = true;
+        comment.updatedAt = new Date().toISOString(); 
         setIsEditing(false);
       }
     } finally {
@@ -122,7 +124,8 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
 
   useEffect(() => {
     const updateTime = () => {
-      const diffMs = Date.now() - new Date(comment.createdAt).getTime();
+      const refTime = comment.isEdited && comment.updatedAt ? comment.updatedAt : comment.createdAt;
+      const diffMs = Date.now() - new Date(refTime).getTime();
       const diffSecs = Math.floor(diffMs / 1000);
 
       if (diffSecs < 60) {
@@ -170,7 +173,12 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {/* Author & Time */}
         <div className="flex items-center gap-2 mb-1">
           <span className="font-semibold text-slate-900">{authorName}</span>
-          <span className="text-[11px] text-slate-400">{timeDisplay}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-slate-400">{timeDisplay}</span>
+            {comment.isEdited && (
+              <span className="text-[10px] italic text-slate-400">(edited)</span>
+            )}
+          </div>
           
           {/* Options Menu (Edit/Delete) */}
           {isOwner && (
@@ -214,12 +222,12 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {/* Action Bar (Like, Dislike, Reply) */}
         {!isEditing && (
           <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500">
-            {/* FIX 3: Display likes count accurately */}
+            {/* Display likes count accurately */}
             <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-[#5667ff] ${reaction === "LIKE" ? "text-[#5667ff]" : ""}`}>
               <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> 
               {likesCount > 0 && likesCount}
             </button>
-            {/* FIX 4: Display dislikes count accurately */}
+            {/* Display dislikes count accurately */}
             <button onClick={() => handleReact("DISLIKE")} className={`flex items-center gap-1.5 transition hover:text-red-500 ${reaction === "DISLIKE" ? "text-red-500" : ""}`}>
               <ThumbsDown size={14} className={reaction === "DISLIKE" ? "fill-current" : ""} />
               {dislikesCount > 0 && dislikesCount}
@@ -236,13 +244,13 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
           <div className="flex gap-2 mt-3 animate-in fade-in slide-in-from-top-2">
             {currentUser?.image || currentUser?.company?.logoUrl ? (
               <img 
-                src={currentUser.image || currentUser.company.logoUrl} 
-                alt={currentUser?.name || "User"} 
+                src={currentUser.company.logoUrl || currentUser.image} 
+                alt={currentUser?.company?.companyName || currentUser?.name || "User"} 
                 className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
               />
             ) : (
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF0FF] text-sm font-bold text-[#5667ff]">
-                {currentUser?.name?.charAt(0) || "U"}
+                {(currentUser?.company?.companyName || currentUser?.name || "U").charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1">
