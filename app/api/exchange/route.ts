@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
         c."type",
         c."description",
         c."size",
+        c."isBoosted",
         c."yearOfEstablishment",
         (1 - (c."offeringVector" <=> ${formattedVector}::vector)) as "matchScore",
         (SELECT COUNT(*) FROM "Follow" WHERE "followingId" = u.id) as "followersCount",
@@ -62,29 +63,43 @@ export async function GET(req: NextRequest) {
       JOIN "User" u ON c."userId" = u.id
       WHERE c."userId" != ${user.id}
       AND c."offeringVector" IS NOT NULL
-      ORDER BY "matchScore" DESC
+      ORDER BY c."isBoosted" DESC, "matchScore" DESC
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const formattedData = matchedCompanies.map(company => {
+    let formattedData = matchedCompanies.map(company => {
       const overlaps = company.dealIn.filter((service: string) => 
-        crossConnections.some(cc => cc.toLowerCase() === service.toLowerCase())
+        crossConnections.some(cc => 
+          cc.toLowerCase().includes(service.toLowerCase()) || 
+          service.toLowerCase().includes(cc.toLowerCase())
+        )
       );
+
+      let matchReason = "";
+      if (overlaps.length > 0) {
+        matchReason = `They offer ${overlaps.join(", ")} which directly aligns with your required services.`;
+      } else if (crossConnections.length > 0) {
+        matchReason = `Because you offer ${currentCompany.dealIn[0] || 'your services'}, you might need ${crossConnections[0]}, which semantically matches their offerings in ${company.dealIn[0]}.`;
+      } else {
+        matchReason = `Matched based on robust business alignment with the ${company.type} sector.`;
+      }
 
       return {
         ...company,
-        followersCount: Number(company.followersCount),
-        connectionsCount: Number(company.connectionsCount),
+        followersCount: Number(company.followersCount || 0),
+        connectionsCount: Number(company.connectionsCount || 0),
         matchPercentage: Math.round(company.matchScore * 100),
-        matchReason: overlaps.length > 0 
-          ? `They offer ${overlaps.join(", ")} which you are looking for.` 
-          : "Matched based on business industry alignment.",
+        isBoosted: company.isBoosted,
+        matchReason: matchReason,
         author: {
           id: company.authorId,
           name: company.authorName,
         }
       };
     });
+
+    formattedData = formattedData.sort(() => Math.random() - 0.5);
+    formattedData = formattedData.sort((a, b) => (b.isBoosted === true ? 1 : 0) - (a.isBoosted === true ? 1 : 0));
 
     return NextResponse.json({
       success: true,
