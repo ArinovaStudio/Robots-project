@@ -332,7 +332,7 @@ model DirectMessage {
   content String @db.Text
   isEdited Boolean @default(false)
   isRead Boolean @default(false)
-
+  isDeleted Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

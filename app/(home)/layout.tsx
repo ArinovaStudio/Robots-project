@@ -4,6 +4,8 @@ import Navbar from "@/components/home/navbar";
 import LeftSidebar from "@/components/home/left-sidebar";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { SessionSync } from "@/components/SessionSync";
+import SocketAnnouncer from "@/components/SocketAnnouncer";
+import { useUserStore } from "@/store/AuthStore";
 
 export default function DashboardLayout({
   children,
@@ -15,9 +17,11 @@ export default function DashboardLayout({
   const segment = useSelectedLayoutSegment();
   const listItems = ["explore","search"];
   const showRightSidebar = segment && listItems.includes(segment);
+  const { user } = useUserStore();
 
   return (
     <SessionSync>
+      {user && <SocketAnnouncer userId={user.id} />}
     <div className="min-h-screen">
       <Navbar />
 
