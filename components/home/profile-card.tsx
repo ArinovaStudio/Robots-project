@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import EditProfileModal from "../modals/edit-profile-modal";
+import Link from "next/link";
 
 export default function ProfileCard({ profile, refreshProfile }: any) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -12,19 +13,21 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         <div className="flex flex-col items-center text-center">
           {/* Avatar */}
-          <div
-            className="
-              flex h-20 w-20 items-center justify-center overflow-hidden
-              rounded-full bg-[#EEF0FF] border border-slate-100
-              text-3xl font-bold text-[#5667ff]
-            "
-          >
-            {profile.logoUrl ? (
-              <img src={profile.logoUrl} alt="Logo" className="h-full w-full object-cover" />
-            ) : (
-              profile.companyName.charAt(0).toUpperCase()
-            )}
-          </div>
+           <Link href={`/profile`}>
+            <div
+              className="
+                flex h-20 w-20 items-center justify-center overflow-hidden
+                rounded-full bg-[#EEF0FF] border border-slate-100
+                text-3xl font-bold text-[#5667ff]
+              "
+            >
+              {profile.logoUrl ? (
+                <img src={profile.logoUrl} alt="Logo" className="h-full w-full object-cover" />
+              ) : (
+                profile.companyName.charAt(0).toUpperCase()
+              )}
+            </div>
+          </Link>
 
           {/* Name */}
           <h2 className="mt-3 text-lg font-semibold">

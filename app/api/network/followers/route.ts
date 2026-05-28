@@ -29,11 +29,23 @@ export async function GET(req: NextRequest) {
       prisma.follow.count({ where: { followingId: user.id } })
     ]);
 
+    const followerIds = followersData.map(f => f.follower.id);
+    const mutualFollows = await prisma.follow.findMany({
+      where: {
+        followerId: user.id,
+        followingId: { in: followerIds }
+      },
+      select: { followingId: true }
+    });
+
+    const mutualSet = new Set(mutualFollows.map(mf => mf.followingId));
+
     const formattedFollowers = followersData.map(f => ({
       followId: f.id,
       followedAt: f.createdAt,
       ...f.follower.company,
       userId: f.follower.id,
+      isFollowing: mutualSet.has(f.follower.id),
     }));
 
     return NextResponse.json({
