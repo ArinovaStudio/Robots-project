@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth";
 import { uploadImage, deleteFile } from "@/lib/uploads";
 import { syncVectors } from "@/lib/embeddings";
 import { startOfMonth } from "date-fns";
+import { generateUserDataset, getCrossConnections } from "@/lib/exchange";
 
 export async function GET() {
   try {
@@ -114,7 +115,20 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({ where: { id: user.id }, data: { isOnboarded: true } });
 
-    syncVectors(user.id, validation.data.description, validation.data.dealIn, validation.data.lookingFor);
+    (async () => {
+        const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
+        
+        let combinedNeeds = [...validation.data.lookingFor];
+
+        if (aiDataset) {
+          const aiRecommendations = getCrossConnections(aiDataset);
+          combinedNeeds = [...combinedNeeds, ...aiRecommendations];
+
+          await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
+        }
+
+        await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
+    })();
 
     return NextResponse.json({ success: true, message: "Profile created successfully" }, { status: 201 });
   } catch {
@@ -161,7 +175,20 @@ export async function PUT(req: NextRequest) {
       data: { ...validation.data, logoUrl }
     });
 
-    syncVectors(user.id, validation.data.description, validation.data.dealIn, validation.data.lookingFor);
+    (async () => {
+        const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
+        
+        let combinedNeeds = [...validation.data.lookingFor];
+
+        if (aiDataset) {
+          const aiRecommendations = getCrossConnections(aiDataset);
+          combinedNeeds = [...combinedNeeds, ...aiRecommendations];
+
+          await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
+        }
+
+        await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
+    })();
 
     return NextResponse.json({ success: true, message: "Profile updated successfully" }, { status: 200 });
   } catch {

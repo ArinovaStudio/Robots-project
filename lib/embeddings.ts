@@ -1,14 +1,20 @@
 import { Ollama } from "ollama";
 import { prisma } from "./prisma";
 
-const ollama = new Ollama();
+const ollama = new Ollama({ 
+  host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434' 
+});
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await ollama.embeddings({
-    model: 'nomic-embed-text',
-    prompt: text,
-  });
-  return response.embedding;
+  try {
+    const response = await ollama.embeddings({
+      model: 'nomic-embed-text',
+      prompt: text,
+    });
+    return response.embedding;
+  } catch {
+    throw new Error("Ollama embedding failed");
+  }
 }
 
 export async function syncVectors(userId: string, description: string, dealIn: string[], lookingFor: string[]) {

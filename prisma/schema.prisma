@@ -87,6 +87,9 @@ model CompanyProfile {
   offeringVector Unsupported("vector(768)")?
   needsVector Unsupported("vector(768)")?
   isBoosted Boolean @default(false)
+
+  exchangeDataset Json?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
