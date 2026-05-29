@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { redirect } from "next/navigation";
 import { globalSocket } from "@/components/SocketAnnouncer";
 import ChatHeader from "./chat-header";
 import MessageList from "./message-list";
@@ -30,9 +31,11 @@ export default function ChatClient({ currentUserId, targetUserId }: ChatClientPr
           setMessages(json.data.messages);
         } else {
           toast.error(json.message || "Failed to load chat.");
+          redirect("/profile/connections");
         }
       } catch {
         toast.error("An error occurred while loading the chat.");
+        redirect("/profile/connections");
       } finally {
         setLoading(false);
       }

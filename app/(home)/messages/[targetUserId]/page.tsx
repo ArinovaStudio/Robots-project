@@ -12,7 +12,7 @@ export default async function ChatPage({ params }: { params: Promise<{ targetUse
   const { targetUserId } = await params;
 
   if (user.id === targetUserId) {
-    redirect("/messages");
+    redirect("/profile/connections");
   }
 
   return (
