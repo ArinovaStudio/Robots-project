@@ -38,14 +38,32 @@ export default function TopRatedCompanies() {
     fetchCompanies(queryParam);
   }, [queryParam]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchQuery !== queryParam) {
+        const params = new URLSearchParams(searchParams);
+        if (searchQuery) {
+          params.set("search", searchQuery);
+        } else {
+          params.delete("search");
+        }
+        router.push(`${pathname}?${params.toString()}`);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery, queryParam, pathname, router, searchParams]);
+
   const handleSearch = () => {
-    const params = new URLSearchParams(searchParams);
-    if (searchQuery) {
-      params.set("search", searchQuery);
-    } else {
-      params.delete("search");
+    if (searchQuery !== queryParam) {
+      const params = new URLSearchParams(searchParams);
+      if (searchQuery) {
+        params.set("search", searchQuery);
+      } else {
+        params.delete("search");
+      }
+      router.push(`${pathname}?${params.toString()}`);
     }
-    router.push(`${pathname}?${params.toString()}`);
   };
 
   return (
@@ -78,6 +96,10 @@ export default function TopRatedCompanies() {
               </div>
             ))}
           </SkeletonTheme>
+        ) : companies.length === 0 ? (
+           <div className="text-center py-20 text-slate-500 bg-white rounded-[28px] border border-slate-100 shadow-sm">
+             No companies found matching "{queryParam}".
+           </div>
         ) : (
           companies.map((company) => (
             <CompanyCard key={company.id} company={company} />

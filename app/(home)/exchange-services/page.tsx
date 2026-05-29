@@ -2,38 +2,35 @@
 
 import { useEffect, useState, useCallback } from "react";
 import ExchangeCard from "@/components/home/exchange/exchange-card";
-import { Loader2 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import "react-loading-skeleton/dist/skeleton.css";
 
 export default function ExchangeServicesPage() {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchMatches = useCallback(async (pageNum: number, append = false) => {
-    if (append) setLoadingMore(true);
-    else setLoading(true);
+  const fetchMatches = useCallback(async (pageNum: number) => {
+    setLoading(true);
+    
+    window.scrollTo({ top: 0, behavior: "smooth" });
 
     try {
       const res = await fetch(`/api/exchange?page=${pageNum}&limit=10`);
       const json = await res.json();
       
       if (json.success) {
-        if (append) {
-          setCompanies(prev => [...prev, ...json.data]);
-        } else {
-          setCompanies(json.data);
-        }
-        setHasMore(pageNum < json.pagination.totalPages);
+        setCompanies(json.data);
+        setTotalPages(json.pagination.totalPages || 1);
+        setPage(pageNum);
       }
     } catch (error) {
       console.error("Failed to load exchange services", error);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   }, []); 
 
@@ -63,7 +60,7 @@ export default function ExchangeServicesPage() {
           </SkeletonTheme>
         </div>
       ) : companies.length === 0 ? (
-        <div className="text-center py-20 text-slate-500 bg-white rounded-3xl border border-slate-100">
+        <div className="text-center py-20 text-slate-500 bg-white rounded-3xl border border-slate-100 shadow-sm">
            No matching partners found at the moment.
         </div>
       ) : (
@@ -72,23 +69,31 @@ export default function ExchangeServicesPage() {
             <ExchangeCard key={c.id} company={c} />
           ))}
 
-          {/* Load More Button */}
-          {hasMore && (
-            <button 
-              onClick={() => {
-                const nextPage = page + 1;
-                setPage(nextPage);
-                fetchMatches(nextPage, true);
-              }}
-              disabled={loadingMore}
-              className="w-full py-4 text-sm font-bold text-[#5667ff] hover:bg-[#EEF0FF] rounded-2xl transition flex items-center justify-center gap-2 border border-slate-100 bg-white"
-            >
-              {loadingMore ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                "Load More Partners"
-              )}
-            </button>
+          {/* Pagination Bar */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 bg-white px-6 py-4 rounded-2xl border border-slate-100 shadow-sm">
+              <button 
+                onClick={() => fetchMatches(page - 1)}
+                disabled={page === 1 || loading}
+                className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 text-slate-700"
+              >
+                <ChevronLeft size={18} />
+                Previous
+              </button>
+              
+              <div className="text-sm font-semibold text-slate-500">
+                Page <span className="text-slate-900">{page}</span> of {totalPages}
+              </div>
+              
+              <button 
+                onClick={() => fetchMatches(page + 1)}
+                disabled={page >= totalPages || loading}
+                className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 text-slate-700"
+              >
+                Next
+                <ChevronRight size={18} />
+              </button>
+            </div>
           )}
         </div>
       )}

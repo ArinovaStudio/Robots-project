@@ -38,6 +38,15 @@ export async function GET(req: NextRequest) {
 
     if (!formattedVector) return NextResponse.json({ success: true, data: [] });
 
+    const countQuery = await prisma.$queryRaw<any[]>`
+      SELECT COUNT(*) as "total"
+      FROM "CompanyProfile" c
+      WHERE c."userId" != ${user.id}
+      AND c."offeringVector" IS NOT NULL
+    `;
+    const totalRecords = Number(countQuery[0]?.total || 0);
+    const totalPages = Math.ceil(totalRecords / limit);
+
     const matchedCompanies = await prisma.$queryRaw<any[]>`
       SELECT 
         c.id, c."companyName", c."logoUrl", c."dealIn", c."type", c."description", c."size", c."isBoosted", c."yearOfEstablishment",
@@ -74,7 +83,11 @@ export async function GET(req: NextRequest) {
     formattedData = formattedData.sort(() => Math.random() - 0.5);
     formattedData = formattedData.sort((a, b) => (b.isBoosted === true ? 1 : 0) - (a.isBoosted === true ? 1 : 0));
 
-    return NextResponse.json({ success: true, data: formattedData, pagination: { page, limit } });
+    return NextResponse.json({ 
+      success: true, 
+      data: formattedData, 
+      pagination: { page, limit, totalPages } 
+    });
   } catch {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }

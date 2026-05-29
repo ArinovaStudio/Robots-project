@@ -16,11 +16,9 @@ export default async function ChatPage({ params }: { params: Promise<{ targetUse
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <ChatClient 
-        currentUserId={user.id} 
-        targetUserId={targetUserId} 
-      />
-    </div>
+    <ChatClient 
+      currentUserId={user.id} 
+      targetUserId={targetUserId} 
+    />
   );
 }

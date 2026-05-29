@@ -11,22 +11,38 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "10", 10)));
+    const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "15", 10)));
     const skip = (page - 1) * limit;
+    const search = searchParams.get("search") || "";
+
+    const whereClause: any = {
+      status: "ACCEPTED",
+      OR: [ { senderId: user.id }, { receiverId: user.id } ]
+    };
+
+    if (search) {
+      whereClause.AND = [
+        {
+          OR: [
+            { sender: { company: { companyName: { contains: search, mode: "insensitive" } } } },
+            { receiver: { company: { companyName: { contains: search, mode: "insensitive" } } } }
+          ]
+        }
+      ];
+    }
 
     const [connections, totalCount] = await Promise.all([
       prisma.connection.findMany({
-        where: { status: "ACCEPTED",
-          OR: [ { senderId: user.id }, { receiverId: user.id } ]
-        },
-        skip, take: limit,
+        where: whereClause,
+        skip, 
+        take: limit,
         orderBy: { updatedAt: 'desc' },
         include: {
           sender: { select: { id: true, company: true } },
           receiver: { select: { id: true, company: true } }
         }
       }),
-      prisma.connection.count({ where: { status: "ACCEPTED", OR: [{ senderId: user.id }, { receiverId: user.id }] } })
+      prisma.connection.count({ where: whereClause })
     ]);
 
     const formattedConnections = connections.map(conn => {

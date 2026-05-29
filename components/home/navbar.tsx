@@ -1,4 +1,5 @@
-import { Boxes, Network, Sparkles } from "lucide-react";
+import { Boxes, Network, Sparkles, MessageSquare } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
@@ -10,18 +11,27 @@ export default function Navbar() {
 
         <div className="flex items-center gap-8">
           <NavItem
+            href="/categories"
             icon={<Sparkles size={16} />}
             label="Categories"
           />
 
           <NavItem
+            href="/expand"
             icon={<Network size={16} />}
             label="Expand Business"
           />
 
           <NavItem
+            href="/explore"
             icon={<Boxes size={16} />}
             label="Explore Services"
+          />
+
+          <NavItem
+            href="/messages"
+            icon={<MessageSquare size={16} />}
+            label="Messages"
           />
         </div>
       </div>
@@ -32,17 +42,21 @@ export default function Navbar() {
 function NavItem({
   icon,
   label,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
+  href: string;
 }) {
   return (
-    <div className="flex cursor-pointer flex-col items-center gap-0.5 text-slate-500 transition hover:text-black">
+    <Link 
+      href={href}
+      className="flex cursor-pointer flex-col items-center gap-0.5 text-slate-500 transition hover:text-black"
+    >
       {icon}
-
       <span className="text-[11px] font-medium">
         {label}
       </span>
-    </div>
+    </Link>
   );
 }
