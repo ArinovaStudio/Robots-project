@@ -11,7 +11,7 @@ import PostComments from "./post-comments";
 import MediaSlider from "./media-slider";
 import Link from "next/link";
 
-export default function FeedCard({ post, currentUser }: { post: any, currentUser: any }) {
+export default function FeedCard({ post, currentUser, onUnsave }: { post: any, currentUser: any, onUnsave?: () => void }) {
   const [isDeleted, setIsDeleted] = useState(false);
   const [currentPost, setCurrentPost] = useState(post);
 
@@ -62,11 +62,17 @@ export default function FeedCard({ post, currentUser }: { post: any, currentUser
   };
 
   const handleSave = async () => {
-    setIsSaved(!isSaved);
+    const newSavedState = !isSaved;
+    setIsSaved(newSavedState);
+    
+    if (!newSavedState && onUnsave) {
+      onUnsave();
+    }
+
     try {
       await fetch(`/api/posts/${currentPost.id}/save`, { method: "POST" });
     } catch {
-      setIsSaved(isSaved);
+      setIsSaved(!newSavedState);
     }
   };
 

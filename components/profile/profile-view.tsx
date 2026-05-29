@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   MapPin, Link as LinkIcon, Users, Building2, UserPlus, 
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers 
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark 
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -289,6 +289,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
         {/* Sidebar Info Panel */}
         <div className="space-y-6">
+          {/* Details Card */}
           <div className="rounded-[32px] bg-white p-8 shadow-sm border border-slate-100 space-y-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2">Details</h2>
             
@@ -330,6 +331,55 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               </div>
             </div>
           </div>
+
+          {/* Activity & Posts Card */}
+          <div className="rounded-[32px] bg-white p-6 shadow-sm border border-slate-100 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-3 px-2">Activity</h2>
+            
+            {viewerState.isOwnProfile ? (
+              <>
+                <Link 
+                  href={`/profile/${userId}/posts`}
+                  className="flex items-center gap-4 w-full p-3 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100 group"
+                >
+                  <div className="p-2.5 bg-indigo-50 text-[#5667ff] rounded-xl group-hover:scale-105 transition-transform">
+                    <Layers size={18} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-800 text-sm">My Posts</span>
+                    <span className="text-[11px] text-slate-500 font-medium">View your recent updates</span>
+                  </div>
+                </Link>
+                
+                <Link 
+                  href={`/profile/saved-posts`}
+                  className="flex items-center gap-4 w-full p-3 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100 group"
+                >
+                  <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-105 transition-transform">
+                    <Bookmark size={18} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-800 text-sm">Saved Posts</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Posts you've bookmarked</span>
+                  </div>
+                </Link>
+              </>
+            ) : (
+              <Link 
+                href={`/profile/${userId}/posts`}
+                className="flex items-center gap-4 w-full p-3 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100 group"
+              >
+                <div className="p-2.5 bg-indigo-50 text-[#5667ff] rounded-xl group-hover:scale-105 transition-transform">
+                  <Layers size={18} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-slate-800 text-sm">View All Posts</span>
+                  <span className="text-[11px] text-slate-500 font-medium">See their recent updates</span>
+                </div>
+              </Link>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
