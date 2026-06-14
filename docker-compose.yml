@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: robots_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: robots_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -20,4 +33,5 @@ services:
     entrypoint: ["/bin/sh", "-c", "echo 'Waiting for Ollama...' && sleep 5 && ollama pull nomic-embed-text && ollama pull phi3 && echo 'Models downloaded successfully!'"]
 
 volumes:
+  postgres_data:
   ollama_storage:
