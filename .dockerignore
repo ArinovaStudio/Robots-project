@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env*
+node_modules
+.next
+server-dist
+prisma/migrations
+*.md
+Dockerfile
+.dockerignore
+Jenkinsfile
+docker-compose.yml
+/tmp
