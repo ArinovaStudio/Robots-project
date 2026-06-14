@@ -33,10 +33,35 @@ export async function GET(req: NextRequest) {
     if (!formattedVector && crossConnections.length > 0) {
       const syntheticNeedsText = `Looking for: ${crossConnections.join(", ")}`;
       const fallbackVector = await generateEmbedding(syntheticNeedsText);
-      formattedVector = `[${fallbackVector.join(",")}]`;
+      if (fallbackVector) formattedVector = `[${fallbackVector.join(",")}]`;
     }
 
-    if (!formattedVector) return NextResponse.json({ success: true, data: [] });
+    // No vector available — return keyword-based fallback
+    if (!formattedVector) {
+      const keywordMatches = await prisma.$queryRaw<any[]>`
+        SELECT
+          c.id, c."companyName", c."logoUrl", c."dealIn", c."type", c."description", c."size", c."isBoosted", c."yearOfEstablishment",
+          0.75 as "matchScore",
+          (SELECT COUNT(*) FROM "Follow" WHERE "followingId" = u.id) as "followersCount",
+          (SELECT COUNT(*) FROM "Connection" WHERE ("senderId" = u.id OR "receiverId" = u.id) AND "status" = 'ACCEPTED') as "connectionsCount",
+          u.id as "authorId", u.name as "authorName"
+        FROM "CompanyProfile" c
+        JOIN "User" u ON c."userId" = u.id
+        WHERE c."userId" != ${user.id}
+        ORDER BY c."isBoosted" DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `;
+      const total = await prisma.companyProfile.count({ where: { userId: { not: user.id } } });
+      const data = keywordMatches.map(c => ({
+        ...c,
+        followersCount: Number(c.followersCount || 0),
+        connectionsCount: Number(c.connectionsCount || 0),
+        matchPercentage: 75,
+        matchReason: `This company operates in ${c.dealIn[0]}, which may align with your business needs.`,
+        author: { id: c.authorId, name: c.authorName }
+      }));
+      return NextResponse.json({ success: true, data, pagination: { page, limit, totalPages: Math.ceil(total / limit) } });
+    }
 
     const countQuery = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*) as "total"

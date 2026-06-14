@@ -14,24 +14,5 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_storage:/root/.ollama
-
-  ollama-init:
-    image: ollama/ollama:latest
-    container_name: ollama-init
-    depends_on:
-      - ollama
-    environment:
-      - OLLAMA_HOST=ollama:11434
-    entrypoint: ["/bin/sh", "-c", "echo 'Waiting for Ollama...' && sleep 5 && ollama pull nomic-embed-text && ollama pull phi3 && echo 'Models downloaded successfully!'"]
-
 volumes:
   postgres_data:
-  ollama_storage:

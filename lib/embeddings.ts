@@ -5,7 +5,7 @@ const ollama = new Ollama({
   host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434' 
 });
 
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string): Promise<number[] | null> {
   try {
     const response = await ollama.embeddings({
       model: 'nomic-embed-text',
@@ -13,7 +13,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     });
     return response.embedding;
   } catch {
-    throw new Error("Ollama embedding failed");
+    return null;
   }
 }
 
@@ -27,14 +27,27 @@ export async function syncVectors(userId: string, description: string, dealIn: s
       : "general business growth networking partnership";
     const needsVector = await generateEmbedding(needsText);
 
-    const formattedOffering = `[${offeringVector.join(",")}]`;
-    const formattedNeeds = `[${needsVector.join(",")}]`;
-
-    await prisma.$executeRaw`
-      UPDATE "CompanyProfile" 
-      SET "offeringVector" = ${formattedOffering}::vector, "needsVector" = ${formattedNeeds}::vector 
-      WHERE "userId" = ${userId}
-    `;
+    if (offeringVector && needsVector) {
+      const fv = `[${offeringVector.join(",")}]`;
+      const nv = `[${needsVector.join(",")}]`;
+      await prisma.$executeRaw`
+        UPDATE "CompanyProfile"
+        SET "offeringVector" = ${fv}::vector, "needsVector" = ${nv}::vector
+        WHERE "userId" = ${userId}
+      `;
+    } else if (offeringVector) {
+      const fv = `[${offeringVector.join(",")}]`;
+      await prisma.$executeRaw`
+        UPDATE "CompanyProfile" SET "offeringVector" = ${fv}::vector WHERE "userId" = ${userId}
+      `;
+    } else if (needsVector) {
+      const nv = `[${needsVector.join(",")}]`;
+      await prisma.$executeRaw`
+        UPDATE "CompanyProfile" SET "needsVector" = ${nv}::vector WHERE "userId" = ${userId}
+      `;
+    } else {
+      return;
+    }
     
   } catch (error) {
     console.error("Vector Sync Error:", error);
