@@ -12,22 +12,22 @@ export const bricolageGrotesque = Bricolage_Grotesque({
 export const sfPro = localFont({
   src: [
     {
-      path: "./locals/sf-pro-display/SFPRODISPLAYREGULAR.otf",
+      path: "./locals/sf-pro-display/SFPRODISPLAYREGULAR.OTF",
       weight: "400",
       style: "normal",
     },
     {
-      path: "./locals/sf-pro-display/SFPRODISPLAYMEDIUM.otf",
+      path: "./locals/sf-pro-display/SFPRODISPLAYMEDIUM.OTF",
       weight: "500",
       style: "normal",
     },
     {
-      path: "./locals/sf-pro-display/SFPRODISPLAYMEDIUM.otf",
+      path: "./locals/sf-pro-display/SFPRODISPLAYMEDIUM.OTF",
       weight: "600",
       style: "normal",
     },
     {
-      path: "./locals/sf-pro-display/SFPRODISPLAYBOLD.otf",
+      path: "./locals/sf-pro-display/SFPRODISPLAYBOLD.OTF",
       weight: "700",
       style: "normal",
     },
