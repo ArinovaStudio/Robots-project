@@ -8,7 +8,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 
@@ -30,7 +30,7 @@ ENV NODE_ENV=production
 
 # Install production deps only
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # Prisma generated engine (produced by builder's `prisma generate`)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
