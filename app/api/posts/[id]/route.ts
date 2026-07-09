@@ -1,0 +1,201 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getOnboardedUser, getUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { uploadFile, uploadImage, deleteFile } from "@/lib/uploads";
+import { validateTextContent } from "@/lib/textFilter";
+
+export async function GET( req: NextRequest, { params }: { params: Promise<{ id: string }> } ) {
+  try {
+    const { user } = await getUser();
+    const { id } = await params;
+
+    const post = await prisma.post.findUnique({
+      where: { id, status: "ACTIVE" },
+      include: {
+        media: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            company: { 
+              select: { 
+                companyName: true, 
+                logoUrl: true, 
+                isBoosted: true,
+                website: true,
+                location: true,
+                lookingFor: true
+              } 
+            }
+          }
+        },
+        _count: { select: { comments: true } },
+        ...(user?.id ? {
+          reactions: { where: { userId: user.id }, select: { type: true } },
+          savedBy: { where: { userId: user.id }, select: { id: true } }
+        } : {})
+      }
+    });
+
+    if (!post) {
+      return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
+    }
+
+    const reactionCounts = await prisma.postReaction.groupBy({
+      by: ['type'],
+      where: { postId: id },
+      _count: { type: true }
+    });
+
+    const likes = reactionCounts.find(r => r.type === "LIKE")?._count.type || 0;
+    const dislikes = reactionCounts.find(r => r.type === "DISLIKE")?._count.type || 0;
+
+    const formattedPost = {
+      ...post,
+      userReaction: (post as any).reactions?.[0]?.type || null,
+      isSaved: (post as any).savedBy?.length > 0,
+      likesCount: likes,
+      dislikesCount: dislikes 
+    };
+
+    delete (formattedPost as any).reactions;
+    delete (formattedPost as any).savedBy;
+
+    return NextResponse.json({ success: true, data: formattedPost }, { status: 200 });
+
+  } catch {
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PUT( req: NextRequest, { params }: { params: Promise<{ id: string }> } ) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user){
+        return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const existingPost = await prisma.post.findUnique({
+      where: { id },
+      include: { media: true }
+    });
+
+    if (!existingPost){
+        return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
+    }
+
+    if (existingPost.authorId !== user.id){
+        return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 403 });
+    }
+
+    if (existingPost.status === "SUSPENDED") {
+        return NextResponse.json({ success: false, message: "This post is suspended and cannot be edited" }, { status: 403 });
+    }
+
+    const formData = await req.formData();
+    const content = formData.get("content")?.toString() || null;
+
+    if (content) {
+      const textValidation = validateTextContent(content);
+      if (!textValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Your edit contains inappropriate language that violates our community guidelines" 
+        }, { status: 400 });
+      }
+    }
+
+    const newMediaFiles = formData.getAll("newMedia") as File[];
+    const deletedMediaIdsStr = formData.get("deletedMediaIds")?.toString() || "[]";
+
+    let deletedMediaIds: string[] = [];
+    try {
+      deletedMediaIds = JSON.parse(deletedMediaIdsStr);
+    } catch {
+      deletedMediaIds = [];
+    }
+
+    if (deletedMediaIds.length > 0) {
+      const mediaToDelete = existingPost.media.filter(m => deletedMediaIds.includes(m.id));
+      
+      await Promise.all(mediaToDelete.map(m => deleteFile(m.url)));
+      
+      await prisma.postMedia.deleteMany({ where: { id: { in: deletedMediaIds }, postId: id } });
+    }
+
+    let uploadedMediaData: { url: string; type: "IMAGE" | "VIDEO" | "DOCUMENT" }[] = [];
+
+    if (newMediaFiles.length > 0) {
+      const uploadPromises = newMediaFiles.map(async (file) => {
+        const mimeType = file.type;
+        let mediaType: "IMAGE" | "VIDEO" | "DOCUMENT";
+        let url: string;
+
+        if (mimeType.startsWith("image/")) {
+          mediaType = "IMAGE";
+          url = await uploadImage(file, "posts/images");
+        } else if (mimeType.startsWith("video/")) {
+          mediaType = "VIDEO";
+          url = await uploadFile(file, "posts/videos");
+        } else {
+          mediaType = "DOCUMENT";
+          url = await uploadFile(file, "posts/documents");
+        }
+        return { url, type: mediaType };
+      });
+
+      uploadedMediaData = await Promise.all(uploadPromises);
+    }
+
+    await prisma.post.update({
+      where: { id },
+      data: {
+        content,
+        isEdited: true,
+        media: { create: uploadedMediaData }
+      },
+    });
+
+    return NextResponse.json({ success: true, message: "Post updated successfully" });
+
+  } catch {
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE( req: NextRequest, { params }: { params: Promise<{ id: string }> } ) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user){
+        return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const existingPost = await prisma.post.findUnique({
+      where: { id },
+      include: { media: true }
+    });
+
+    if (!existingPost){
+        return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
+    }
+
+    if (existingPost.authorId !== user.id){
+        return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 403 });
+    }
+
+    if (existingPost.media.length > 0) {
+      await Promise.all(existingPost.media.map(m => deleteFile(m.url)));
+    }
+
+    await prisma.post.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, message: "Post deleted successfully" }, { status: 200 });
+
+  } catch {
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
