@@ -5,26 +5,43 @@ import ExchangeCard from "@/components/home/exchange/exchange-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import "react-loading-skeleton/dist/skeleton.css";
-import { findBusinessCompanies } from "@/lib/findBusinessesData";
 
 export default function FindBusinessesPage() {
-  const [companies, setCompanies] = useState(findBusinessCompanies);
-  const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 3;
-  const totalPages = Math.ceil(findBusinessCompanies.length / itemsPerPage);
 
   const fetchMatches = useCallback(async (pageNum: number) => {
     setLoading(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    const start = (pageNum - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
+    try {
+      const res = await fetch("/api/match/similar");
+      const json = await res.json();
+      console.log(json);
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    setCompanies(findBusinessCompanies.slice(start, end));
-    setPage(pageNum);
-    setLoading(false);
+      if (json.success) {
+        const allCompanies = json.data || [];
+        const start = (pageNum - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+
+        setCompanies(allCompanies.slice(start, end));
+        setTotalPages(
+          Math.max(1, Math.ceil(allCompanies.length / itemsPerPage)),
+        );
+        setPage(pageNum);
+      } else {
+        setCompanies([]);
+        setTotalPages(1);
+      }
+    } catch {
+      setCompanies([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -62,7 +79,11 @@ export default function FindBusinessesPage() {
       ) : (
         <div className="grid gap-4">
           {companies.map((company) => (
-            <ExchangeCard key={company.id} company={company} />
+            
+            <ExchangeCard
+              key={company.userId || company.id}
+              company={company}
+            />
           ))}
 
           {totalPages > 1 && (

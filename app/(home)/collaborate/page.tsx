@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import CompanyCard from "@/components/home/search/company-card";
 import CompanySearch from "@/components/home/search/company-search";
-import { collaborateCompanies } from "@/lib/collaborateData";
 import "react-loading-skeleton/dist/skeleton.css";
 
 export default function CollaboratePage() {
@@ -16,37 +15,37 @@ export default function CollaboratePage() {
 
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [loading, setLoading] = useState(true);
+  const [companies, setCompanies] = useState<any[]>([]);
 
-  const companies = useMemo(() => {
-    const query = queryParam.trim().toLowerCase();
+  const fetchConnections = useCallback(async (search: string) => {
+    setLoading(true);
 
-    if (!query) {
-      return collaborateCompanies;
+    try {
+      const params = new URLSearchParams({ page: "1", limit: "50" });
+      if (search) params.set("search", search);
+
+      const res = await fetch(
+        `/api/network/connect/connections?${params.toString()}`,
+      );
+      const json = await res.json();
+      console.log(json);
+
+      if (json.success) {
+        setCompanies(json.data || []);
+      } else {
+        setCompanies([]);
+      }
+    } catch {
+      setCompanies([]);
+    } finally {
+      setLoading(false);
     }
-
-    return collaborateCompanies.filter((company) =>
-      [
-        company.companyName,
-        company.type,
-        company.description,
-        String(company.yearOfEstablishment),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [queryParam]);
+  }, []);
 
   useEffect(() => {
     setSearchQuery(queryParam);
-    setLoading(true);
-
-    const timer = window.setTimeout(() => {
-      setLoading(false);
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [queryParam]);
+    fetchConnections(queryParam);
+  }, [queryParam, fetchConnections]);
 
   useEffect(() => {
     const handler = window.setTimeout(() => {
@@ -125,7 +124,7 @@ export default function CollaboratePage() {
           </div>
         ) : (
           companies.map((company) => (
-            <CompanyCard key={company.id} company={company} />
+            <CompanyCard key={company.userId || company.id} company={company} />
           ))
         )}
       </div>
