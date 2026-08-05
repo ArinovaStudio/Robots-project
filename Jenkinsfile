@@ -182,8 +182,20 @@ podTemplate(
                     passwordVariable: 'REGISTRY_PASS'
                 )]) {
                     sh """
-                        for i in {1..10}; do
+                        # Two real bugs found and fixed live against build #1 (confirmed via the
+                        # registry's own access log, not guessed): (1) Jenkins' default `sh` step
+                        # runs dash, not bash -- \\`for i in {1..10}\\` brace expansion silently
+                        # does NOT happen under dash, so the loop only ever ran once. Replaced with
+                        # a portable seq-based loop. (2) A bare curl GET with no Accept header hit
+                        # the registry's own real response: 404 "OCI manifest found, but accept
+                        # header does not support OCI manifests" -- Kaniko pushes OCI-format
+                        # manifests (\\`Content-Type: application/vnd.oci.image.manifest.v1+json\\`
+                        # in the registry's own PUT log for this exact push), so the check has to
+                        # ask for that format explicitly instead of relying on curl's default
+                        # Accept: */*.
+                        for i in \$(seq 1 10); do
                             if curl -sf -u "\$REGISTRY_USER:\$REGISTRY_PASS" \\
+                                -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \\
                                 -o /dev/null \\
                                 http://${registry}/v2/robots-project/manifests/${gitSha}; then
                                 echo "Registry manifest check passed for tag ${gitSha}"
