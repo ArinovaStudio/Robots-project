@@ -150,7 +150,7 @@ podTemplate(
                         rm -rf azyntor-k8s
                         git clone https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/azyntor-labs/azyntor-k8s.git
                         cd azyntor-k8s
-                        sed -i 's/^  tag: .*/  tag: ${gitSha}/' charts/robots-project/values-prod.yaml
+                        sed -i 's/^  tag: .*/  tag: "${gitSha}"/' charts/robots-project/values-prod.yaml
                         git config user.email "jenkins@azyntorlabs.com"
                         git config user.name "Jenkins (robots-project-prod)"
                         git add charts/robots-project/values-prod.yaml
