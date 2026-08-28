@@ -77,7 +77,7 @@ export default function TopRatedCompanies() {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Top Rated Companies</h2>
+        <h2 className="text-xl font-bold text-gray-900">Find Businesses</h2>
         <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{total} results</span>
       </div>
 

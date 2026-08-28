@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, ThumbsDown, Flag, Edit2, Trash2 } from "lucide-react";
+import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, ThumbsDown, Flag, Edit2, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
 import ShareModal from "../modals/share-modal";
 import ReportModal from "../modals/report-modal";
@@ -98,8 +98,8 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   if (isDeleted || !currentPost) return null; 
 
   return (
-    <div className="flex flex-col">
-      <div className="bg-background p-4 rounded-2xl relative shadow-sm border border-slate-100">
+    <div className="bg-white border border-gray-200 rounded-lg mb-4 flex flex-col">
+      <div className="p-4 relative">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -107,23 +107,25 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
               {currentPost.author?.company?.logoUrl ? (
                 <img 
                   src={currentPost.author.company.logoUrl} 
-                  className="h-10 w-10 rounded-full object-cover hover:opacity-80 transition" 
+                  className="h-12 w-12 rounded-full object-cover border border-gray-100 hover:opacity-80 transition" 
                   alt="Logo" 
                 />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF0FF] text-base font-bold text-[#5667ff] hover:opacity-80 transition">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-600 hover:opacity-80 transition">
                   {authorInitials}
                 </div>
               )}
             </Link>
             <div>
-              <h3 className="text-lg font-semibold">{authorName}</h3>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs text-slate-400">
+              <Link href={`/profile/${currentPost.author?.id}`}>
+                <h3 className="text-sm font-bold text-gray-900 hover:text-blue-600 hover:underline">{authorName}</h3>
+              </Link>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-xs text-gray-500">
                   {new Date(currentPost.isEdited ? currentPost.updatedAt : currentPost.createdAt).toLocaleDateString()}
                 </p>
                 {currentPost.isEdited && (
-                  <span className="text-[10px] italic text-slate-400">(edited)</span>
+                  <span className="text-[10px] text-gray-400">• Edited</span>
                 )}
               </div>
             </div>
@@ -131,23 +133,23 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
 
           {/* 3-Dots Menu */}
           <div className="relative">
-            <button onClick={() => setShowDropdown(!showDropdown)} className="text-slate-500 hover:bg-slate-50 p-1.5 rounded-full transition">
+            <button onClick={() => setShowDropdown(!showDropdown)} className="text-gray-500 hover:bg-gray-100 p-1.5 rounded-full transition">
               <MoreVertical size={18} />
             </button>
             
             {showDropdown && (
-              <div className="absolute right-0 top-8 w-36 bg-white border border-slate-200 shadow-md rounded-xl z-20 overflow-hidden py-1">
+              <div className="absolute right-0 top-8 w-36 bg-white border border-gray-200 shadow-md rounded-md z-20 overflow-hidden py-1">
                 {isAuthor ? (
                   <>
-                    <button onClick={() => { setShowEdit(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50">
+                    <button onClick={() => { setShowEdit(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       <Edit2 size={14} /> Edit Post
                     </button>
-                    <button onClick={() => { setShowDeleteConfirm(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 border-t border-slate-50">
+                    <button onClick={() => { setShowDeleteConfirm(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                       <Trash2 size={14} /> Delete
                     </button>
                   </>
                 ) : (
-                  <button onClick={() => { setShowReport(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-red-600 hover:bg-slate-50">
+                  <button onClick={() => { setShowReport(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-50">
                     <Flag size={14} /> Report
                   </button>
                 )}
@@ -157,39 +159,51 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         </div>
 
         {/* Content */}
-        <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600 whitespace-pre-wrap">
+        <div className="mt-3 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
           {currentPost.content}
         </div>
+      </div>
         
-        {currentPost.media && currentPost.media.length > 0 && (
+      {currentPost.media && currentPost.media.length > 0 && (
+        <div className="bg-gray-50 border-y border-gray-100">
           <MediaSlider 
             key={currentPost.media.map((m: any) => m.id).join('-')} 
             media={currentPost.media} 
           />
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Social Counts */}
+      {(likesCount > 0 || dislikesCount > 0 || currentPost._count?.comments > 0) && (
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            {likesCount > 0 && <span className="flex items-center gap-1"><ThumbsUp size={12} className="text-blue-500 fill-blue-500" /> {likesCount}</span>}
+            {dislikesCount > 0 && <span className="flex items-center gap-1 ml-2"><ThumbsDown size={12} className="text-red-500 fill-red-500" /> {dislikesCount}</span>}
+          </div>
+          <div>
+            {currentPost._count?.comments > 0 && <span>{currentPost._count.comments} comments</span>}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
-      <div className="mt-3 flex items-center gap-2 flex-wrap">
-        <button onClick={() => handleReact("LIKE")} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-full text-xs font-medium transition shadow-sm ${reaction === "LIKE" ? 'bg-[#5667ff] text-white' : 'bg-background hover:bg-[#ececec] text-slate-700'}`}>
-          <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> {likesCount > 0 ? likesCount : "Like"}
+      <div className="px-2 py-1 flex items-center justify-between">
+        <button onClick={() => handleReact("LIKE")} className={`flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-sm font-medium transition-colors ${reaction === "LIKE" ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
+          <ThumbsUp size={18} className={reaction === "LIKE" ? "fill-current" : ""} /> Like
         </button>
-        <button onClick={() => handleReact("DISLIKE")} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-full text-xs font-medium transition shadow-sm ${reaction === "DISLIKE" ? 'bg-red-500 text-white' : 'bg-background hover:bg-[#ececec] text-slate-700'}`}>
-          <ThumbsDown size={14} className={reaction === "DISLIKE" ? "fill-current" : ""} /> {dislikesCount > 0 && dislikesCount}
+        <button onClick={() => setShowComments(!showComments)} className="flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900">
+          <MessageCircle size={18} /> Comment
         </button>
-        <button onClick={() => setShowComments(!showComments)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-full bg-background text-slate-700 text-xs font-medium transition hover:bg-[#ececec] shadow-sm">
-          <MessageCircle size={14} /> {currentPost._count?.comments > 0 ? currentPost._count.comments : "Comments"}
+        <button onClick={handleSave} className={`flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-sm font-medium transition-colors ${isSaved ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
+          <Bookmark size={18} className={isSaved ? "fill-current" : ""} /> Save
         </button>
-        <button onClick={() => setShowShare(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-full bg-background text-slate-700 text-xs font-medium transition hover:bg-[#ececec] shadow-sm">
-          <Share2 size={14} /> Share
-        </button>
-        <button onClick={handleSave} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-full text-xs font-medium transition ${isSaved ? 'bg-black text-white' : 'bg-background text-slate-700 hover:bg-[#ececec] shadow-sm'}`}>
-          <Bookmark size={14} className={isSaved ? "fill-current" : ""} /> {isSaved ? "Saved" : "Save"}
+        <button onClick={() => setShowShare(true)} className="flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900">
+          <Send size={18} /> Send
         </button>
       </div>
 
       {showComments && (
-        <div className="mt-3">
+        <div className="bg-gray-50 border-t border-gray-100 rounded-b-lg">
           <PostComments postId={currentPost.id} currentUser={currentUser} />
         </div>
       )}

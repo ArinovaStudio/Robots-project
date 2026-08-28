@@ -10,10 +10,10 @@ export default function CompanySearch({ value, onChange, onSearch }: any) {
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onSearch()}
         placeholder="Search for Company Name, Topics, Categories..."
-        className="h-14 rounded-full border-none bg-white px-6 text-sm shadow-none focus-visible:ring-0"
+        className="h-12 rounded-lg border border-gray-200 bg-white px-4 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500"
       />
-      <Button onClick={onSearch} size="icon" className="size-14 rounded-full bg-black hover:bg-black/90">
-        <Search className="size-5" />
+      <Button onClick={onSearch} size="icon" className="h-12 w-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+        <Search className="h-5 w-5" />
       </Button>
     </div>
   );

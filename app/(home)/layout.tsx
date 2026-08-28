@@ -24,7 +24,7 @@ export default function DashboardLayout({
   return (
     <SessionSync>
       {user && <SocketAnnouncer userId={user.id} />}
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[#F3F2EF]">
         <Navbar />
 
         <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-5 p-5">

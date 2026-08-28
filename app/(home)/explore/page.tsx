@@ -24,9 +24,16 @@ export default function DashboardPage() {
       
       if (json.success) {
         if (append) {
-          setPosts(prev => [...prev, ...json.data]);
+          setPosts(prev => {
+            const combined = [...prev, ...json.data];
+            // Deduplicate by ID to prevent React key errors during pagination
+            const unique = Array.from(new Map(combined.map(p => [p.id, p])).values());
+            return unique;
+          });
         } else {
-          setPosts(json.data);
+          // Also deduplicate the initial fetch just in case the API returned duplicates
+          const unique = Array.from(new Map(json.data.map((p: any) => [p.id, p])).values());
+          setPosts(unique);
         }
         setHasMore(pageNum < json.pagination.totalPages);
       }

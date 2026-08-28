@@ -11,7 +11,6 @@ import {
   Landmark,
   Compass,
   Lock,
-  ChevronRight,
 } from "lucide-react";
 
 const menu = [
@@ -52,88 +51,38 @@ export default function MenuCard() {
   const pathname = usePathname();
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
-      <div className="mb-5">
-        <h3 className="text-lg font-semibold text-slate-900">
-          Menu
-        </h3>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-1.5">
+      {menu.map((item) => {
+        const isActive = pathname === item.href;
 
-        <p className="mt-1 text-sm text-slate-400">
-          Navigate through your workspace
-        </p>
-      </div>
+        return (
+          <Link
+            key={item.label}
+            href={item.locked ? "#" : item.href}
+            className={`
+              flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
+              ${isActive
+                ? "bg-blue-50 text-blue-700 font-semibold"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }
+              ${item.locked ? "cursor-not-allowed opacity-50" : ""}
+            `}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+              <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>
+                {item.label}
+              </span>
+            </div>
 
-      <div className="space-y-2">
-        {menu.map((item) => {
-          const isActive = pathname === item.href;
-
-          return (
-            <Link
-              key={item.label}
-              href={item.locked ? "#" : item.href}
-              className={`
-                group flex h-12 items-center justify-between
-                rounded-2xl border px-4 transition-all duration-200
-                ${
-                  isActive
-                    ? `
-                      border-transparent
-                      bg-[#111111]
-                      text-white
-                      shadow-md
-                    `
-                    : `
-                      border-slate-200
-                      bg-white
-                      text-slate-700
-                      hover:border-slate-300
-                      hover:bg-slate-50
-                    `
-                }
-                ${
-                  item.locked
-                    ? "cursor-not-allowed opacity-60"
-                    : ""
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`
-                    flex h-8 w-8 items-center justify-center rounded-xl
-                    transition-all
-                    ${
-                      isActive
-                        ? "bg-white/10"
-                        : "bg-slate-100 group-hover:bg-slate-200"
-                    }
-                  `}
-                >
-                  <item.icon size={16} />
-                </div>
-
-                <span className="text-sm font-medium">
-                  {item.label}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {item.locked ? (
-                  <Lock size={14} />
-                ) : (
-                  <ChevronRight
-                    size={14}
-                    className={`
-                      transition-transform
-                      group-hover:translate-x-0.5
-                    `}
-                  />
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+            <div className="flex items-center">
+              {item.locked && (
+                <Lock size={16} className={isActive ? "text-blue-600" : "text-gray-400"} />
+              )}
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -74,7 +74,31 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
       return safeData;
     });
 
-    return cleanMatches;
+    const userIds = cleanMatches.map(c => c.userId);
+    const userCounts = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            followers: true,
+            receivedConnections: { where: { status: "ACCEPTED" } },
+            sentConnections: { where: { status: "ACCEPTED" } }
+          }
+        }
+      }
+    });
+
+    const countsMap = new Map(userCounts.map(u => [u.id, u._count]));
+
+    return cleanMatches.map((company) => {
+      const counts = countsMap.get(company.userId);
+      return {
+        ...company,
+        followersCount: counts?.followers || 0,
+        connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0)
+      };
+    });
 
   } catch {
     return [];

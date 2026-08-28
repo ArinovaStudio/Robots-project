@@ -10,15 +10,18 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
 
   return (
     <>
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="flex flex-col items-center text-center">
+      <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden relative">
+        {/* Cover Image */}
+        <div className="h-16 w-full bg-gradient-to-r from-blue-600 to-blue-400"></div>
+
+        <div className="px-4 pb-4 flex flex-col items-center text-center -mt-8 relative">
           {/* Avatar */}
-           <Link href={`/profile`}>
+           <Link href={`/profile`} className="block">
             <div
               className="
-                flex h-20 w-20 items-center justify-center overflow-hidden
-                rounded-full bg-[#EEF0FF] border border-slate-100
-                text-3xl font-bold text-[#5667ff]
+                flex h-16 w-16 items-center justify-center overflow-hidden
+                rounded-full bg-white border-2 border-white shadow-sm
+                text-2xl font-bold text-blue-600
               "
             >
               {profile.logoUrl ? (
@@ -30,38 +33,43 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
           </Link>
 
           {/* Name */}
-          <h2 className="mt-3 text-lg font-semibold">
-            {profile.companyName}
+          <h2 className="mt-3 text-base font-semibold text-gray-900 hover:underline cursor-pointer">
+            {profile.companyName} {profile.isBoosted && "⭐"}
           </h2>
 
           {/* Subtitle */}
-          <p className="mt-1 text-xs text-slate-400">
-            {profile.type} {profile.isBoosted ? "(Boosted)" : ""}
+          <p className="mt-1 text-xs text-gray-500">
+            {profile.type}
           </p>
-
-          {/* Connections & Followers */}
-          <div className="mt-2 flex gap-3 text-[11px] font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-            <span><strong className="text-slate-800">{profile.followersCount}</strong> Followers</span>
-            <span className="w-px h-3 bg-slate-300 self-center"></span>
-            <span><strong className="text-slate-800">{profile.connectionsCount}</strong> Connections</span>
-          </div>
 
           {/* Description */}
-          <p className="mt-3 text-xs leading-5 text-slate-500 line-clamp-3 px-2">
+          <p className="mt-3 text-xs leading-5 text-gray-500 line-clamp-2">
             {profile.description}
           </p>
-
-          {/* Edit Button */}
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="
-              ml-auto mt-4 rounded-full p-1.5
-              shadow-sm transition hover:bg-slate-100 text-slate-500
-            "
-          >
-            <Pencil size={14} />
-          </button>
         </div>
+
+        {/* Stats */}
+        <div className="border-t border-gray-100 py-3 flex flex-col px-4 hover:bg-gray-50 cursor-pointer transition-colors">
+          <div className="flex justify-between items-center text-xs font-medium text-gray-500">
+            <span>Followers</span>
+            <span className="text-blue-600 font-semibold">{profile.followersCount}</span>
+          </div>
+          <div className="flex justify-between items-center text-xs font-medium text-gray-500 mt-1">
+            <span>Connections</span>
+            <span className="text-blue-600 font-semibold">{profile.connectionsCount}</span>
+          </div>
+        </div>
+
+        {/* Edit Button */}
+        <button
+          onClick={() => setIsEditModalOpen(true)}
+          className="
+            absolute top-3 right-3 rounded-full p-1.5
+            bg-white/20 hover:bg-white/40 transition text-white backdrop-blur-sm
+          "
+        >
+          <Pencil size={14} />
+        </button>
       </div>
 
       {isEditModalOpen && (

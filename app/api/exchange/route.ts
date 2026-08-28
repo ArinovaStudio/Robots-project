@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       formattedVector = `[${fallbackVector.join(",")}]`;
     }
 
-    if (!formattedVector) return NextResponse.json({ success: true, data: [] });
+    if (!formattedVector) return NextResponse.json({ success: true, data: [], pagination: { totalPages: 1 } });
 
     const countQuery = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*) as "total"

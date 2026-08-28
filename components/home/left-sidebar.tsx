@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ProfileCard from "./profile-card";
-import StatsCard from "./stats-card";
 import MenuCard from "./menu-card";
-import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 
 export default function LeftSidebar() {
   const [profileData, setProfileData] = useState<any>(null);
@@ -32,10 +28,7 @@ export default function LeftSidebar() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
-          <Skeleton height={280} borderRadius={16} />
-          <Skeleton height={140} borderRadius={16} />
-        </SkeletonTheme>
+        {/* Placeholder for menu skeleton or empty space */}
       </div>
     );
   }
@@ -44,11 +37,6 @@ export default function LeftSidebar() {
 
   return (
     <div className="space-y-4">
-      <ProfileCard profile={profileData} refreshProfile={fetchProfile} />
-      <StatsCard 
-        viewers={profileData.profileViewers} 
-        impressions={profileData.impressions} 
-      />
       <MenuCard />
     </div>
   );

@@ -16,12 +16,12 @@ interface SendEmailParams {
 
 export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to,
-      subject,
-      html,
-    });
+    // MOCK EMAIL SENDER FOR DEMO:
+    console.log("=========================================");
+    console.log(`MOCK EMAIL SENT TO: ${to}`);
+    console.log(`SUBJECT: ${subject}`);
+    console.log(`BODY: ${html}`);
+    console.log("=========================================");
     return true;
   } catch {
     return false;

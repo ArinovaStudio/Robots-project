@@ -1,21 +1,22 @@
-
 import ConnectionRequests from "@/components/home/connection-requests";
 import SuggestedProfiles from "@/components/SuggestedProfiles";
 import { Lock } from "lucide-react";
 
 export default function RightSidebar() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <SuggestedProfiles />
 
-      <div className="flex h-[170px] flex-col items-center justify-center rounded-2xl bg-white p-5 text-center shadow-sm">
-        <h3 className="text-2xl text-slate-300"><Lock /></h3>
-        <h4 className="mt-3 text-lg font-medium text-slate-800">
+      <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col items-center justify-center text-center shadow-sm mt-4">
+        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 text-gray-400">
+          <Lock size={20} />
+        </div>
+        <h4 className="text-sm font-semibold text-gray-900">
           Top Investors for you
         </h4>
-        <p className="mt-2 text-xs text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-full">
+        <span className="mt-2 text-[11px] text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded">
           Coming soon
-        </p>
+        </span>
       </div>
 
        <ConnectionRequests />

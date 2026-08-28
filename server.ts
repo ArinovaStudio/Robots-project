@@ -17,8 +17,7 @@ const onlineUsers = new Map<string, Set<string>>();
 app.prepare().then(() => {
 
   const httpServer = createServer((req, res) => {
-    const parsedUrl = parse(req.url!, true);
-    handle(req, res, parsedUrl); 
+    handle(req, res); 
   });
 
   const io = new Server(httpServer, {
