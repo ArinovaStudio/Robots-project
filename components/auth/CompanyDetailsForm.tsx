@@ -56,7 +56,7 @@ export default function CompanyDetailsForm() {
       const res = await fetch("/api/company/profile", { method: "POST", body: data });
       const result = await res.json();
       if (!result.success) setError(result.message);
-      else router.push("/dashboard");
+      else router.push("/feed");
     } catch {
       setError("Failed to create company profile");
     } finally {
@@ -174,7 +174,7 @@ export default function CompanyDetailsForm() {
       </div>
 
       <div className="flex gap-3 pt-4">
-        <Button type="submit" disabled={loading} className="h-12 flex-1 rounded-xl bg-[#0f2230] text-base font-medium hover:bg-[#132c3d]">
+        <Button type="submit" disabled={loading} className="h-12 flex-1 rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700">
           {loading ? "Saving..." : "Complete Setup"}
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>

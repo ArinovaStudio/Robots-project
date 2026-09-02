@@ -6,9 +6,9 @@ export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Public pages
-  const publicPages = ["/", "/login", "/signup"];
+  const publicPages = ["/login", "/signup", "/"];
 
-  if (publicPages.includes(pathname)) {
+  if (publicPages.includes(pathname) || pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
@@ -34,7 +34,7 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
-  ],
+  // matcher: [
+  //   "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  // ],
 };

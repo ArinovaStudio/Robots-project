@@ -1,16 +1,18 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  MapPin, Link as LinkIcon, Users, Building2, UserPlus, 
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark 
+import {
+  MapPin, Link as LinkIcon, Users, Building2, UserPlus,
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
 import ConnectModal from "../modals/connect-modal";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 interface ProfileViewProps {
   userId: string;
@@ -23,7 +25,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  
+
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isConnectLoading, setIsConnectLoading] = useState(false);
 
@@ -55,7 +57,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
         body: JSON.stringify({ targetUserId: userId })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setIsFollowing(data.isFollowing);
         toast.success(data.message);
@@ -103,8 +105,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       }
     }
     else if (!connectionStatus) {
-        setShowConnectModal(true);
-      }
+      setShowConnectModal(true);
+    }
   };
 
   if (loading) {
@@ -142,8 +144,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 pb-20">
-      
+
       {/* Header Banner Card */}
+      <ScrollReveal direction="down">
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
         {/* Cover Photo */}
         <div className="h-32 sm:h-48 w-full bg-slate-200 relative"></div>
@@ -167,91 +170,91 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 <p className="text-gray-500 font-medium mt-1 text-sm">{company.type} • Founded {company.yearOfEstablishment}</p>
               </div>
 
-            {viewerState.isOwnProfile ? (
-              <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
-                <Link 
-                  href="/profile/followers"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
-                >
-                  <Users size={16} /> Manage Network
-                </Link>
-                <Link 
-                  href="/profile/connections"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-white text-gray-700 hover:bg-gray-50 transition border border-gray-200 shadow-sm"
-                >
-                  <Layers size={16} /> Connection Requests
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 justify-center sm:justify-start">
-                <button 
-                  onClick={toggleFollow}
-                  disabled={isFollowLoading}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition min-w-[120px] justify-center ${
-                    isFollowing ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {isFollowLoading ? <Loader2 size={16} className="animate-spin" /> : 
-                   isFollowing ? <CheckCircle size={16} /> : <UserPlus size={16} />}
-                  {isFollowing ? "Following" : "Follow"}
-                </button>
-                
-                <button 
-                  onClick={toggleConnect}
-                  disabled={isConnectLoading || connectionStatus === "PENDING"}
-                  className={`group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[130px] justify-center ${
-                    connectionStatus === "ACCEPTED" ? "bg-green-50 text-green-700 border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200" :
-                    connectionStatus === "PENDING" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                    "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
-                  }`}
-                >
-                  {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> :
-                   connectionStatus === "ACCEPTED" ? (
-                     <>
-                       <CheckCircle size={16} className="block group-hover:hidden" />
-                       <UserMinus size={16} className="hidden group-hover:block" />
-                     </>
-                   ) :
-                   connectionStatus === "PENDING" ? <Clock size={16} /> :
-                   <LinkIcon size={16} />}
-                   
-                  {connectionStatus === "ACCEPTED" ? <span className="block group-hover:hidden">Connected</span> : null}
-                  {connectionStatus === "ACCEPTED" ? <span className="hidden group-hover:block">Disconnect</span> : null}
-                  {connectionStatus === "PENDING" ? "Pending" : null}
-                  {!connectionStatus ? "Connect" : null}
-                </button>
-              </div>
-            )}
+              {viewerState.isOwnProfile ? (
+                <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
+                  <Link
+                    href="/profile/followers"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                  >
+                    <Users size={16} /> Manage Network
+                  </Link>
+                  <Link
+                    href="/profile/connections"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-white text-gray-700 hover:bg-gray-50 transition border border-gray-200 shadow-sm"
+                  >
+                    <Layers size={16} /> Connection Requests
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <button
+                    onClick={toggleFollow}
+                    disabled={isFollowLoading}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition min-w-[120px] justify-center ${isFollowing ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                  >
+                    {isFollowLoading ? <Loader2 size={16} className="animate-spin" /> :
+                      isFollowing ? <CheckCircle size={16} /> : <UserPlus size={16} />}
+                    {isFollowing ? "Following" : "Follow"}
+                  </button>
 
-            {showConnectModal && profile?.company && (
-              <ConnectModal
-                receiverId={userId}
-                companyName={profile.company.companyName}
-                onClose={() => setShowConnectModal(false)}
-                onSuccess={(message) => {
-                  setConnectionStatus("PENDING");
-                  toast.success(message);
-                }}
-              />
-            )}
-          </div>
+                  <button
+                    onClick={toggleConnect}
+                    disabled={isConnectLoading || connectionStatus === "PENDING"}
+                    className={`group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[130px] justify-center ${connectionStatus === "ACCEPTED" ? "bg-green-50 text-green-700 border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200" :
+                        connectionStatus === "PENDING" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                          "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
+                      }`}
+                  >
+                    {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> :
+                      connectionStatus === "ACCEPTED" ? (
+                        <>
+                          <CheckCircle size={16} className="block group-hover:hidden" />
+                          <UserMinus size={16} className="hidden group-hover:block" />
+                        </>
+                      ) :
+                        connectionStatus === "PENDING" ? <Clock size={16} /> :
+                          <LinkIcon size={16} />}
 
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6 mt-6">
-            <div className="flex flex-col items-center sm:items-start">
-              <span className="font-bold text-gray-900 text-xl">{stats.followers}</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Followers</span>
+                    {connectionStatus === "ACCEPTED" ? <span className="block group-hover:hidden">Connected</span> : null}
+                    {connectionStatus === "ACCEPTED" ? <span className="hidden group-hover:block">Disconnect</span> : null}
+                    {connectionStatus === "PENDING" ? "Pending" : null}
+                    {!connectionStatus ? "Connect" : null}
+                  </button>
+                </div>
+              )}
+
+              {showConnectModal && profile?.company && (
+                <ConnectModal
+                  receiverId={userId}
+                  companyName={profile.company.companyName}
+                  onClose={() => setShowConnectModal(false)}
+                  onSuccess={(message) => {
+                    setConnectionStatus("PENDING");
+                    toast.success(message);
+                  }}
+                />
+              )}
             </div>
-            <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
-            <div className="flex flex-col items-center sm:items-start">
-              <span className="font-bold text-gray-900 text-xl">{stats.connections}</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Connections</span>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6 mt-6">
+              <div className="flex flex-col items-center sm:items-start">
+                <span className="font-bold text-gray-900 text-xl">{stats.followers}</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Followers</span>
+              </div>
+              <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
+              <div className="flex flex-col items-center sm:items-start">
+                <span className="font-bold text-gray-900 text-xl">{stats.connections}</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Connections</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      </div>
+      </ScrollReveal>
 
       {/* Bento Grid Content */}
+      <ScrollReveal direction="up" delay={0.1}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 space-y-4">
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -295,7 +298,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           {/* Details Card */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm space-y-5">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Details</h2>
-            
+
             {company.location && (
               <div className="flex items-center gap-3 text-sm text-gray-600">
                 <div className="text-gray-400"><MapPin size={18} /></div>
@@ -305,7 +308,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 </div>
               </div>
             )}
-            
+
             {company.website && (
               <div className="flex items-center gap-3 text-sm text-gray-600">
                 <div className="text-gray-400"><LinkIcon size={18} /></div>
@@ -338,10 +341,10 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           {/* Activity & Posts Card */}
           <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm space-y-2">
             <h2 className="text-lg font-bold text-gray-900 mb-3 px-1">Activity</h2>
-            
+
             {viewerState.isOwnProfile ? (
               <>
-                <Link 
+                <Link
                   href={`/profile/${userId}/posts`}
                   className="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-gray-50 transition border border-transparent hover:border-gray-200"
                 >
@@ -353,8 +356,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     <span className="text-[11px] text-gray-500 font-medium">View your recent updates</span>
                   </div>
                 </Link>
-                
-                <Link 
+
+                <Link
                   href={`/profile/saved-posts`}
                   className="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-gray-50 transition border border-transparent hover:border-gray-200"
                 >
@@ -368,7 +371,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 </Link>
               </>
             ) : (
-              <Link 
+              <Link
                 href={`/profile/${userId}/posts`}
                 className="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-gray-50 transition border border-transparent hover:border-gray-200"
               >
@@ -385,6 +388,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
         </div>
       </div>
+      </ScrollReveal>
     </div>
   );
 }

@@ -36,7 +36,7 @@ export default function AuthPage() {
               {/* Heading */}
               <div className="mb-10">
                 <h1 className="text-4xl font-bold tracking-tight text-[#0f172a]">
-                  Hey, Join us Today! 👀
+                  Join Connecto Today! 👀
                 </h1>
                 <p className="mt-4 text-sm leading-6 text-slate-500">
                   Today is a new day. It&apos;s your day. You shape it.
@@ -85,7 +85,7 @@ export default function AuthPage() {
             </div>
 
             <div className="mt-10 text-center text-sm text-slate-400">
-              © {new Date().getFullYear()} Arinova Studio
+              © {new Date().getFullYear()} Connecto
             </div>
           </div>
 

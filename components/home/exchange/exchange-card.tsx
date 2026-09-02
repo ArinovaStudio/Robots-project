@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { EllipsisVertical, Target } from "lucide-react";
@@ -40,10 +41,10 @@ export default function ExchangeCard({ company }: { company: any }) {
       <div className="mt-4 flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
         <Target size={18} className="text-blue-600 shrink-0 mt-0.5" />
         <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Match Reason</span>
-            <p className="text-sm text-gray-800 leading-relaxed">
-                "{company.matchReason}"
-            </p>
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Match Reason</span>
+          <p className="text-sm text-gray-800 leading-relaxed">
+            "{company.matchReason}"
+          </p>
         </div>
       </div>
 
@@ -55,13 +56,13 @@ export default function ExchangeCard({ company }: { company: any }) {
       {/* Company Stats & Match Score */}
       <div className="mt-4 pt-4 border-t border-gray-100">
         <div className="flex justify-between items-center mb-4">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Partner Stats</span>
-            <span className="px-2 py-1 bg-green-50 text-green-700 text-[11px] font-bold rounded">
-                {company.matchPercentage}% Compatibility
-            </span>
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Partner Stats</span>
+          <span className="px-2 py-1 bg-green-50 text-green-700 text-[11px] font-bold rounded">
+            {company.matchPercentage}% Compatibility
+          </span>
         </div>
-        
-        <CompanyStats 
+
+        <CompanyStats
           size={company.size || 0}
           type={company.type}
           followers={company.followersCount}

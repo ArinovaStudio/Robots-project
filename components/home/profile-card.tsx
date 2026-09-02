@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -16,7 +17,7 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
 
         <div className="px-4 pb-4 flex flex-col items-center text-center -mt-8 relative">
           {/* Avatar */}
-           <Link href={`/profile`} className="block">
+          <Link href={`/profile`} className="block">
             <div
               className="
                 flex h-16 w-16 items-center justify-center overflow-hidden
@@ -73,12 +74,12 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
       </div>
 
       {isEditModalOpen && (
-        <EditProfileModal 
-          profile={profile} 
-          onClose={() => setIsEditModalOpen(false)} 
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setIsEditModalOpen(false)}
           onSuccess={() => {
             setIsEditModalOpen(false);
-            refreshProfile(); 
+            refreshProfile();
           }}
         />
       )}

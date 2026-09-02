@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -99,7 +100,7 @@ export default function WriteArticlePage() {
 
           <div className="space-y-6">
             {!coverImage ? (
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
               >

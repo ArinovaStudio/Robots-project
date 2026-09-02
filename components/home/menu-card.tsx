@@ -20,19 +20,14 @@ const menu = [
     href: "/explore",
   },
   {
-    icon: Search,
-    label: "Search",
-    href: "/search",
-  },
-  {
     icon: ArrowLeftRight,
-    label: "Exchange Services",
-    href: "/exchange-services",
+    label: "Marketplace",
+    href: "/marketplace",
   },
   {
     icon: Building2,
-    label: "Find Businesses",
-    href: "/find-businesses",
+    label: "Directory",
+    href: "/directory",
   },
   {
     icon: Handshake,
@@ -41,7 +36,7 @@ const menu = [
   },
   {
     icon: Landmark,
-    label: "Find Investors",
+    label: "Investors",
     href: "/find-investors",
     locked: true,
   },

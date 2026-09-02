@@ -1,5 +1,6 @@
 "use client";
 
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Bed, Check, X, Loader2 } from "lucide-react";
@@ -80,8 +81,8 @@ export default function ConnectionRequests() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                   <Skeleton width={32} height={32} borderRadius={16} />
-                   <Skeleton width={32} height={32} borderRadius={16} />
+                  <Skeleton width={32} height={32} borderRadius={16} />
+                  <Skeleton width={32} height={32} borderRadius={16} />
                 </div>
               </div>
             ))}

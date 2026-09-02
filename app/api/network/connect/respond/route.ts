@@ -42,6 +42,31 @@ export async function POST(req: NextRequest) {
       data: { status: action }
     });
 
+    if (action === "ACCEPTED") {
+      // Create mutual follows
+      await prisma.follow.createMany({
+        data: [
+          { followerId: user.id, followingId: connection.senderId },
+          { followerId: connection.senderId, followingId: user.id }
+        ],
+        skipDuplicates: true
+      });
+
+      // Send notification to the sender
+      const notification = await prisma.notification.create({
+        data: {
+          userId: connection.senderId,
+          actorId: user.id,
+          type: "CONNECTION_ACCEPTED",
+          content: `${user.name || "Someone"} accepted your connection request`,
+          link: `/profile/${user.id}`,
+        }
+      });
+
+      // We could ideally emit real-time notification here if we had access to globalSocket or Redis
+      // But for now it'll be in the DB and visible on refresh or polling.
+    }
+
     return NextResponse.json({ success: true, message: `Connection request ${action.toLowerCase()} successfully` }, { status: 200 });
 
   } catch {

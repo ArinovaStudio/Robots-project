@@ -96,7 +96,7 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
         </div>
       </div>
 
-      <Button type="button" onClick={handleRegister} disabled={loading} className="h-12 w-full rounded-xl bg-[#0f2230] text-base font-medium hover:bg-[#132c3d]">
+      <Button type="button" onClick={handleRegister} disabled={loading} className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700">
         {loading ? "Processing..." : "Continue"}
         <ChevronRight className="ml-2 h-4 w-4" />
       </Button>

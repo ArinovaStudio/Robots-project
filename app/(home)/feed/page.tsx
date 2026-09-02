@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,11 +20,11 @@ export default function DashboardPage() {
 
   const fetchFeed = async (pageNum: number, append = false) => {
     if (append) setLoadingMore(true);
-    
+
     try {
-      const res = await fetch(`/api/user/feed/explore?page=${pageNum}&limit=15`);
+      const res = await fetch(`/api/user/feed/following?page=${pageNum}&limit=15`);
       const json = await res.json();
-      
+
       if (json.success) {
         if (append) {
           setPosts(prev => {
@@ -55,7 +57,7 @@ export default function DashboardPage() {
       <ScrollReveal direction="down">
         <AchievementPost />
       </ScrollReveal>
-      
+
       {loading ? (
         // Initial Loading Skeletons
         <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
@@ -91,9 +93,9 @@ export default function DashboardPage() {
         <>
           {posts.map((post) => (
             <ScrollReveal key={post.id} direction="up" delay={0.1}>
-              <FeedCard 
-                post={post} 
-                currentUser={user} 
+              <FeedCard
+                post={post}
+                currentUser={user}
               />
             </ScrollReveal>
           ))}
@@ -108,7 +110,7 @@ export default function DashboardPage() {
                   </SkeletonTheme>
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => {
                     const nextPage = page + 1;
                     setPage(nextPage);

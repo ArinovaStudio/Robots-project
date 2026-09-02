@@ -49,6 +49,8 @@ model User {
   conversationsAsUser2 Conversation[] @relation("ConversationUser2")
   sentMessages DirectMessage[] @relation("MessageSender")
   submittedReports PostReport[]
+  notifications Notification[]
+  collaborationRequests CollaborationRequest[]
 }
 
 model Account {
@@ -403,4 +405,45 @@ model SearchImpressionStat {
   company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   
   @@unique([companyId, date])
+}
+
+enum NotificationType {
+  NEW_MESSAGE
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  POST_LIKE
+  NEW_COMMENT
+  SYSTEM
+}
+
+model Notification {
+  id String @id @default(uuid())
+  userId String
+  actorId String?
+  type NotificationType
+  content String
+  link String?
+  isRead Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum CollabStatus {
+  OPEN
+  CLOSED
+}
+
+model CollaborationRequest {
+  id String @id @default(uuid())
+  title String
+  description String @db.Text
+  authorId String
+  status CollabStatus @default(OPEN)
+  tags String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }

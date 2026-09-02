@@ -1,3 +1,4 @@
+
 "use client";
 
 import Navbar from "@/components/home/navbar";
@@ -28,7 +29,7 @@ export default function DashboardLayout({
         <Navbar />
 
         <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-5 p-5">
-          
+
           {/* Left */}
           {!isMessages && (
             <div className="col-span-3 hidden xl:block">
@@ -37,7 +38,7 @@ export default function DashboardLayout({
               </div>
             </div>
           )}
-          
+
           <div
             className={`
               col-span-12

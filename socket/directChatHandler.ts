@@ -50,6 +50,20 @@ export default function directChatHandler(io: Server, socket: Socket) {
       const roomName = `dm_${getRoomId(data.senderId, data.receiverId)}`;
       io.to(roomName).emit("receive_dm", savedMessage);
 
+      // Create Notification
+      const notification = await prisma.notification.create({
+        data: {
+          userId: data.receiverId,
+          actorId: data.senderId,
+          type: "NEW_MESSAGE",
+          content: `${savedMessage.sender.name || "Someone"} sent you a message`,
+          link: `/messages/${data.senderId}`,
+        }
+      });
+
+      // Emit to global room
+      io.to(`user_${data.receiverId}`).emit("new_notification", notification);
+
     } catch {
       socket.emit("dm_error", { message: "Failed to send message." });
     }

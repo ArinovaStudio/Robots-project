@@ -30,6 +30,8 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
 
     socket.on("user_connected", (userId: string) => {
+      socket.join("user_" + userId);
+
       if (!onlineUsers.has(userId)) {
         onlineUsers.set(userId, new Set());
       }

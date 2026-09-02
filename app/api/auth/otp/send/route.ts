@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { getOtpEmailTemplate } from "@/lib/template";
+import { authRateLimiter, getIP } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -11,6 +12,16 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getIP(req);
+    const rateLimit = authRateLimiter.check(ip);
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { success: false, message: "Too many attempts. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const validation = schema.safeParse(body);
 

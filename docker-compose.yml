@@ -1,4 +1,17 @@
 services:
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: connecto_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: robots_project
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -19,3 +32,4 @@ services:
 
 volumes:
   ollama_storage:
+  pgdata:

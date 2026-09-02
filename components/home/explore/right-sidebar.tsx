@@ -1,3 +1,4 @@
+
 import ConnectionRequests from "@/components/home/connection-requests";
 import SuggestedProfiles from "@/components/SuggestedProfiles";
 import { Lock } from "lucide-react";
@@ -19,7 +20,7 @@ export default function RightSidebar() {
         </span>
       </div>
 
-       <ConnectionRequests />
+      <ConnectionRequests />
     </div>
   );
 }

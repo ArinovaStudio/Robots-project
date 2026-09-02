@@ -42,23 +42,23 @@ export default function LoginPage() {
   };
 
   if (status === "loading") {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-screen w-full items-center justify-center bg-white">Loading...</div>;
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mx-auto flex w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
-        <div className="grid w-full grid-cols-1 p-0 lg:grid-cols-2">
+    <div className="h-screen w-full overflow-hidden flex items-center justify-center p-4 md:p-6 bg-white">
+      <div className="mx-auto flex h-full w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
+        <div className="grid h-full w-full grid-cols-1 p-0 lg:grid-cols-2 overflow-hidden">
           {/* LEFT SIDE */}
-          <div className="flex flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
+          <div className="flex flex-col justify-center px-6 py-4 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
             <div className="mx-auto flex w-full max-w-md flex-col">
               
               {/* Heading */}
-              <div className="mb-12">
+              <div className="mb-8 mt-4">
                 <h1 className="text-4xl font-bold tracking-tight text-[#0f172a]">
-                  Welcome Back 👋
+                  Welcome to Connecto 👋
                 </h1>
-                <p className="mt-4 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-slate-500">
                   Today is a new day. It&apos;s your day. You shape it.
                   <br />
                   Sign in to start connection with other business.
@@ -66,10 +66,10 @@ export default function LoginPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleCredentialsLogin} className="space-y-5">
+              <form onSubmit={handleCredentialsLogin} className="space-y-4">
                 {error && <p className="text-sm text-red-500">{error}</p>}
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">
                     Email
                   </label>
@@ -81,12 +81,12 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Example@email.com"
-                      className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-10 focus-visible:ring-1"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 focus-visible:ring-1"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">
                     Password
                   </label>
@@ -96,11 +96,11 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 8 characters"
-                    className="h-12 rounded-xl border-slate-200 bg-slate-50"
+                    className="h-11 rounded-xl border-slate-200 bg-slate-50"
                   />
-                  <div className="flex justify-end">
+                  <div className="flex justify-end pt-1">
                     <Link
-                      href="#"
+                      href="/forgot-password"
                       className="text-sm font-medium text-[#3F6FFF] hover:underline"
                     >
                       Forgot Password?
@@ -111,26 +111,26 @@ export default function LoginPage() {
                 <Button 
                   type="submit" 
                   disabled={loading}
-                  className="h-12 w-full rounded-xl bg-[#0f2230] text-base font-medium hover:bg-[#132c3d]"
+                  className="h-11 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700 mt-2"
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
 
               {/* Divider */}
-              <div className="my-10 flex items-center gap-4">
+              <div className="my-6 flex items-center gap-4">
                 <Separator className="flex-1" />
                 <span className="text-sm text-slate-400">Or</span>
                 <Separator className="flex-1" />
               </div>
 
               {/* Social Buttons */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Button
                   type="button"
-                  onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                  onClick={() => signIn("google", { callbackUrl: "/feed" })}
                   variant="outline"
-                  className="h-12 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  className="h-11 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
                   <Image
                     src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -143,9 +143,9 @@ export default function LoginPage() {
 
                 <Button
                   type="button"
-                  onClick={() => signIn("facebook", { callbackUrl: "/dashboard" })}
+                  onClick={() => signIn("facebook", { callbackUrl: "/feed" })}
                   variant="outline"
-                  className="h-12 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  className="h-11 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
                   <Facebook className="h-5 w-5 fill-[#1877F2] text-[#1877F2]" />
                   Sign in with Facebook
@@ -153,7 +153,7 @@ export default function LoginPage() {
               </div>
 
               {/* Footer */}
-              <p className="mt-14 text-center text-sm text-slate-500">
+              <p className="mt-8 text-center text-sm text-slate-500">
                 Don&apos;t you have an account?{" "}
                 <Link
                   href="/signup"
@@ -164,8 +164,8 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="mt-10 text-center text-sm text-slate-400">
-              © {new Date().getFullYear()} Arinova Studio
+            <div className="mt-6 text-center text-sm text-slate-400 mb-4">
+              © {new Date().getFullYear()} Connecto
             </div>
           </div>
 
