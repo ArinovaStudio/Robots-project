@@ -3,9 +3,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { signOut } from "next-auth/react";
+import { useUserStore } from "@/store/AuthStore";
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useUserStore();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,20 +79,38 @@ export default function Navbar() {
           />
 
           <div className="hidden sm:flex h-full items-center ml-2 border-l pl-6 border-gray-200">
-            <Link href="/profile" className="flex flex-col items-center gap-1">
-              <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200">
-                <Image
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                  alt="User Profile"
-                  width={28}
-                  height={28}
-                  className="object-cover"
-                />
-              </div>
-              <span className="text-[11px] font-medium text-gray-500 flex items-center">
-                Me <span className="ml-0.5 text-[8px]">▼</span>
-              </span>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200">
+                  <Image
+                    src={user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || 'Felix'}`}
+                    alt="User Profile"
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
+                <span className="text-[11px] font-medium text-gray-500 flex items-center max-w-[60px] truncate">
+                  {user?.name || "Me"} <span className="ml-0.5 text-[8px]">▼</span>
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-white z-[100]">
+                <div className="px-2 py-1.5 text-sm text-gray-500 font-medium truncate">
+                  {user?.email}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/profile">View Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50" 
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                >
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

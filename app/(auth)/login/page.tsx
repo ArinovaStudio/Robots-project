@@ -50,11 +50,11 @@ export default function LoginPage() {
       <div className="mx-auto flex h-full w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
         <div className="grid h-full w-full grid-cols-1 p-0 lg:grid-cols-2 overflow-hidden">
           {/* LEFT SIDE */}
-          <div className="flex flex-col justify-center px-6 py-4 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
+          <div className="flex flex-col px-6 py-10 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
             <div className="mx-auto flex w-full max-w-md flex-col">
               
               {/* Heading */}
-              <div className="mb-8 mt-4">
+              <div className="mb-8">
                 <h1 className="text-4xl font-bold tracking-tight text-[#0f172a]">
                   Welcome to Connecto 👋
                 </h1>

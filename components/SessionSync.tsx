@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import { useUserStore } from "@/store/AuthStore";
 import { useSession } from "next-auth/react";
+import { useRouter, usePathname } from "next/navigation";
 import ErrorScreen from "./FullPageErrorScreen";
 
 export function SessionSync({ children }: { children: React.ReactNode }) {
   const { setUser, clearUser } = useUserStore();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
 
     const fetchData = async () => {
@@ -18,6 +22,12 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
         if (status === "unauthenticated") {
           clearUser();
         } else if (status === "authenticated") {
+          // If user hasn't completed onboarding, redirect to signup to finish step 2
+          if (session?.user?.isOnboarded === false && pathname !== "/signup") {
+            router.replace("/signup");
+            return;
+          }
+
           const req = await fetch("/api/auth/me");
           const res = await req.json();
           if (!res.success) {
