@@ -22,6 +22,15 @@ export async function GET(req: NextRequest) {
     const expiredSubIds = expiredSubscriptions.map(sub => sub.id);
     const expiredUserIds = expiredSubscriptions.map(sub => sub.userId);
 
+    // Only remove boost for users with NO remaining active subscriptions
+    const usersToUnboost: string[] = [];
+    for (const userId of expiredUserIds) {
+      const otherActiveSub = await prisma.subscription.findFirst({
+        where: { userId, status: "ACTIVE", id: { notIn: expiredSubIds } }
+      });
+      if (!otherActiveSub) usersToUnboost.push(userId);
+    }
+
     await prisma.$transaction([
 
       prisma.subscription.updateMany({
@@ -29,10 +38,12 @@ export async function GET(req: NextRequest) {
         data: { status: "EXPIRED" }
       }),
       
-      prisma.companyProfile.updateMany({
-        where: { userId: { in: expiredUserIds } },
-        data: { isBoosted: false }
-      })
+      ...(usersToUnboost.length > 0 ? [
+        prisma.companyProfile.updateMany({
+          where: { userId: { in: usersToUnboost } },
+          data: { isBoosted: false }
+        })
+      ] : [])
     ]);
 
     return NextResponse.json({ success: true, message: `Successfully expired ${expiredSubscriptions.length}` }, { status: 200 });

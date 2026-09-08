@@ -36,6 +36,7 @@ export default function LoginPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
+      setLoading(false);
       router.refresh();
       router.push("/explore"); 
     }

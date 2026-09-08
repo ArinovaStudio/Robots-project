@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const { user } = await getUser();
     if (!user) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "10", 10)));
     const skip = (page - 1) * limit;

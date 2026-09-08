@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 403 });
     }
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "10", 10)));
     const search = searchParams.get("search") || "";

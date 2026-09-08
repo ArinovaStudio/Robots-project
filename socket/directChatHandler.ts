@@ -11,6 +11,7 @@ export default function directChatHandler(io: Server, socket: Socket) {
   });
 
   socket.on("send_dm", async (data: { senderId: string; receiverId: string; content: string }) => {
+    // TODO: Verify senderId matches authenticated socket session to prevent spoofing
     try {
       if (!data.content || data.content.trim() === "") return;
 

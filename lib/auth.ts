@@ -38,7 +38,7 @@ export async function getAdmin(){
       return { user: null, error: "Unauthorized" };
     }
 
-    return { user, error: null };
+    return { user: user.user, error: null };
   } catch {
     return { user: null, error: "Internal server error" };
   }

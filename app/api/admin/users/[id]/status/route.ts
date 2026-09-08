@@ -18,7 +18,7 @@ export async function PATCH( req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params;
 
-    if (user.user.id === id) {
+    if (user.id === id) {
       return NextResponse.json({ success: false, message: "You cannot suspend your own account" }, { status: 400 });
     }
 

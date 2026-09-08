@@ -25,25 +25,28 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
           // If user hasn't completed onboarding, redirect to signup to finish step 2
           if (session?.user?.isOnboarded === false && pathname !== "/signup") {
             router.replace("/signup");
-            return;
+            return; // Don't set loaded — prevent main app UI from rendering
           }
 
-          const req = await fetch("/api/auth/me");
-          const res = await req.json();
-          if (!res.success) {
-            throw Error(res.message);
-          }
-          const user = res.data || {};
-          const displayName = user.name || user.email?.split('@')[0] || "User";
+          // Only fetch user data if onboarded (or already on /signup)
+          if (session?.user?.isOnboarded !== false) {
+            const req = await fetch("/api/auth/me");
+            const res = await req.json();
+            if (!res.success) {
+              throw Error(res.message);
+            }
+            const user = res.data || {};
+            const displayName = user.name || user.email?.split('@')[0] || "User";
 
-          setUser({
-            email: user.email,
-            id: user.id,
-            name: displayName,
-            image: user.image,
-            role: user.role,
-            company: user.company
-          });
+            setUser({
+              email: user.email,
+              id: user.id,
+              name: displayName,
+              image: user.image,
+              role: user.role,
+              company: user.company
+            });
+          }
         }
       } catch (error: any) {
         setError(error.message);
@@ -54,7 +57,7 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
       }
     }
     fetchData();
-  }, [status]);
+  }, [status, session, pathname, router, setUser, clearUser]);
 
   if (error) {
     return <ErrorScreen message={error} />

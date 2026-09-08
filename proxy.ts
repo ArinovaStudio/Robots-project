@@ -16,17 +16,17 @@ export default async function proxy(req: NextRequest) {
 
   // Not logged in
   if (!user) {
-    return NextResponse.redirect(
-      new URL("/login", req.url)
-    );
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    return NextResponse.redirect(loginUrl);
   }
 
   // Admin protection
   if (pathname.startsWith("/admin")) {
     if (user.role !== "ADMIN") {
-      return NextResponse.redirect(
-        new URL("/explore", req.url)
-      );
+      const exploreUrl = req.nextUrl.clone();
+      exploreUrl.pathname = "/explore";
+      return NextResponse.redirect(exploreUrl);
     }
   }
 

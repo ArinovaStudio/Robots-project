@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
+import { toast } from "sonner";
 import RightSection from "@/components/auth/RightSection";
 
 export default function ForgotPasswordPage() {
@@ -15,7 +16,8 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -24,7 +26,7 @@ export default function ForgotPasswordPage() {
     if (!email) return setError("Please enter an email");
     setError("");
     setMessage("");
-    setLoading(true);
+    setOtpLoading(true);
 
     try {
       const res = await fetch("/api/auth/otp/send", {
@@ -42,7 +44,7 @@ export default function ForgotPasswordPage() {
     } catch {
       setError("Failed to send OTP");
     } finally {
-      setLoading(false);
+      setOtpLoading(false);
     }
   };
 
@@ -50,7 +52,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     if (!otp || !newPassword) return setError("Please fill all fields");
     setError("");
-    setLoading(true);
+    setResetLoading(true);
 
     try {
       const res = await fetch("/api/auth/reset-password", {
@@ -63,13 +65,13 @@ export default function ForgotPasswordPage() {
       if (!data.success) {
         setError(data.message);
       } else {
-        alert("Password reset successfully!");
+        toast.success("Password reset successfully!");
         router.push("/login");
       }
     } catch {
       setError("Reset failed");
     } finally {
-      setLoading(false);
+      setResetLoading(false);
     }
   };
 
@@ -112,10 +114,10 @@ export default function ForgotPasswordPage() {
 
                   <Button 
                     type="submit" 
-                    disabled={loading}
+                    disabled={otpLoading}
                     className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700"
                   >
-                    {loading ? "Sending..." : "Send OTP"}
+                    {otpLoading ? "Sending..." : "Send OTP"}
                   </Button>
                 </form>
               ) : (
@@ -149,10 +151,10 @@ export default function ForgotPasswordPage() {
 
                   <Button 
                     type="submit" 
-                    disabled={loading}
+                    disabled={resetLoading}
                     className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700"
                   >
-                    {loading ? "Resetting..." : "Reset Password"}
+                    {resetLoading ? "Resetting..." : "Reset Password"}
                   </Button>
                 </form>
               )}

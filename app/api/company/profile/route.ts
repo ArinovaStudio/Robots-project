@@ -70,13 +70,13 @@ export async function GET() {
 }
 
 const profileSchema = z.object({
-  companyName: z.string().min(2),
-  description: z.string().min(10),
-  size: z.coerce.number().int().positive(),
-  type: z.string().min(2),
-  yearOfEstablishment: z.coerce.number().int(),
-  dealIn: z.array(z.string()),
-  website: z.string().url().optional().or(z.literal("")),
+  companyName: z.string().min(2, "Company name must be at least 2 characters."),
+  description: z.string().min(10, "Description must be at least 10 characters."),
+  size: z.coerce.number({ message: "Company size must be a number." }).int("Company size must be a whole number.").positive("Company size must be a positive number."),
+  type: z.string().min(2, "Please select a company type."),
+  yearOfEstablishment: z.coerce.number({ message: "Founded year must be a number." }).int("Founded year must be a whole number."),
+  dealIn: z.array(z.string()).min(1, "Please select at least one service you deal in."),
+  website: z.string().url("Please enter a valid website URL.").optional().or(z.literal("")),
   location: z.string().optional(),
   lookingFor: z.array(z.string()).optional().default([]),
 });
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
         }
 
         await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
-    })();
+    })().catch(console.error);
 
     return NextResponse.json({ success: true, message: "Profile created successfully" }, { status: 201 });
   } catch {

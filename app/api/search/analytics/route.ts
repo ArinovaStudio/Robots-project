@@ -4,7 +4,7 @@ import { startOfMonth, startOfYear } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const filter = searchParams.get("filter") || "monthly";
     const limit = searchParams.get("limit") || "10";
 

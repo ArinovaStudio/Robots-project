@@ -6,8 +6,9 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import React from "react";
 
-export default function TopRatedCompanies() {
+function TopRatedCompaniesContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -136,5 +137,13 @@ export default function TopRatedCompanies() {
         )}
       </div>
     </section>
+  );
+}
+
+export default function TopRatedCompanies() {
+  return (
+    <React.Suspense fallback={<div>Loading search...</div>}>
+      <TopRatedCompaniesContent />
+    </React.Suspense>
   );
 }

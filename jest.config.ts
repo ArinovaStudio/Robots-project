@@ -27,7 +27,7 @@ const config: Config = {
   transformIgnorePatterns: [
     "/node_modules/(?!(bad-words|badwords-list)/)",
   ],
-  setupFilesAfterSetup: [],
+  setupFilesAfterEnv: [],
   verbose: true,
 };
 

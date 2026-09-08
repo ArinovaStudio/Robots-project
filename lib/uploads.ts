@@ -15,7 +15,6 @@ export async function uploadFile(file: File, subfolder: string = ""): Promise<st
   
   // Create an unsigned upload preset in your Cloudinary settings, or use signature-based upload
   // For simplicity in this server-side function, we generate a signature
-  const timestamp = Math.round(new Date().getTime() / 1000).toString();
   
   // Using simple unsigned upload for now if you configure 'connecto_preset' in Cloudinary
   // Alternatively, use a signed upload logic here. We'll use a preset for ease of config.

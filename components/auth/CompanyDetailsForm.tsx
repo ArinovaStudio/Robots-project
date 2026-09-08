@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, X, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DEAL_IN_OPTIONS, LOOKING_FOR_OPTIONS } from "@/lib/constants";
@@ -10,7 +11,7 @@ import { DEAL_IN_OPTIONS, LOOKING_FOR_OPTIONS } from "@/lib/constants";
 export default function CompanyDetailsForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -39,10 +40,25 @@ export default function CompanyDetailsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (dealIn.length === 0) return setError("Please select at least one service you deal in.");
     
+    // Client-side validation
+    const validationErrors: string[] = [];
+    if (!formData.companyName.trim()) validationErrors.push("Company name is required.");
+    if (!formData.description.trim() || formData.description.trim().length < 10) validationErrors.push("Description must be at least 10 characters.");
+    if (!formData.size || Number(formData.size) <= 0) validationErrors.push("Company size must be a positive number.");
+    if (!formData.yearOfEstablishment) validationErrors.push("Founded year is required.");
+    if (!formData.type) validationErrors.push("Please select a company type.");
+    if (dealIn.length === 0) validationErrors.push("Please select at least one service you deal in.");
+    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) validationErrors.push("Website must be a valid URL (e.g. https://example.com).");
+
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      toast.error("Please fix the errors before submitting.");
+      return;
+    }
+
     setLoading(true);
-    setError("");
+    setErrors([]);
 
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
@@ -55,10 +71,16 @@ export default function CompanyDetailsForm() {
     try {
       const res = await fetch("/api/company/profile", { method: "POST", body: data });
       const result = await res.json();
-      if (!result.success) setError(result.message);
-      else router.push("/feed");
+      if (!result.success) {
+        setErrors([result.message || "Something went wrong."]);
+        toast.error(result.message || "Failed to create profile.");
+      } else {
+        toast.success("Company profile created successfully!");
+        router.push("/feed");
+      }
     } catch {
-      setError("Failed to create company profile");
+      setErrors(["Failed to create company profile. Please try again."]);
+      toast.error("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +88,19 @@ export default function CompanyDetailsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 mt-3 pb-10">
-      {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
+      {errors.length > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 space-y-1">
+          <div className="flex items-center gap-2 text-red-600 font-medium text-sm">
+            <AlertCircle className="h-4 w-4" />
+            Please fix the following:
+          </div>
+          <ul className="list-disc list-inside text-red-500 text-sm space-y-0.5 pl-1">
+            {errors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Basic Info */}
       <div className="space-y-2">

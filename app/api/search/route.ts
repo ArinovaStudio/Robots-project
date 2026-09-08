@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     const { user: currentUser } = await getUser();
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    Promise.all(logPromises);
+    await Promise.all(logPromises).catch(() => {});
 
     return NextResponse.json({
       success: true,
