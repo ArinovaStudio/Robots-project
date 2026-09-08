@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { FileText, ImageIcon, Video, X, Loader2, Send, CalendarDays } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { toast } from "sonner";
+import CreateEventModal from "@/components/modals/create-event-modal";
 
 type MediaPreview = {
   file: File;
@@ -18,6 +20,9 @@ export default function AchievementPost() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [eventData, setEventData] = useState<{ title: string; date: string; time: string; location: string; link: string } | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +75,10 @@ export default function AchievementPost() {
       formData.append("content", content);
     }
     
+    if (eventData) {
+      formData.append("eventData", JSON.stringify(eventData));
+    }
+    
     media.forEach((item) => {
       formData.append("media", item.file);
     });
@@ -86,6 +95,7 @@ export default function AchievementPost() {
         setError(result.message || "Failed to create post");
       } else {
         setContent("");
+        setEventData(null);
         media.forEach(m => URL.revokeObjectURL(m.previewUrl));
         setMedia([]);
         setIsExpanded(false);
@@ -144,6 +154,30 @@ export default function AchievementPost() {
         </div>
       </div>
 
+      {/* Event Details Preview */}
+      {eventData && isExpanded && (
+        <div className="mb-4 pl-[60px] pr-4">
+          <div className="relative group p-3 rounded-lg border border-orange-200 bg-orange-50 flex items-start gap-3">
+            <button
+              onClick={() => setEventData(null)}
+              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 rounded-full transition"
+            >
+              <X size={14} />
+            </button>
+            <div className="p-2 bg-orange-100 text-orange-600 rounded-md shrink-0">
+              <CalendarDays size={20} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 text-sm">{eventData.title}</h4>
+              <p className="text-xs text-gray-600 mt-1">
+                {new Date(`${eventData.date}T${eventData.time}`).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+              </p>
+              {eventData.location && <p className="text-xs text-gray-500 mt-0.5">{eventData.location}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Media Previews Container */}
       {media.length > 0 && isExpanded && (
         <div className="mt-4 flex flex-wrap gap-3 pl-15">
@@ -185,7 +219,7 @@ export default function AchievementPost() {
         <div className="flex gap-1 flex-1">
           <Action icon={<ImageIcon className="w-5 h-5 text-blue-500" />} label="Photo" onClick={() => imageInputRef.current?.click()} disabled={loading} />
           <Action icon={<Video className="w-5 h-5 text-green-600" />} label="Video" onClick={() => videoInputRef.current?.click()} disabled={loading} />
-          <Action icon={<CalendarDays className="w-5 h-5 text-orange-500" />} label="Event" onClick={() => {}} disabled={loading} />
+          <Action icon={<CalendarDays className="w-5 h-5 text-orange-500" />} label="Event" onClick={() => setIsEventModalOpen(true)} disabled={loading || !!eventData} />
           <Action icon={<FileText className="w-5 h-5 text-red-500" />} label="Write article" onClick={() => router.push("/post/article")} disabled={loading} />
         </div>
         
@@ -203,6 +237,15 @@ export default function AchievementPost() {
           </button>
         )}
       </div>
+
+      <CreateEventModal 
+        isOpen={isEventModalOpen} 
+        onClose={() => setIsEventModalOpen(false)} 
+        onSubmit={(data) => {
+          setEventData(data);
+          setIsExpanded(true);
+        }} 
+      />
     </div>
   );
 }

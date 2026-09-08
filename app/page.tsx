@@ -157,7 +157,6 @@ function HeroSection() {
                 alt="Connecto Platform Dashboard"
                 width={720}
                 height={480}
-                quality={90}
                 className="w-full"
                 priority
               />

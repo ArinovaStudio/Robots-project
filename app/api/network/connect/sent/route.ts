@@ -14,26 +14,29 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "10", 10)));
     const skip = (page - 1) * limit;
 
-    const [pendingRequests, totalCount] = await Promise.all([
+    const [sentRequests, totalCount] = await Promise.all([
       prisma.connection.findMany({
-        where: { receiverId: user.id, status: "PENDING" },
+        where: { senderId: user.id, status: "PENDING" },
         skip, take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          sender: { select: { id: true, name: true, image: true, company: true } }
+          receiver: { select: { id: true, name: true, image: true, company: true } }
         }
       }),
-      prisma.connection.count({ where: { receiverId: user.id, status: "PENDING" } })
+      prisma.connection.count({ where: { senderId: user.id, status: "PENDING" } })
     ]);
 
-    const formattedRequests = pendingRequests.map(req => ({
+    const formattedRequests = sentRequests.map(req => ({
+      id: req.id,
       connectionId: req.id,
       message: req.message,
       requestedAt: req.createdAt,
-      companyName: req.sender.company?.companyName || req.sender.name || "Unknown User",
-      logoUrl: req.sender.company?.logoUrl || null,
-      type: req.sender.company?.type || "User",
-      userId: req.sender.id,
+      receiver: {
+        id: req.receiver.id,
+        name: req.receiver.company?.companyName || req.receiver.name || "Unknown User",
+        image: req.receiver.company?.logoUrl || req.receiver.image || null,
+        type: req.receiver.company?.type || "User"
+      }
     }));
 
     return NextResponse.json({

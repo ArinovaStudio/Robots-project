@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
           { type: { contains: cleanSearch, mode: "insensitive" } },
           { location: { contains: cleanSearch, mode: "insensitive" } },
           { dealIn: { hasSome: arrayVariations } },
-          { lookingFor: { hasSome: arrayVariations } }
+          { lookingFor: { hasSome: arrayVariations } },
+          { user: { name: { contains: cleanSearch, mode: "insensitive" } } }
         ]
       });
     }

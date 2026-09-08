@@ -50,6 +50,8 @@ export async function GET(req: NextRequest) {
           ],
           include: {
             media: true,
+            // @ts-ignore - Bypass stale Prisma cache in IDE
+            event: true,
             author: {
               select: {
                 id: true,
@@ -97,7 +99,9 @@ export async function GET(req: NextRequest) {
 
       return {
         ...post,
+        // @ts-ignore
         userReaction: post.reactions[0]?.type || null, 
+        // @ts-ignore
         isSaved: post.savedBy?.length > 0,
         likesCount: likes,
         dislikesCount: dislikes

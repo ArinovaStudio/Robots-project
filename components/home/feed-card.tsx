@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, ThumbsDown, Flag, Edit2, Trash2, Send } from "lucide-react";
+import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, ThumbsDown, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import ShareModal from "../modals/share-modal";
 import ReportModal from "../modals/report-modal";
@@ -162,6 +162,65 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         <div className="mt-3 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
           {currentPost.content}
         </div>
+
+        {/* Event Card */}
+        {currentPost.event && (
+          <div className="mt-4 rounded-xl border border-orange-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition">
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 flex items-center justify-between">
+              <div>
+                <span className="inline-block px-2 py-1 bg-white/20 text-white text-xs font-semibold rounded-full mb-2 backdrop-blur-sm">
+                  Upcoming Event
+                </span>
+                <h3 className="text-lg font-bold text-white line-clamp-2">{currentPost.event.title}</h3>
+              </div>
+              <div className="flex flex-col items-center justify-center bg-white rounded-lg p-2 min-w-16 shadow-inner shrink-0 ml-4">
+                <span className="text-xs font-bold text-orange-600 uppercase">
+                  {new Date(currentPost.event.date).toLocaleString('default', { month: 'short' })}
+                </span>
+                <span className="text-xl font-black text-gray-900 leading-none">
+                  {new Date(currentPost.event.date).getDate()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-orange-50/50">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-start gap-2 text-gray-700">
+                  <CalendarDays className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">
+                      {new Date(currentPost.event.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                    <p className="text-gray-500">
+                      {new Date(currentPost.event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                
+                {currentPost.event.location && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                    <MapPin className="w-4 h-4 shrink-0 text-orange-500" />
+                    <span className="truncate">{currentPost.event.location}</span>
+                  </div>
+                )}
+                
+                {currentPost.event.link && (
+                  <div className="mt-3 pt-3 border-t border-orange-100 flex justify-end">
+                    <a 
+                      href={currentPost.event.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold rounded-full transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Event Link
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
         
       {currentPost.media && currentPost.media.length > 0 && (

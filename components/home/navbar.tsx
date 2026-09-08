@@ -6,11 +6,22 @@ import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { signOut } from "next-auth/react";
 import { useUserStore } from "@/store/AuthStore";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUserStore();
+
+  const { data: countsData } = useSWR(user ? "/api/user/counts" : null, fetcher, {
+    refreshInterval: 10000, // Poll every 10s
+    revalidateOnFocus: true,
+  });
+
+  const unreadNotifications = countsData?.data?.unreadNotifications || 0;
+  const pendingConnections = countsData?.data?.pendingConnections || 0;
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,6 +72,7 @@ export default function Navbar() {
             icon={<Network size={22} />}
             label="Network"
             isActive={pathname === "/network"}
+            badge={pendingConnections > 0 ? pendingConnections : undefined}
           />
 
           <NavItem
@@ -75,7 +87,7 @@ export default function Navbar() {
             icon={<Bell size={22} />}
             label="Notifications"
             isActive={pathname === "/notifications"}
-            badge={3}
+            badge={unreadNotifications > 0 ? unreadNotifications : undefined}
           />
 
           <div className="hidden sm:flex h-full items-center ml-2 border-l pl-6 border-gray-200">

@@ -235,10 +235,22 @@ model Post {
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   media PostMedia[]
+  event PostEvent?
   comments Comment[]
   reactions PostReaction[]
   savedBy SavedPost[]
   reports PostReport[]
+}
+
+model PostEvent {
+  id String @id @default(uuid())
+  postId String @unique
+  title String
+  date DateTime
+  location String?
+  link String?
+  
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model PostMedia {
