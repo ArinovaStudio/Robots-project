@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
-  session: { 
+  session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
@@ -69,7 +69,7 @@ export const authOptions: NextAuthOptions = {
           where: { email: token.email },
           select: { id: true, isOnboarded: true },
         });
-        
+
         if (dbUser) {
           token.id = dbUser.id;
           token.isOnboarded = dbUser.isOnboarded;
@@ -95,7 +95,7 @@ const handler = NextAuth(authOptions);
 async function rateLimitedPOST(req: NextRequest, ctx: any) {
   const ip = getIP(req);
   const rateLimit = authRateLimiter.check(ip);
-  
+
   if (!rateLimit.success) {
     return NextResponse.json(
       { success: false, message: "Too many login attempts. Please try again in 15 minutes." },

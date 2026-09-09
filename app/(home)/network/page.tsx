@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import ConnectionRequests from "@/components/home/connection-requests";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { UserMinus, UserCheck, Clock, Send, Users, Loader2 } from "lucide-react";
+import { UserMinus, UserCheck, Clock, Send, Users, Loader2, Search, MoreVertical, MessageSquare } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export default function NetworkPage() {
   const [sentRequests, setSentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [connectionPage, setConnectionPage] = useState(1);
   const [hasMoreConnections, setHasMoreConnections] = useState(false);
@@ -90,6 +92,11 @@ export default function NetworkPage() {
       fetchNetworkData();
     }
   }, [activeTab]);
+
+  const filteredConnections = connections.filter(conn => 
+    conn.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conn.company?.type?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
@@ -178,7 +185,24 @@ export default function NetworkPage() {
 
       {activeTab === "connections" && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm mt-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Your Connections</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              Your Connections
+              <span className="bg-blue-100 text-blue-700 text-sm py-0.5 px-2.5 rounded-full font-medium">
+                {connections.length}
+              </span>
+            </h2>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search connections..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-64 pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
           {loading ? (
             <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -196,11 +220,11 @@ export default function NetworkPage() {
           ) : connections?.length === 0 || !connections ? (
             <div className="text-center py-12 text-gray-500">
               <UserMinus className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p>You don't have any connections yet. Start exploring the directory to find partners!</p>
+              <p>{searchQuery ? "No connections found matching your search." : "You don't have any connections yet. Start exploring the directory to find partners!"}</p>
             </div>
           ) : (
             <div className="flex flex-col space-y-4">
-              {connections.map((conn) => (
+              {filteredConnections.map((conn) => (
                 <div key={conn.id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
                   <Link href={`/profile/${conn.userId}`} className="shrink-0">
                     <div className="w-14 h-14 rounded-full relative overflow-hidden bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg border border-gray-200">
@@ -218,14 +242,26 @@ export default function NetworkPage() {
                     <p className="text-sm text-gray-500 truncate">{conn.company?.type || "Member"}</p>
                     <p className="text-xs text-gray-400 mt-0.5">Connected {new Date(conn.connectedAt).toLocaleDateString()}</p>
                   </div>
-                  <button 
-                    disabled={disconnectingId === conn.userId}
-                    onClick={() => handleDisconnect(conn.userId)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-red-600 hover:border-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {disconnectingId === conn.userId ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
-                    <span className="hidden sm:inline">Disconnect</span>
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors focus:outline-none flex items-center justify-center shrink-0">
+                      {disconnectingId === conn.userId ? <Loader2 className="w-5 h-5 animate-spin" /> : <MoreVertical className="w-5 h-5" />}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/messaging?userId=${conn.userId}`} className="cursor-pointer flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-blue-600" />
+                          Message
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDisconnect(conn.userId)}
+                        className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50 flex items-center gap-2"
+                      >
+                        <UserMinus className="w-4 h-4" />
+                        Disconnect
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
 
