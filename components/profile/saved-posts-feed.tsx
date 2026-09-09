@@ -5,6 +5,7 @@ import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useUserStore } from "@/store/AuthStore";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 
 export default function SavedPostsFeed() {
   const { user } = useUserStore();
@@ -13,6 +14,8 @@ export default function SavedPostsFeed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
 
   const fetchFeed = useCallback(async (pageNum: number, append = false) => {
     if (append) setLoadingMore(true);
@@ -36,6 +39,14 @@ export default function SavedPostsFeed() {
       setLoadingMore(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (isIntersecting && hasMore && !loading && !loadingMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchFeed(nextPage, true);
+    }
+  }, [isIntersecting, hasMore, loading, loadingMore, page, fetchFeed]);
 
   useEffect(() => {
     fetchFeed(1);
@@ -86,24 +97,13 @@ export default function SavedPostsFeed() {
           ))}
 
           {hasMore && (
-            <div className="flex justify-center pt-4">
-              {loadingMore ? (
+            <div ref={ref} className="flex justify-center pt-4">
+              {loadingMore && (
                 <div className="w-full max-w-[200px]">
                   <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
                     <Skeleton height={44} borderRadius={999} />
                   </SkeletonTheme>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    const nextPage = page + 1;
-                    setPage(nextPage);
-                    fetchFeed(nextPage, true);
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition shadow-sm"
-                >
-                  Load More Posts
-                </button>
               )}
             </div>
           )}

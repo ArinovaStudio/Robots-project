@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 import registerDirectChatHandlers from "./socket/directChatHandler";
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = dev ? "localhost" : "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
@@ -31,6 +31,8 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
 
     socket.on("user_connected", (userId: string) => {
+      socket.join("user_" + userId);
+
       if (!onlineUsers.has(userId)) {
         onlineUsers.set(userId, new Set());
       }

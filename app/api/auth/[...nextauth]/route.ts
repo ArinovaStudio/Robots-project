@@ -53,7 +53,10 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
     async jwt({ token, user }) {
 
@@ -66,7 +69,7 @@ export const authOptions: NextAuthOptions = {
           where: { email: token.email },
           select: { id: true, isOnboarded: true },
         });
-        
+
         if (dbUser) {
           token.id = dbUser.id;
           token.isOnboarded = dbUser.isOnboarded;
@@ -84,6 +87,23 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
+import { NextRequest, NextResponse } from "next/server";
+import { authRateLimiter, getIP } from "@/lib/rate-limit";
+
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+async function rateLimitedPOST(req: NextRequest, ctx: any) {
+  const ip = getIP(req);
+  const rateLimit = authRateLimiter.check(ip);
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
+      { status: 429 }
+    );
+  }
+
+  return handler(req, ctx);
+}
+
+export { handler as GET, rateLimitedPOST as POST };

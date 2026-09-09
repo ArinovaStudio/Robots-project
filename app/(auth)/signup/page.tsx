@@ -22,23 +22,23 @@ export default function AuthPage() {
   }, [status, session, router, step]);
 
   if (status === "loading") {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-screen w-full items-center justify-center bg-white">Loading...</div>;
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mx-auto flex h-full w-full max-w-7xl rounded-[32px]">
-        <div className="grid h-full w-full grid-cols-1 lg:grid-cols-2">
+    <div className="h-screen w-full overflow-hidden flex items-center justify-center p-4 md:p-6 bg-white">
+      <div className="mx-auto flex h-full w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
+        <div className="grid h-full w-full grid-cols-1 p-0 lg:grid-cols-2 overflow-hidden">
           {/* LEFT SIDE */}
-          <div className="flex h-full flex-col justify-between overflow-y-auto px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
-            <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+          <div className="flex flex-col px-6 py-4 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
+            <div className="mx-auto flex w-full max-w-md flex-col">
               
               {/* Heading */}
-              <div className="mb-10">
+              <div className="mb-6">
                 <h1 className="text-4xl font-bold tracking-tight text-[#0f172a]">
-                  Hey, Join us Today! 👀
+                  Join Connecto Today! 👀
                 </h1>
-                <p className="mt-4 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-slate-500">
                   Today is a new day. It&apos;s your day. You shape it.
                   <br />
                   Sign in to start connection with other business.
@@ -46,7 +46,7 @@ export default function AuthPage() {
               </div>
 
               {/* STEPPER */}
-              <div className="mb-10">
+              <div className="mb-8">
                 <div className="flex relative items-center">
                   <div className="flex absolute left-0 top-[-10px] flex-col items-start">
                     <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${step >= 1 ? "bg-[#3F6FFF]" : "bg-slate-300"}`}>
@@ -76,7 +76,7 @@ export default function AuthPage() {
               )}
 
               {/* Footer */}
-              <p className="mt-14 text-center text-sm text-slate-500">
+              <p className="mt-8 text-center text-sm text-slate-500">
                 Already have an account?{" "}
                 <Link href="/login" className="font-semibold text-[#3F6FFF] hover:underline">
                   Sign in
@@ -84,8 +84,8 @@ export default function AuthPage() {
               </p>
             </div>
 
-            <div className="mt-10 text-center text-sm text-slate-400">
-              © {new Date().getFullYear()} Arinova Studio
+            <div className="mt-6 text-center text-sm text-slate-400 mb-4">
+              © {new Date().getFullYear()} Connecto
             </div>
           </div>
 

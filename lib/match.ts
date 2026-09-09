@@ -1,3 +1,4 @@
+
 import { prisma } from "./prisma";
 import { CompanyProfile } from "@prisma/client";
 
@@ -8,7 +9,7 @@ interface CompanyProfileWithVectors extends CompanyProfile {
 }
 
 export async function getSimilarCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
-  const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });  
+  const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
   if (!userProfile) return [];
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
@@ -53,12 +54,49 @@ export async function getSuggestedCompanies(userId: string): Promise<CompanyProf
   `;
 }
 
-export async function getMatches(userId: string, matchType: "similar" | "suggested") {
+export async function getSuppliers(userId: string): Promise<CompanyProfileWithVectors[]> {
+  const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!userProfile) return [];
+
+  return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
+    SELECT cp.*, 
+    (1 - (cp."offeringVector" <=> (SELECT "needsVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
+    FROM "CompanyProfile" cp
+    INNER JOIN "User" u ON cp."userId" = u.id
+    WHERE cp."userId" != ${userId}
+    AND u.status = 'ACTIVE'
+    ORDER BY cp."isBoosted" DESC, similarity DESC
+    LIMIT 40
+  `;
+}
+
+export async function getBuyers(userId: string): Promise<CompanyProfileWithVectors[]> {
+  const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!userProfile) return [];
+
+  return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
+    SELECT cp.*, 
+    (1 - (cp."needsVector" <=> (SELECT "offeringVector" FROM "CompanyProfile" WHERE "userId" = ${userId}))) as similarity
+    FROM "CompanyProfile" cp
+    INNER JOIN "User" u ON cp."userId" = u.id
+    WHERE cp."userId" != ${userId}
+    AND u.status = 'ACTIVE'
+    ORDER BY cp."isBoosted" DESC, similarity DESC
+    LIMIT 40
+  `;
+}
+
+export async function getMatches(userId: string, matchType: "similar" | "suggested" | "suppliers" | "buyers") {
   try {
     const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
     if (!userProfile) return [];
 
-    const candidates = matchType === "similar" ? await getSimilarCompanies(userId) : await getSuggestedCompanies(userId);
+    let candidates: CompanyProfileWithVectors[] = [];
+    if (matchType === "similar") candidates = await getSimilarCompanies(userId);
+    else if (matchType === "suggested") candidates = await getSuggestedCompanies(userId);
+    else if (matchType === "suppliers") candidates = await getSuppliers(userId);
+    else if (matchType === "buyers") candidates = await getBuyers(userId);
+
     if (candidates.length === 0) return [];
 
     const boostedCompanies = candidates.filter(c => c.isBoosted);
@@ -74,7 +112,31 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
       return safeData;
     });
 
-    return cleanMatches;
+    const userIds = cleanMatches.map(c => c.userId);
+    const userCounts = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            followers: true,
+            receivedConnections: { where: { status: "ACCEPTED" } },
+            sentConnections: { where: { status: "ACCEPTED" } }
+          }
+        }
+      }
+    });
+
+    const countsMap = new Map(userCounts.map(u => [u.id, u._count]));
+
+    return cleanMatches.map((company) => {
+      const counts = countsMap.get(company.userId);
+      return {
+        ...company,
+        followersCount: counts?.followers || 0,
+        connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0)
+      };
+    });
 
   } catch {
     return [];
@@ -85,7 +147,7 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
 export async function getSuggestedFeedAuthors(userId: string): Promise<string[]> {
   try {
     const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
-    
+
     if (!userProfile) {
       const activeAuthors = await prisma.post.findMany({
         where: { status: 'ACTIVE', author: { status: 'ACTIVE' } },
@@ -96,7 +158,7 @@ export async function getSuggestedFeedAuthors(userId: string): Promise<string[]>
       return activeAuthors.map(a => a.authorId);
     }
 
-    const candidates = await prisma.$queryRaw<{userId: string}[]>`
+    const candidates = await prisma.$queryRaw<{ userId: string }[]>`
       SELECT cp."userId"
       FROM "CompanyProfile" cp
       INNER JOIN "User" u ON cp."userId" = u.id

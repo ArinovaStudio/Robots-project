@@ -6,6 +6,8 @@ import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useUserStore } from "@/store/AuthStore";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 
 export default function DashboardPage() {
   const { user } = useUserStore();
@@ -14,6 +16,16 @@ export default function DashboardPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
+
+  useEffect(() => {
+    if (isIntersecting && hasMore && !loading && !loadingMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchFeed(nextPage, true);
+    }
+  }, [isIntersecting, hasMore, loading, loadingMore, page]);
 
   const fetchFeed = async (pageNum: number, append = false) => {
     if (append) setLoadingMore(true);
@@ -24,9 +36,16 @@ export default function DashboardPage() {
       
       if (json.success) {
         if (append) {
-          setPosts(prev => [...prev, ...json.data]);
+          setPosts(prev => {
+            const combined = [...prev, ...json.data];
+            // Deduplicate by ID to prevent React key errors during pagination
+            const unique = Array.from(new Map(combined.map(p => [p.id, p])).values());
+            return unique;
+          });
         } else {
-          setPosts(json.data);
+          // Also deduplicate the initial fetch just in case the API returned duplicates
+          const unique = Array.from(new Map(json.data.map((p: any) => [p.id, p])).values());
+          setPosts(unique);
         }
         setHasMore(pageNum < json.pagination.totalPages);
       }
@@ -44,7 +63,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 pb-20">
-      <AchievementPost />
+      <ScrollReveal direction="down">
+        <AchievementPost />
+      </ScrollReveal>
       
       {loading ? (
         // Initial Loading Skeletons
@@ -80,33 +101,23 @@ export default function DashboardPage() {
       ) : (
         <>
           {posts.map((post) => (
-            <FeedCard 
-              key={post.id} 
-              post={post} 
-              currentUser={user} 
-            />
+            <ScrollReveal key={post.id} direction="up" delay={0.1}>
+              <FeedCard 
+                post={post} 
+                currentUser={user} 
+              />
+            </ScrollReveal>
           ))}
 
-          {/* Load More Section */}
+          {/* Infinite Scroll Trigger */}
           {hasMore && (
-            <div className="flex justify-center pt-4">
-              {loadingMore ? (
+            <div ref={ref} className="flex justify-center pt-4">
+              {loadingMore && (
                 <div className="w-full max-w-[200px]">
                   <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
                     <Skeleton height={44} borderRadius={999} />
                   </SkeletonTheme>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    const nextPage = page + 1;
-                    setPage(nextPage);
-                    fetchFeed(nextPage, true);
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition shadow-sm"
-                >
-                  Load More Posts
-                </button>
               )}
             </div>
           )}

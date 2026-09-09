@@ -15,6 +15,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Order ID required" }, { status: 400 });
     }
 
+    const transaction = await prisma.transaction.findUnique({
+      where: { razorpayOrderId: razorpay_order_id }
+    });
+
+    if (!transaction || transaction.userId !== user.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized or not found" }, { status: 403 });
+    }
+
     await prisma.transaction.update({
       where: { razorpayOrderId: razorpay_order_id },
       data: { status: "FAILED" }

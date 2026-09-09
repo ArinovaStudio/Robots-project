@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const { user } = await getUser();
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const postId = searchParams.get("postId");
     const parentId = searchParams.get("parentId");
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));

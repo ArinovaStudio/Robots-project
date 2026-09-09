@@ -6,9 +6,9 @@ export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Public pages
-  const publicPages = ["/", "/login", "/signup"];
+  const publicPages = ["/login", "/signup", "/"];
 
-  if (publicPages.includes(pathname)) {
+  if (publicPages.includes(pathname) || pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
@@ -16,17 +16,17 @@ export default async function proxy(req: NextRequest) {
 
   // Not logged in
   if (!user) {
-    return NextResponse.redirect(
-      new URL("/login", req.url)
-    );
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    return NextResponse.redirect(loginUrl);
   }
 
   // Admin protection
   if (pathname.startsWith("/admin")) {
     if (user.role !== "ADMIN") {
-      return NextResponse.redirect(
-        new URL("/explore", req.url)
-      );
+      const exploreUrl = req.nextUrl.clone();
+      exploreUrl.pathname = "/explore";
+      return NextResponse.redirect(exploreUrl);
     }
   }
 
@@ -35,6 +35,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)",
   ],
 };

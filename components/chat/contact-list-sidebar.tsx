@@ -95,20 +95,20 @@ export default function ContactListSidebar() {
             >
               {/* Avatar */}
               <div className="size-10 rounded-full bg-white border border-slate-200 overflow-hidden flex-shrink-0 relative flex items-center justify-center font-bold text-sm text-slate-400">
-                {contact.logoUrl ? (
-                  <Image src={contact.logoUrl} alt="Logo" fill className="object-cover" />
+                {contact.image ? (
+                  <Image src={contact.image} alt="Logo" fill className="object-cover" />
                 ) : (
-                  contact.companyName?.charAt(0) || "?"
+                  contact.name?.charAt(0) || "?"
                 )}
               </div>
               
               {/* Info */}
               <div className="overflow-hidden">
                 <h3 className={`font-semibold text-sm truncate ${isActive ? "text-white" : "text-slate-900"}`}>
-                  {contact.companyName || "Unknown User"}
+                  {contact.name || "Unknown User"}
                 </h3>
                 <p className={`text-xs truncate ${isActive ? "text-indigo-100" : "text-slate-500"}`}>
-                  {contact.type || "Connection"}
+                  {contact.company?.type || "Connection"}
                 </p>
               </div>
             </Link>

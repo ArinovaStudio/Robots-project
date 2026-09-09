@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { getMatches } from "@/lib/match";
 
-const VALID_SLUGS = ["similar", "suggested"] as const;
+const VALID_SLUGS = ["similar", "suggested", "suppliers", "buyers"] as const;
 type MatchSlug = (typeof VALID_SLUGS)[number];
 
 export async function GET( req: NextRequest, { params }: { params: Promise<{ slug: string }> } ) {

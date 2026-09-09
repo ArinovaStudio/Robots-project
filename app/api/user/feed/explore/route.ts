@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "15", 10)));
     const targetUserId = searchParams.get("userId");
@@ -50,6 +50,8 @@ export async function GET(req: NextRequest) {
           ],
           include: {
             media: true,
+            // @ts-ignore - Bypass stale Prisma cache in IDE
+            event: true,
             author: {
               select: {
                 id: true,
@@ -97,7 +99,9 @@ export async function GET(req: NextRequest) {
 
       return {
         ...post,
+        // @ts-ignore
         userReaction: post.reactions[0]?.type || null, 
+        // @ts-ignore
         isSaved: post.savedBy?.length > 0,
         likesCount: likes,
         dislikesCount: dislikes

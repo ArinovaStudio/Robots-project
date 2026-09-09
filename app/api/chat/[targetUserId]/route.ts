@@ -9,7 +9,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ tar
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "50", 10)));
     const skip = (page - 1) * limit;

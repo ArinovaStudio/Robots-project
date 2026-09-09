@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "10", 10)));
     const skip = (page - 1) * limit;
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         skip, take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          sender: { select: { id: true, company: true } }
+          sender: { select: { id: true, name: true, image: true, company: true } }
         }
       }),
       prisma.connection.count({ where: { receiverId: user.id, status: "PENDING" } })
@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
       connectionId: req.id,
       message: req.message,
       requestedAt: req.createdAt,
-      ...req.sender.company,
+      companyName: req.sender.company?.companyName || req.sender.name || "Unknown User",
+      logoUrl: req.sender.company?.logoUrl || null,
+      type: req.sender.company?.type || "User",
       userId: req.sender.id,
     }));
 

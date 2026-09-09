@@ -13,10 +13,12 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const content = formData.get("content")?.toString().trim() || null;
+    const eventDataString = formData.get("eventData")?.toString();
+    const eventData = eventDataString ? JSON.parse(eventDataString) : null;
     const files = formData.getAll("media") as File[];
 
-    if (!content && files.length === 0) {
-      return NextResponse.json( { success: false, message: "Post must contain text or media" }, { status: 400 });
+    if (!content && files.length === 0 && !eventData) {
+      return NextResponse.json( { success: false, message: "Post must contain text, media, or event details" }, { status: 400 });
     }
 
     if (content) {
@@ -61,12 +63,23 @@ export async function POST(req: NextRequest) {
             type: m.type,
           })),
         },
+        ...(eventData && {
+          event: {
+            create: {
+              title: eventData.title,
+              date: new Date(`${eventData.date}T${eventData.time}`),
+              location: eventData.location || null,
+              link: eventData.link || null,
+            }
+          }
+        })
       },
     });
 
     return NextResponse.json({ success: true, message: "Post created successfully" }, { status: 201 });
 
-  } catch {
+  } catch (error) {
+    console.error("EVENT CREATION ERROR:", error);
     return NextResponse.json( { success: false, message: "Internal server error" }, { status: 500 } );
   }
 }

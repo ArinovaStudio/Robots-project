@@ -1,6 +1,28 @@
-version: '3.8'
-
 services:
+  # ==========================================
+  # PostgreSQL + pgvector
+  # ==========================================
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: connecto_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: robots_project
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Ollama LLM Server
+  # ==========================================
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -9,15 +31,76 @@ services:
       - "11434:11434"
     volumes:
       - ollama_storage:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
+  # ==========================================
+  # Ollama Model Pull (one-time init)
+  # ==========================================
   ollama-init:
     image: ollama/ollama:latest
     container_name: ollama-init
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     environment:
       - OLLAMA_HOST=ollama:11434
     entrypoint: ["/bin/sh", "-c", "echo 'Waiting for Ollama...' && sleep 5 && ollama pull nomic-embed-text && ollama pull phi3 && echo 'Models downloaded successfully!'"]
 
+  # ==========================================
+  # Connecto Next.js App
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connecto_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database (points to the postgres container)
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/robots_project?schema=public
+
+      # NextAuth
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dGhpc2lzYW1vY2tuZXh0YXV0aHNlY3JldGtleWZvcmRlbW8xMjMh}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Facebook OAuth
+      FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID:-}
+      FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET:-}
+
+      # Email
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+
+      # Razorpay
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+
+      # Ollama (points to the ollama container)
+      OLLAMA_HOST: http://ollama:11434
+
+      # Server
+      PORT: 3000
+      NODE_ENV: production
+
+      # Cron
+      CRON_SECRET: ${CRON_SECRET:-your-cron-secret-token}
+    volumes:
+      - uploads:/app/public/uploads
+
 volumes:
+  pgdata:
   ollama_storage:
+  uploads:
