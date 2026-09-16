@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
+import { Mail, Eye, EyeOff, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import RightSection from "@/components/auth/RightSection";
 
@@ -16,10 +16,18 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const passwordCriteria = {
+    hasMinLength: newPassword.length >= 8,
+    hasUpper: /[A-Z]/.test(newPassword),
+    hasNumber: /[0-9]/.test(newPassword),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +59,9 @@ export default function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp || !newPassword) return setError("Please fill all fields");
+    if (!passwordCriteria.hasMinLength || !passwordCriteria.hasNumber || !passwordCriteria.hasUpper || !passwordCriteria.hasSpecial) {
+      return setError("Please meet all password criteria");
+    }
     setError("");
     setResetLoading(true);
 
@@ -114,8 +125,8 @@ export default function ForgotPasswordPage() {
 
                   <Button 
                     type="submit" 
-                    disabled={otpLoading}
-                    className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700"
+                    disabled={otpLoading || !email}
+                    className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {otpLoading ? "Sending..." : "Send OTP"}
                   </Button>
@@ -139,20 +150,42 @@ export default function ForgotPasswordPage() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">New Password</label>
-                    <Input
-                      type="password"
-                      required
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="At least 8 characters"
-                      className="h-12 rounded-xl border-slate-200 bg-slate-50"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="At least 8 characters"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50 pr-10"
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    {/* Password Criteria */}
+                    {newPassword && (
+                      <div className="pt-2 pb-1 grid grid-cols-2 gap-2 text-xs">
+                        <div className={`flex items-center gap-1.5 ${passwordCriteria.hasMinLength ? 'text-green-600' : 'text-slate-500'}`}>
+                          {passwordCriteria.hasMinLength ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />} 8+ characters
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${passwordCriteria.hasUpper ? 'text-green-600' : 'text-slate-500'}`}>
+                          {passwordCriteria.hasUpper ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />} Uppercase letter
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${passwordCriteria.hasNumber ? 'text-green-600' : 'text-slate-500'}`}>
+                          {passwordCriteria.hasNumber ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />} Number
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${passwordCriteria.hasSpecial ? 'text-green-600' : 'text-slate-500'}`}>
+                          {passwordCriteria.hasSpecial ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />} Special character
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button 
                     type="submit" 
-                    disabled={resetLoading}
-                    className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700"
+                    disabled={resetLoading || !otp || !newPassword}
+                    className="h-12 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {resetLoading ? "Resetting..." : "Reset Password"}
                   </Button>

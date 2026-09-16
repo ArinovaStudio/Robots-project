@@ -5,14 +5,21 @@ import { getUser } from "./lib/auth";
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
+  const { user } = await getUser();
+
+  // If user is logged in and trying to access "/", redirect to "/explore"
+  if (user && pathname === "/") {
+    const exploreUrl = req.nextUrl.clone();
+    exploreUrl.pathname = "/explore";
+    return NextResponse.redirect(exploreUrl);
+  }
+
   // Public pages
   const publicPages = ["/login", "/signup", "/"];
 
   if (publicPages.includes(pathname) || pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
-
-  const { user } = await getUser();
 
   // Not logged in
   if (!user) {

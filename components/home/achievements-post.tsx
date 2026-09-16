@@ -7,6 +7,8 @@ import Image from "next/image";
 import { toast } from "sonner";
 import CreateEventModal from "@/components/modals/create-event-modal";
 
+import { useUserStore } from "@/store/AuthStore";
+
 type MediaPreview = {
   file: File;
   previewUrl: string;
@@ -15,6 +17,7 @@ type MediaPreview = {
 
 export default function AchievementPost() {
   const router = useRouter();
+  const { user } = useUserStore();
   const [content, setContent] = useState("");
   const [media, setMedia] = useState<MediaPreview[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,13 +122,19 @@ export default function AchievementPost() {
       {/* Input Area */}
       <div className="flex gap-3 mb-3">
         <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 shrink-0">
-          <Image
-            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-            alt="Profile"
-            width={48}
-            height={48}
-            className="object-cover"
-          />
+          {user?.image ? (
+            <Image
+              src={user.image}
+              alt="Profile"
+              width={48}
+              height={48}
+              className="object-cover h-full w-full"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-600 font-bold text-lg">
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          )}
         </div>
         
         <div className="flex-1">

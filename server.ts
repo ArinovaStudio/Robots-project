@@ -1,4 +1,8 @@
 import "dotenv/config";
+import dns from "node:dns";
+
+dns.setDefaultResultOrder("ipv4first");
+
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
@@ -9,7 +13,7 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = dev ? "localhost" : "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
-const app = next({ dev, hostname, port });
+const app = next({ dev, hostname, port, dir: process.cwd() });
 const handle = app.getRequestHandler();
 
 const onlineUsers = new Map<string, Set<string>>();

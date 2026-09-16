@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Bed, Check, X, Loader2 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -100,17 +101,21 @@ export default function ConnectionRequests() {
             {requests.map((req) => (
               <div key={req.connectionId} className="flex items-center justify-between border-t border-gray-100 pt-3 first:border-0 first:pt-0">
                 <div className="flex items-center gap-3 w-full overflow-hidden">
-                  <div className="h-12 w-12 rounded-full relative overflow-hidden bg-gray-100 shrink-0">
-                    {req.logoUrl ? (
-                      <Image alt={req.companyName} src={req.logoUrl} fill className="object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-lg font-bold text-gray-400">
-                        {req.companyName.charAt(0)}
-                      </div>
-                    )}
-                  </div>
+                  <Link href={`/profile/${req.userId}`} className="shrink-0">
+                    <div className="h-12 w-12 rounded-full relative overflow-hidden bg-gray-100 hover:opacity-90 transition-opacity">
+                      {req.logoUrl ? (
+                        <Image alt={req.companyName} src={req.logoUrl} fill className="object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-lg font-bold text-gray-400">
+                          {req.companyName.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
                   <div className="flex-1 overflow-hidden pr-2">
-                    <h4 className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline cursor-pointer">{req.companyName}</h4>
+                    <Link href={`/profile/${req.userId}`} className="truncate block">
+                      <h4 className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline">{req.companyName}</h4>
+                    </Link>
                     <p className="text-xs text-gray-500 truncate">{req.type}</p>
                   </div>
                 </div>

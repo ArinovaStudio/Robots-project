@@ -18,7 +18,7 @@ export default function RootLayout({
     <html lang="en" className={`${sfPro.className} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#f5f5f5]">
         <AuthProvider>
-            <Toaster />
+            <Toaster position="bottom-center" />
             {children}
         </AuthProvider>
       </body>

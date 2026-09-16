@@ -76,7 +76,7 @@ export default function CompanyDetailsForm() {
         toast.error(result.message || "Failed to create profile.");
       } else {
         toast.success("Company profile created successfully!");
-        window.location.href = "/feed";
+        window.location.href = "/explore";
       }
     } catch {
       setErrors(["Failed to create company profile. Please try again."]);

@@ -82,7 +82,7 @@ export default function MarketplacePage() {
         
         {loading ? (
           <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="border border-gray-100 rounded-xl p-5">
                   <div className="flex gap-4">
@@ -98,7 +98,7 @@ export default function MarketplacePage() {
             </div>
           </SkeletonTheme>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(activeTab === "suppliers" ? suppliers : buyers).map((company) => (
               <CompanyCard key={company.id} company={company} />
             ))}

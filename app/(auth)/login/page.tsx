@@ -8,7 +8,7 @@ import { signIn, useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail } from "lucide-react";
+import { Mail, Eye, EyeOff } from "lucide-react";
 import { FaFacebook as Facebook } from "react-icons/fa";
 import RightSection from "@/components/auth/RightSection";
 
@@ -18,6 +18,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,11 +48,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden flex items-center justify-center p-4 md:p-6 bg-white">
-      <div className="mx-auto flex h-full w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
+    <div className="h-screen w-full overflow-hidden flex bg-white">
+      <div className="mx-auto flex h-full w-full">
         <div className="grid h-full w-full grid-cols-1 p-0 lg:grid-cols-2 overflow-hidden">
           {/* LEFT SIDE */}
-          <div className="flex flex-col px-6 py-10 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
+          <div className="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar relative">
             <div className="mx-auto flex w-full max-w-md flex-col">
               
               {/* Heading */}
@@ -68,8 +69,6 @@ export default function LoginPage() {
 
               {/* Form */}
               <form onSubmit={handleCredentialsLogin} className="space-y-4">
-                {error && <p className="text-sm text-red-500">{error}</p>}
-
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">
                     Email
@@ -91,14 +90,23 @@ export default function LoginPage() {
                   <label className="text-sm font-medium text-slate-700">
                     Password
                   </label>
-                  <Input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    className="h-11 rounded-xl border-slate-200 bg-slate-50"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)} 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <div className="flex justify-end pt-1">
                     <Link
                       href="/forgot-password"
@@ -111,11 +119,13 @@ export default function LoginPage() {
 
                 <Button 
                   type="submit" 
-                  disabled={loading}
-                  className="h-11 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700 mt-2"
+                  disabled={loading || !email || !password}
+                  className="h-11 w-full rounded-xl bg-blue-600 text-base font-medium hover:bg-blue-700 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </Button>
+                
+                {error && <p className="text-sm text-red-500 mt-2 text-center">{error}</p>}
               </form>
 
               {/* Divider */}
@@ -129,7 +139,7 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <Button
                   type="button"
-                  onClick={() => signIn("google", { callbackUrl: "/feed" })}
+                  onClick={() => signIn("google", { callbackUrl: "/explore" })}
                   variant="outline"
                   className="h-11 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
@@ -144,7 +154,7 @@ export default function LoginPage() {
 
                 <Button
                   type="button"
-                  onClick={() => signIn("facebook", { callbackUrl: "/feed" })}
+                  onClick={() => signIn("facebook", { callbackUrl: "/explore" })}
                   variant="outline"
                   className="h-11 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 >
@@ -165,7 +175,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="mt-6 text-center text-sm text-slate-400 mb-4">
+            <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-slate-400">
               © {new Date().getFullYear()} Connecto
             </div>
           </div>

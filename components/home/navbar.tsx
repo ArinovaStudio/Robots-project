@@ -38,7 +38,7 @@ export default function Navbar() {
         
         {/* Left: Logo & Search */}
         <div className="flex items-center gap-4">
-          <Link href="/feed" className="flex items-center gap-2">
+          <Link href="/explore" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
               <span className="text-white font-bold text-xl">C</span>
             </div>
@@ -61,10 +61,10 @@ export default function Navbar() {
         {/* Right: Navigation */}
         <div className="flex items-center h-full gap-2 sm:gap-6">
           <NavItem
-            href="/feed"
+            href="/explore"
             icon={<Home size={22} />}
             label="Home"
-            isActive={pathname === "/feed"}
+            isActive={pathname === "/explore"}
           />
 
           <NavItem
@@ -93,14 +93,18 @@ export default function Navbar() {
           <div className="hidden sm:flex h-full items-center ml-2 border-l pl-6 border-gray-200">
             <DropdownMenu>
               <DropdownMenuTrigger className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer">
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200">
-                  <Image
-                    src={user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || 'Felix'}`}
-                    alt="User Profile"
-                    width={28}
-                    height={28}
-                    className="object-cover"
-                  />
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt="User Profile"
+                      width={28}
+                      height={28}
+                      className="object-cover h-full w-full"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-gray-500">{user?.name?.charAt(0).toUpperCase() || "U"}</span>
+                  )}
                 </div>
                 <span className="text-[11px] font-medium text-gray-500 flex items-center max-w-[60px] truncate">
                   {user?.name || "Me"} <span className="ml-0.5 text-[8px]">▼</span>

@@ -26,11 +26,11 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden flex items-center justify-center p-4 md:p-6 bg-white">
-      <div className="mx-auto flex h-full w-full max-w-7xl py-0 rounded-[32px] border-none shadow-none">
+    <div className="h-screen w-full overflow-hidden flex bg-white">
+      <div className="mx-auto flex h-full w-full">
         <div className="grid h-full w-full grid-cols-1 p-0 lg:grid-cols-2 overflow-hidden">
           {/* LEFT SIDE */}
-          <div className="flex flex-col px-6 py-4 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar">
+          <div className="flex flex-col justify-center px-6 py-4 sm:px-10 lg:px-16 overflow-y-auto no-scrollbar relative">
             <div className="mx-auto flex w-full max-w-md flex-col">
               
               {/* Heading */}
@@ -84,7 +84,7 @@ export default function AuthPage() {
               </p>
             </div>
 
-            <div className="mt-6 text-center text-sm text-slate-400 mb-4">
+            <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-slate-400">
               © {new Date().getFullYear()} Connecto
             </div>
           </div>

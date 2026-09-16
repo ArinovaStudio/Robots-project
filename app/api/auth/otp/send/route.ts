@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
 
     const { email, type } = validation.data;
 
+    if (type === "RESET_PASSWORD") {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return NextResponse.json({ success: false, message: "Email not found in our records." }, { status: 404 });
+      }
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 

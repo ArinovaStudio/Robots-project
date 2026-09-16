@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ThumbsUp, ThumbsDown, Loader2, MoreVertical, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ThumbsUp, Loader2, MoreVertical, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 export function CommentThread({ comment, postId, currentUser, onDelete }: { comment: any, postId: string, currentUser: any, onDelete: (id: string) => void }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -11,9 +11,8 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   const [replies, setReplies] = useState<any[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
 
-  const [reaction, setReaction] = useState<"LIKE" | "DISLIKE" | null>(comment.userReaction || null);
+  const [reaction, setReaction] = useState<"LIKE" | null>(comment.userReaction === "LIKE" ? "LIKE" : null);
   const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
-  const [dislikesCount, setDislikesCount] = useState(comment.dislikesCount || 0);
   
   const [showMenu, setShowMenu] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -23,25 +22,15 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   const authorName = comment.author?.company?.companyName || comment.author?.name || "User";
   const isOwner = currentUser?.id === comment.authorId;
 
-  const handleReact = async (type: "LIKE" | "DISLIKE") => {
+  const handleReact = async (type: "LIKE") => {
     if (!currentUser) return alert("Please log in to react to comments.");
 
     if (reaction === type) {
       setReaction(null);
-      if (type === "LIKE") setLikesCount((prev: any) => prev - 1);
-      if (type === "DISLIKE") setDislikesCount((prev: any) => prev - 1);
+      setLikesCount((prev: any) => prev - 1);
     } else {
-      if (reaction === "LIKE" && type === "DISLIKE") {
-        setLikesCount((prev: any) => prev - 1);
-        setDislikesCount((prev: any) => prev + 1);
-      } else if (reaction === "DISLIKE" && type === "LIKE") {
-        setDislikesCount((prev: any) => prev - 1);
-        setLikesCount((prev: any) => prev + 1);
-      } else if (!reaction) {
-        if (type === "LIKE") setLikesCount((prev: any) => prev + 1);
-        if (type === "DISLIKE") setDislikesCount((prev: any) => prev + 1);
-      }
       setReaction(type);
+      setLikesCount((prev: any) => prev + 1);
     }
 
     try {
@@ -226,11 +215,6 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
             <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-[#5667ff] ${reaction === "LIKE" ? "text-[#5667ff]" : ""}`}>
               <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> 
               {likesCount > 0 && likesCount}
-            </button>
-            {/* Display dislikes count accurately */}
-            <button onClick={() => handleReact("DISLIKE")} className={`flex items-center gap-1.5 transition hover:text-red-500 ${reaction === "DISLIKE" ? "text-red-500" : ""}`}>
-              <ThumbsDown size={14} className={reaction === "DISLIKE" ? "fill-current" : ""} />
-              {dislikesCount > 0 && dislikesCount}
             </button>
 
             <button onClick={() => setIsReplying(!isReplying)} className="hover:text-slate-800 transition">

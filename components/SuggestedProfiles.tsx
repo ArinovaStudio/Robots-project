@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import ConnectModal from "./modals/connect-modal";
@@ -73,24 +74,28 @@ export default function SuggestedProfiles() {
               key={company.userId}
               className="flex gap-3"
             >
-              <div className="h-12 w-12 rounded-full relative overflow-hidden bg-gray-100 shrink-0">
-                {company.logoUrl ? (
-                  <Image
-                    alt={company.companyName}
-                    src={company.logoUrl}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-lg font-bold text-gray-400">
-                    {company.companyName.charAt(0)}
-                  </div>
-                )}
-              </div>
+              <Link href={`/profile/${company.userId}`} className="shrink-0">
+                <div className="h-12 w-12 rounded-full relative overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity">
+                  {company.logoUrl ? (
+                    <Image
+                      alt={company.companyName}
+                      src={company.logoUrl}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-lg font-bold text-gray-400">
+                      {company.companyName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+              </Link>
 
               <div className="flex flex-col items-start w-full overflow-hidden">
                 <div className="flex items-center gap-1.5 w-full">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline cursor-pointer">{company.companyName}</h4>
+                  <Link href={`/profile/${company.userId}`} className="truncate">
+                    <h4 className="text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer">{company.companyName}</h4>
+                  </Link>
                   {company.isBoosted && (
                     <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded font-medium">
                       Ad

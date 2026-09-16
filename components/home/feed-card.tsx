@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, ThumbsDown, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import ShareModal from "../modals/share-modal";
 import ReportModal from "../modals/report-modal";
@@ -10,14 +10,14 @@ import EditPostModal from "../modals/edit-post-modal";
 import PostComments from "./post-comments";
 import MediaSlider from "./media-slider";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function FeedCard({ post, currentUser, onUnsave }: { post: any, currentUser: any, onUnsave?: () => void }) {
   const [isDeleted, setIsDeleted] = useState(false);
   const [currentPost, setCurrentPost] = useState(post);
 
-  const [reaction, setReaction] = useState<"LIKE" | "DISLIKE" | null>(currentPost?.userReaction || null);
+  const [reaction, setReaction] = useState<"LIKE" | null>(currentPost?.userReaction === "LIKE" ? "LIKE" : null);
   const [likesCount, setLikesCount] = useState(currentPost?.likesCount || 0);
-  const [dislikesCount, setDislikesCount] = useState(currentPost?.dislikesCount || 0);
   const [isSaved, setIsSaved] = useState(currentPost?.isSaved || false);
   
   const [showDropdown, setShowDropdown] = useState(false);
@@ -29,27 +29,40 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [latestComment, setLatestComment] = useState<any>(null);
+
   const isAuthor = currentUser?.id === currentPost?.authorId;
   const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || "Independent Professional";
   const authorInitials = authorName.charAt(0).toUpperCase();
+  const authorImage = currentPost?.author?.company?.logoUrl || currentPost?.author?.image;
 
-  const handleReact = async (type: "LIKE" | "DISLIKE") => {
+  useEffect(() => {
+    // Fetch latest comment for this post
+    const fetchLatestComment = async () => {
+      try {
+        const res = await fetch(`/api/comments?postId=${currentPost.id}&limit=1`);
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          // Assuming the API returns comments sorted by date
+          setLatestComment(json.data[json.data.length - 1]);
+        }
+      } catch (error) {
+        // ignore
+      }
+    };
+    if (currentPost._count?.comments > 0) {
+      fetchLatestComment();
+    }
+  }, [currentPost.id, currentPost._count?.comments]);
+
+  const handleReact = async () => {
+    const type = "LIKE";
     if (reaction === type) {
       setReaction(null);
-      if (type === "LIKE") setLikesCount((prev: any) => prev - 1);
-      if (type === "DISLIKE") setDislikesCount((prev: any) => prev - 1);
+      setLikesCount((prev: any) => prev - 1);
     } else {
-      if (reaction === "LIKE" && type === "DISLIKE") {
-        setLikesCount((prev: any) => prev - 1);
-        setDislikesCount((prev: any) => prev + 1);
-      } else if (reaction === "DISLIKE" && type === "LIKE") {
-        setDislikesCount((prev: any) => prev - 1);
-        setLikesCount((prev: any) => prev + 1);
-      } else if (!reaction) {
-        if (type === "LIKE") setLikesCount((prev: any) => prev + 1);
-        if (type === "DISLIKE") setDislikesCount((prev: any) => prev + 1);
-      }
       setReaction(type);
+      setLikesCount((prev: any) => prev + 1);
     }
 
     try {
@@ -104,9 +117,9 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Link href={`/profile/${currentPost.author?.id}`} className="shrink-0 block">
-              {currentPost.author?.company?.logoUrl ? (
+              {authorImage ? (
                 <img 
-                  src={currentPost.author.company.logoUrl} 
+                  src={authorImage} 
                   className="h-12 w-12 rounded-full object-cover border border-gray-100 hover:opacity-80 transition" 
                   alt="Logo" 
                 />
@@ -232,22 +245,46 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         </div>
       )}
 
+      {/* Latest Comment Showcase */}
+      {!showComments && latestComment && (
+        <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm">
+          <div className="flex items-start gap-2">
+            {latestComment.author?.company?.logoUrl || latestComment.author?.image ? (
+              <img 
+                src={latestComment.author?.company?.logoUrl || latestComment.author?.image} 
+                className="w-6 h-6 rounded-full object-cover shrink-0" 
+                alt="Logo" 
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
+                {(latestComment.author?.company?.companyName || latestComment.author?.name || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex-1 bg-gray-100 rounded-lg p-2">
+              <div className="font-semibold text-gray-900 text-xs">
+                {latestComment.author?.company?.companyName || latestComment.author?.name || "User"}
+              </div>
+              <p className="text-gray-700 text-xs mt-0.5 line-clamp-2">{latestComment.content}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Social Counts */}
-      {(likesCount > 0 || dislikesCount > 0 || currentPost._count?.comments > 0) && (
-        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between text-xs text-gray-500">
+      {(likesCount > 0 || currentPost._count?.comments > 0) && (
+        <div className="px-4 py-2 border-t border-b border-gray-100 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-1">
             {likesCount > 0 && <span className="flex items-center gap-1"><ThumbsUp size={12} className="text-blue-500 fill-blue-500" /> {likesCount}</span>}
-            {dislikesCount > 0 && <span className="flex items-center gap-1 ml-2"><ThumbsDown size={12} className="text-red-500 fill-red-500" /> {dislikesCount}</span>}
           </div>
           <div>
-            {currentPost._count?.comments > 0 && <span>{currentPost._count.comments} comments</span>}
+            {currentPost._count?.comments > 0 && <span className="cursor-pointer hover:underline" onClick={() => setShowComments(true)}>{currentPost._count.comments} comments</span>}
           </div>
         </div>
       )}
 
       {/* Actions */}
       <div className="px-2 py-1 flex items-center justify-between">
-        <button onClick={() => handleReact("LIKE")} className={`flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-sm font-medium transition-colors ${reaction === "LIKE" ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
+        <button onClick={handleReact} className={`flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-sm font-medium transition-colors ${reaction === "LIKE" ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
           <ThumbsUp size={18} className={reaction === "LIKE" ? "fill-current" : ""} /> Like
         </button>
         <button onClick={() => setShowComments(!showComments)} className="flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900">
