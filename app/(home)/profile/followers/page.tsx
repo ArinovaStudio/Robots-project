@@ -126,23 +126,23 @@ export default function NetworkPage() {
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
       <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100">
         <h1 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-          <Users className="text-[#5667ff]" /> My Network
+          <Users className="text-blue-600" /> My Network
         </h1>
         
         <div className="flex gap-6 border-b border-slate-100">
           <button 
             onClick={() => setActiveTab("followers")}
-            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "followers" ? "text-[#5667ff]" : "text-slate-500 hover:text-slate-800"}`}
+            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "followers" ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
           >
             Followers <span className="ml-1 opacity-70">({totalFollowers})</span>
-            {activeTab === "followers" && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#5667ff] rounded-t-full"></span>}
+            {activeTab === "followers" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></span>}
           </button>
           <button 
             onClick={() => setActiveTab("following")}
-            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "following" ? "text-[#5667ff]" : "text-slate-500 hover:text-slate-800"}`}
+            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "following" ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
           >
             Following <span className="ml-1 opacity-70">({totalFollowing})</span>
-            {activeTab === "following" && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#5667ff] rounded-t-full"></span>}
+            {activeTab === "following" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></span>}
           </button>
         </div>
       </div>

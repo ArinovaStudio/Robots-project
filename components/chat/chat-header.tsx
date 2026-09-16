@@ -47,7 +47,7 @@ export default function ChatHeader({ user, isOnline }: ChatHeaderProps) {
 
           {/* User Info */}
           <div>
-            <h2 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-[#5667ff] transition-colors">
+            <h2 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
               {user.company?.companyName || user.name || "Unknown User"}
             </h2>
             <div className="flex items-center gap-2 mt-0.5">

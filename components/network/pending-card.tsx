@@ -24,7 +24,7 @@ export default function PendingCard({ item, actionLoading, onRespond }: PendingC
           </Link>
 
           <div className="flex-1 min-w-0">
-            <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-[#5667ff] transition truncate block w-fit">
+            <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-blue-600 transition truncate block w-fit">
               {item.companyName || "Unknown Company"}
             </Link>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">

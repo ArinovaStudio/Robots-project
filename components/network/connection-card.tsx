@@ -10,7 +10,7 @@ interface ConnectionCardProps {
 
 export default function ConnectionCard({ item, actionLoading, onRemove }: ConnectionCardProps) {
   return (
-    <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm hover:border-[#5667ff]/20 hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm hover:border-blue-600/20 hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
         <Link href={`/profile/${item.userId}`} className="size-[64px] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 relative block">
           {item.logoUrl ? (
@@ -23,7 +23,7 @@ export default function ConnectionCard({ item, actionLoading, onRemove }: Connec
         </Link>
 
         <div className="flex-1 min-w-0">
-          <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-[#5667ff] transition truncate block w-fit">
+          <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-blue-600 transition truncate block w-fit">
             {item.companyName || "Unknown Company"}
           </Link>
           
@@ -53,7 +53,7 @@ export default function ConnectionCard({ item, actionLoading, onRemove }: Connec
         </button>
         <Link 
           href={`/messages/${item.userId}`}
-          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-[#5667ff] hover:bg-[#4352cc] transition shadow-sm"
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm"
         >
           <MessageSquare size={14} />
           Message

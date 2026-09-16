@@ -158,20 +158,20 @@ export default function ConnectionsPage() {
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
       <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100">
         <h1 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-          <LinkIcon className="text-[#5667ff]" /> Connections
+          <LinkIcon className="text-blue-600" /> Connections
         </h1>
         
         <div className="flex gap-6 border-b border-slate-100">
           <button 
             onClick={() => setActiveTab("connections")}
-            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "connections" ? "text-[#5667ff]" : "text-slate-500 hover:text-slate-800"}`}
+            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === "connections" ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
           >
             My Connections <span className="ml-1 opacity-70">({totalConnections})</span>
-            {activeTab === "connections" && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#5667ff] rounded-t-full"></span>}
+            {activeTab === "connections" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></span>}
           </button>
           <button 
             onClick={() => setActiveTab("pending")}
-            className={`pb-4 px-2 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === "pending" ? "text-[#5667ff]" : "text-slate-500 hover:text-slate-800"}`}
+            className={`pb-4 px-2 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === "pending" ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
           >
             Pending Requests
             {totalPending > 0 && (
@@ -179,7 +179,7 @@ export default function ConnectionsPage() {
                 {totalPending}
               </span>
             )}
-            {activeTab === "pending" && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#5667ff] rounded-t-full"></span>}
+            {activeTab === "pending" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></span>}
           </button>
         </div>
       </div>

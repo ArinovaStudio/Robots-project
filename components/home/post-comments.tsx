@@ -77,7 +77,7 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
             className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
           />
         ) : (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF0FF] text-sm font-bold text-[#5667ff]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
             {(currentUser?.company?.companyName || currentUser?.name || "U").charAt(0).toUpperCase()}
           </div>
         )}
@@ -92,7 +92,7 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
             <button 
               onClick={handlePostComment}
               disabled={posting || !newComment.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-white bg-[#5667ff] text-sm font-medium disabled:opacity-50 transition hover:bg-[#4555e5]"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-white bg-blue-600 text-sm font-medium disabled:opacity-50 transition hover:bg-blue-700"
             >
               {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               Comment
@@ -129,7 +129,7 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
               setPage(nextPage);
               fetchComments(nextPage, true);
             }}
-            className="w-full py-3 text-sm font-medium text-[#5667ff] hover:bg-[#EEF0FF] rounded-xl transition"
+            className="w-full py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition"
           >
             Load more comments
           </button>

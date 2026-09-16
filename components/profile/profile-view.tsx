@@ -12,7 +12,9 @@ import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
 import ConnectModal from "../modals/connect-modal";
+import EditProfileModal from "../modals/edit-profile-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import { Pencil } from "lucide-react";
 
 interface ProfileViewProps {
   userId: string;
@@ -22,6 +24,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
@@ -184,6 +187,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   >
                     <Layers size={16} /> Connection Requests
                   </Link>
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
+                  >
+                    <Pencil size={16} /> Edit Profile
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 justify-center sm:justify-start">
@@ -232,6 +241,23 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   onSuccess={(message) => {
                     setConnectionStatus("PENDING");
                     toast.success(message);
+                  }}
+                />
+              )}
+
+              {showEditModal && profile?.company && (
+                <EditProfileModal
+                  profile={profile.company}
+                  onClose={() => setShowEditModal(false)}
+                  onSuccess={() => {
+                    setShowEditModal(false);
+                    // Refresh profile
+                    const fetchProfile = async () => {
+                      const res = await fetch(`/api/profile/${userId}`);
+                      const json = await res.json();
+                      if (json.success) setProfile(json.data);
+                    };
+                    fetchProfile();
                   }}
                 />
               )}

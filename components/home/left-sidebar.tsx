@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import MenuCard from "./menu-card";
+import ProfileCard from "./profile-card";
 
 export default function LeftSidebar() {
   const [profileData, setProfileData] = useState<any>(null);
@@ -39,6 +40,7 @@ export default function LeftSidebar() {
   return (
     <div className="space-y-4">
       <MenuCard />
+      <ProfileCard profile={profileData} refreshProfile={fetchProfile} />
     </div>
   );
 }

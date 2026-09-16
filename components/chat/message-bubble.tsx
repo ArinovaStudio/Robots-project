@@ -99,7 +99,7 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
                 message.isDeleted
                   ? "bg-slate-100 text-slate-500 italic border border-slate-200" 
                   : isOwn 
-                    ? "bg-[#5667ff] text-white rounded-br-[4px]" 
+                    ? "bg-blue-600 text-white rounded-br-[4px]" 
                     : "bg-white text-slate-800 border border-slate-100 rounded-bl-[4px]"
               }`}
             >
@@ -129,7 +129,7 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
                 {message.isPending ? (
                   <Check size={14} className="opacity-70" />
                 ) : message.isRead ? (
-                  <CheckCheck size={14} className="text-[#5667ff]" /> 
+                  <CheckCheck size={14} className="text-blue-600" /> 
                 ) : (
                   <CheckCheck size={14} />
                 )}

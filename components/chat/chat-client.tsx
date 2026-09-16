@@ -116,7 +116,7 @@ export default function ChatClient({ currentUserId, targetUserId }: ChatClientPr
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-120px)] items-center justify-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-        <Loader2 className="h-8 w-8 animate-spin text-[#5667ff]" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }

@@ -89,7 +89,7 @@ export default function ConnectModal({ receiverId, companyName, onClose, onSucce
           <button
             onClick={handleSendRequest}
             disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#4f46e5] py-3 text-sm font-semibold text-white transition hover:bg-[#4338ca] disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Send Invitation

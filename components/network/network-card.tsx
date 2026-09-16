@@ -11,7 +11,7 @@ interface NetworkCardProps {
 
 export default function NetworkCard({ item, activeTab, actionLoading, onToggleFollow }: NetworkCardProps) {
   return (
-    <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm hover:border-[#5667ff]/20 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
+    <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm hover:border-blue-600/20 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <Link href={`/profile/${item.userId}`} className="size-[64px] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 relative block">
           {item.logoUrl ? (
@@ -24,7 +24,7 @@ export default function NetworkCard({ item, activeTab, actionLoading, onToggleFo
         </Link>
 
         <div className="flex-1 min-w-0">
-          <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-[#5667ff] transition truncate block w-fit">
+          <Link href={`/profile/${item.userId}`} className="text-lg font-bold text-slate-900 hover:text-blue-600 transition truncate block w-fit">
             {item.companyName || "Unknown Company"}
           </Link>
           
@@ -49,7 +49,7 @@ export default function NetworkCard({ item, activeTab, actionLoading, onToggleFo
         className={`hidden sm:flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition shrink-0 min-w-[120px] ${
           activeTab === "following" || item.isFollowing 
             ? "bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-100 border border-transparent" 
-            : "bg-[#5667ff] text-white hover:bg-[#4352cc]"
+            : "bg-blue-600 text-white hover:bg-blue-700"
         }`}
       >
         {actionLoading ? (

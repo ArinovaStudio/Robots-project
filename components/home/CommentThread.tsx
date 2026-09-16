@@ -195,11 +195,11 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#5667ff] min-h-[60px]"
+              className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 min-h-[60px]"
             />
             <div className="flex gap-2 mt-2 justify-end">
               <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-full">Cancel</button>
-              <button onClick={handleEdit} disabled={isUpdating} className="px-3 py-1.5 text-xs font-medium bg-[#5667ff] text-white hover:bg-[#4555e5] rounded-full">
+              <button onClick={handleEdit} disabled={isUpdating} className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-full">
                 Save
               </button>
             </div>
@@ -212,7 +212,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {!isEditing && (
           <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500">
             {/* Display likes count accurately */}
-            <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-[#5667ff] ${reaction === "LIKE" ? "text-[#5667ff]" : ""}`}>
+            <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-blue-600 ${reaction === "LIKE" ? "text-blue-600" : ""}`}>
               <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> 
               {likesCount > 0 && likesCount}
             </button>
@@ -233,7 +233,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
                 className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
               />
             ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF0FF] text-sm font-bold text-[#5667ff]">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
                 {(currentUser?.company?.companyName || currentUser?.name || "U").charAt(0).toUpperCase()}
               </div>
             )}
@@ -242,12 +242,12 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
-                className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#5667ff]"
+                className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600"
                 rows={2}
               />
               <div className="flex justify-end gap-2 mt-1">
                 <button onClick={() => setIsReplying(false)} className="px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-full">Cancel</button>
-                <button onClick={handlePostReply} disabled={isUpdating || !replyContent.trim()} className="px-3 py-1 text-xs font-medium bg-[#5667ff] text-white hover:bg-[#4555e5] rounded-full">
+                <button onClick={handlePostReply} disabled={isUpdating || !replyContent.trim()} className="px-3 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-full">
                   Reply
                 </button>
               </div>
@@ -260,7 +260,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
           <div className="mt-2">
             <button 
               onClick={toggleReplies} 
-              className="flex items-center gap-1.5 text-xs font-bold text-[#5667ff] hover:bg-[#EEF0FF] px-2 py-1 rounded-full transition"
+              className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-full transition"
             >
               {showReplies ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               {showReplies ? "Hide replies" : `${comment._count.replies} ${comment._count.replies === 1 ? 'reply' : 'replies'}`}

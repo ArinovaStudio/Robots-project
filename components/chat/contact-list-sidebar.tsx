@@ -73,7 +73,7 @@ export default function ContactListSidebar() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search connections..." 
-            className="w-full bg-slate-100 border-none rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-[#5667ff]/20 outline-none transition"
+            className="w-full bg-slate-100 border-none rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-600/20 outline-none transition"
           />
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function ContactListSidebar() {
               href={`/messages/${contact.userId}`} 
               key={contact.connectionId}
               className={`flex items-center gap-3 p-3 rounded-xl transition cursor-pointer mb-1 ${
-                isActive ? "bg-[#5667ff] text-white shadow-md" : "hover:bg-slate-100 text-slate-700"
+                isActive ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-100 text-slate-700"
               }`}
             >
               {/* Avatar */}

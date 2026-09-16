@@ -67,7 +67,7 @@ export default function MediaSlider({ media }: { media: any[] }) {
             {media.map((_, idx) => (
               <div 
                 key={idx} 
-                className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? "w-4 bg-[#5667ff]" : "w-1.5 bg-slate-300/80"}`}
+                className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? "w-4 bg-blue-600" : "w-1.5 bg-slate-300/80"}`}
               />
             ))}
           </div>
