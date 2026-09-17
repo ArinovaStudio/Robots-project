@@ -152,7 +152,11 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       <ScrollReveal direction="down">
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
         {/* Cover Photo */}
-        <div className="h-32 sm:h-48 w-full bg-slate-200 relative"></div>
+        <div className="h-32 sm:h-48 w-full bg-slate-200 relative">
+          {company.bannerUrl && (
+            <Image src={company.bannerUrl} alt="Banner" fill className="object-cover" />
+          )}
+        </div>
 
         <div className="p-6 sm:p-8 pt-0 sm:pt-0 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative">
           <div className="-mt-12 sm:-mt-16 h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-lg border-4 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center z-10 relative">

@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
               select: {
                 id: true,
                 name: true,
+                image: true,
                 company: { 
                   select: { 
                     companyName: true, 
@@ -96,6 +97,10 @@ export async function GET(req: NextRequest) {
     const formattedPosts = posts.map(post => {
       const likes = reactionCounts.find(r => r.postId === post.id && r.type === "LIKE")?._count.type || 0;
       const dislikes = reactionCounts.find(r => r.postId === post.id && r.type === "DISLIKE")?._count.type || 0;
+
+      if (post.author && post.author.company) {
+        post.author.company.logoUrl = post.author.company.logoUrl || post.author.image;
+      }
 
       return {
         ...post,

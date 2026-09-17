@@ -57,6 +57,7 @@ export async function GET() {
       success: true,
       data: {
         ...company,
+        logoUrl: company.logoUrl || user.image,
         profileViewers,
         impressions,
         connectionsCount,
@@ -107,13 +108,27 @@ export async function POST(req: NextRequest) {
     let logoUrl = null;
     if (logoFile && logoFile.size > 0) {
       logoUrl = await uploadImage(logoFile, "logos");
+    } else if (user.image) {
+      logoUrl = user.image;
+    }
+
+    const bannerFile = formData.get("banner") as File;
+    let bannerUrl = null;
+    if (bannerFile && bannerFile.size > 0) {
+      bannerUrl = await uploadImage(bannerFile, "banners");
     }
 
     await prisma.companyProfile.create({
-        data: { ...validation.data, userId: user.id, logoUrl }
+        data: { ...validation.data, userId: user.id, logoUrl, bannerUrl }
     });
 
-    await prisma.user.update({ where: { id: user.id }, data: { isOnboarded: true } });
+    await prisma.user.update({ 
+      where: { id: user.id }, 
+      data: { 
+        isOnboarded: true,
+        ...(logoUrl && { image: logoUrl })
+      } 
+    });
 
     (async () => {
         const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
@@ -168,11 +183,22 @@ export async function PUT(req: NextRequest) {
     if (newLogo && newLogo.size > 0) {
       if (existing.logoUrl) await deleteFile(existing.logoUrl);
       logoUrl = await uploadImage(newLogo, "logos");
+      
+      // Update User image to keep pfp in sync
+      await prisma.user.update({ where: { id: user.id }, data: { image: logoUrl } });
+    }
+
+    let bannerUrl = existing.bannerUrl;
+    const newBanner = formData.get("banner") as File;
+
+    if (newBanner && newBanner.size > 0) {
+      if (existing.bannerUrl) await deleteFile(existing.bannerUrl);
+      bannerUrl = await uploadImage(newBanner, "banners");
     }
 
     await prisma.companyProfile.update({
       where: { userId: user.id },
-      data: { ...validation.data, logoUrl }
+      data: { ...validation.data, logoUrl, bannerUrl }
     });
 
     (async () => {

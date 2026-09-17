@@ -245,30 +245,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         </div>
       )}
 
-      {/* Latest Comment Showcase */}
-      {!showComments && latestComment && (
-        <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm">
-          <div className="flex items-start gap-2">
-            {latestComment.author?.company?.logoUrl || latestComment.author?.image ? (
-              <img 
-                src={latestComment.author?.company?.logoUrl || latestComment.author?.image} 
-                className="w-6 h-6 rounded-full object-cover shrink-0" 
-                alt="Logo" 
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
-                {(latestComment.author?.company?.companyName || latestComment.author?.name || "U").charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1 bg-gray-100 rounded-lg p-2">
-              <div className="font-semibold text-gray-900 text-xs">
-                {latestComment.author?.company?.companyName || latestComment.author?.name || "User"}
-              </div>
-              <p className="text-gray-700 text-xs mt-0.5 line-clamp-2">{latestComment.content}</p>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Social Counts */}
       {(likesCount > 0 || currentPost._count?.comments > 0) && (
@@ -297,6 +274,31 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
           <Send size={18} /> Send
         </button>
       </div>
+
+      {/* Latest Comment Showcase */}
+      {!showComments && latestComment && (
+        <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm rounded-b-lg">
+          <div className="flex items-start gap-2">
+            {latestComment.author?.company?.logoUrl || latestComment.author?.image ? (
+              <img 
+                src={latestComment.author?.company?.logoUrl || latestComment.author?.image} 
+                className="w-6 h-6 rounded-full object-cover shrink-0" 
+                alt="Logo" 
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
+                {(latestComment.author?.company?.companyName || latestComment.author?.name || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex-1 bg-gray-100 rounded-lg p-2">
+              <div className="font-semibold text-gray-900 text-xs">
+                {latestComment.author?.company?.companyName || latestComment.author?.name || "User"}
+              </div>
+              <p className="text-gray-700 text-xs mt-0.5 line-clamp-2">{latestComment.content}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showComments && (
         <div className="bg-gray-50 border-t border-gray-100 rounded-b-lg">

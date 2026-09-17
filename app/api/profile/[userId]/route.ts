@@ -72,7 +72,10 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       name: targetUser.name,
       image: targetUser.image,
       joinedAt: targetUser.createdAt,
-      company: targetUser.company,
+      company: targetUser.company ? {
+        ...targetUser.company,
+        logoUrl: targetUser.company.logoUrl || targetUser.image
+      } : null,
       stats: {
         followers: targetUser._count.followers,
         following: targetUser._count.following,

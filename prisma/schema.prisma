@@ -79,6 +79,7 @@ model CompanyProfile {
   companyName String
   description String @db.Text
   logoUrl String?
+  bannerUrl String?
   size Int
   type String
   yearOfEstablishment Int

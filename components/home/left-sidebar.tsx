@@ -39,8 +39,8 @@ export default function LeftSidebar() {
 
   return (
     <div className="space-y-4">
-      <MenuCard />
       <ProfileCard profile={profileData} refreshProfile={fetchProfile} />
+      <MenuCard />
     </div>
   );
 }

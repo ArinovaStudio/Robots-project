@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +16,12 @@ import RightSection from "@/components/auth/RightSection";
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/explore");
+    }
+  }, [status, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

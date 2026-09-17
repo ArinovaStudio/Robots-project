@@ -26,6 +26,7 @@ export default function CompanyDetailsForm() {
   const [dealIn, setDealIn] = useState<string[]>([]);
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [logo, setLogo] = useState<File | null>(null);
+  const [banner, setBanner] = useState<File | null>(null);
 
   const addTag = (val: string, type: "dealIn" | "lookingFor") => {
     if (!val) return;
@@ -67,6 +68,7 @@ export default function CompanyDetailsForm() {
     lookingFor.forEach((item) => data.append("lookingFor", item));
     
     if (logo) data.append("logo", logo);
+    if (banner) data.append("banner", banner);
 
     try {
       const res = await fetch("/api/company/profile", { method: "POST", body: data });
@@ -202,6 +204,17 @@ export default function CompanyDetailsForm() {
             <div className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4">
               <span className="text-sm text-slate-400 truncate max-w-[120px]">{logo ? logo.name : "Upload"}</span>
               <label htmlFor="company-logo" className="cursor-pointer text-sm font-medium text-[#3F6FFF] hover:underline">Choose File</label>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700">Banner Image</label>
+          <div className="relative">
+            <input id="company-banner" type="file" accept="image/*" className="hidden" onChange={(e) => setBanner(e.target.files?.[0] || null)} />
+            <div className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4">
+              <span className="text-sm text-slate-400 truncate max-w-[120px]">{banner ? banner.name : "Upload"}</span>
+              <label htmlFor="company-banner" className="cursor-pointer text-sm font-medium text-[#3F6FFF] hover:underline">Choose File</label>
             </div>
           </div>
         </div>

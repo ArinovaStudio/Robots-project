@@ -17,6 +17,8 @@ export default function AuthPage() {
     if (status === "authenticated") {
       if (session?.user?.isOnboarded === false && step !== 2) {
         setStep(2);
+      } else if (session?.user?.isOnboarded) {
+        router.push("/explore");
       }
     }
   }, [status, session, router, step]);

@@ -11,6 +11,8 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
   
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(profile.logoUrl || null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(profile.bannerUrl || null);
 
   const [dealInInput, setDealInInput] = useState("");
   const [lookingForInput, setLookingForInput] = useState("");
@@ -44,6 +46,14 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
     if (file) {
       setLogoFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setBannerFile(file);
+      setBannerPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -83,6 +93,9 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
     if (logoFile) {
       payload.append("logo", logoFile);
     }
+    if (bannerFile) {
+      payload.append("banner", bannerFile);
+    }
 
     try {
       const res = await fetch("/api/company/profile", {
@@ -94,6 +107,7 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
       if (data.success) {
         toast.success("Profile updated successfully");
         if (previewUrl && logoFile) URL.revokeObjectURL(previewUrl); 
+        if (bannerPreviewUrl && bannerFile) URL.revokeObjectURL(bannerPreviewUrl);
         onSuccess();
       } else {
         toast.error(data.message || "Failed to update profile");
@@ -118,22 +132,38 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
 
         <form id="edit-profile-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
           
-          <div className="flex flex-col items-center justify-center pb-2">
-            <input type="file" id="logo-upload" accept="image/*" className="hidden" onChange={handleImageChange} />
-            <label htmlFor="logo-upload" className="relative cursor-pointer group">
-              <div className="h-24 w-24 rounded-full border-[3px] border-white shadow-md overflow-hidden bg-slate-100 flex items-center justify-center transition-transform group-hover:scale-105">
-                {previewUrl ? (
-                  <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-bold text-slate-300">
-                    {formData.companyName.charAt(0) || "C"}
-                  </span>
-                )}
-              </div>
-              <div className="absolute bottom-0 right-0 bg-black text-white p-2 rounded-full shadow-lg border-2 border-white transition-transform group-hover:scale-110">
+          <div className="relative mb-12">
+            {/* Banner Area */}
+            <div className="h-32 w-full bg-slate-200 relative group overflow-hidden">
+              {bannerPreviewUrl ? (
+                <img src={bannerPreviewUrl} alt="Banner" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-r from-blue-100 to-blue-50"></div>
+              )}
+              <label htmlFor="banner-upload" className="absolute top-3 right-3 cursor-pointer bg-black/50 text-white p-2 rounded-full shadow-lg border border-white/20 transition-transform group-hover:scale-105 hover:bg-black/70">
                 <Pencil size={14} />
-              </div>
-            </label>
+              </label>
+              <input type="file" id="banner-upload" accept="image/*" className="hidden" onChange={handleBannerChange} />
+            </div>
+
+            {/* Logo Area */}
+            <div className="absolute -bottom-10 left-6">
+              <input type="file" id="logo-upload" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <label htmlFor="logo-upload" className="relative cursor-pointer group block">
+                <div className="h-24 w-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-100 flex items-center justify-center transition-transform group-hover:scale-105">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-4xl font-bold text-slate-300">
+                      {formData.companyName.charAt(0) || "C"}
+                    </span>
+                  )}
+                </div>
+                <div className="absolute bottom-0 right-0 bg-black text-white p-2 rounded-full shadow-lg border-2 border-white transition-transform group-hover:scale-110">
+                  <Pencil size={14} />
+                </div>
+              </label>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
