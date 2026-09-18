@@ -9,6 +9,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function NetworkPage() {
   const [activeTab, setActiveTab] = useState<"pending" | "sent" | "connections">("connections");
@@ -17,6 +20,9 @@ export default function NetworkPage() {
   const [loading, setLoading] = useState(true);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: countsData } = useSWR("/api/user/counts", fetcher);
+  const pendingRequestsCount = countsData?.data?.pendingConnections || 0;
 
   const [connectionPage, setConnectionPage] = useState(1);
   const [hasMoreConnections, setHasMoreConnections] = useState(false);
@@ -111,7 +117,7 @@ export default function NetworkPage() {
           }`}
         >
           <Clock className="w-5 h-5" />
-          Pending Requests
+          Pending Requests {pendingRequestsCount > 0 && `(${pendingRequestsCount})`}
         </button>
         <button
           onClick={() => setActiveTab("sent")}
