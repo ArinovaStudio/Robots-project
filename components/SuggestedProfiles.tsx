@@ -117,9 +117,9 @@ export default function SuggestedProfiles() {
       </div>
 
       {!loading && matches.length > 0 && (
-        <button className="mt-4 text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1 group">
+        <Link href="/network" className="mt-4 text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center justify-center gap-1 group block w-full text-center py-2">
           View all recommendations <span className="group-hover:translate-x-1 transition-transform">→</span>
-        </button>
+        </Link>
       )}
 
       {selectedCompany && (

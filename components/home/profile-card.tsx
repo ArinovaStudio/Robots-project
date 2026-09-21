@@ -13,7 +13,11 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
     <>
       <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden relative">
         {/* Cover Image */}
-        <div className="h-16 w-full bg-gradient-to-r from-blue-600 to-blue-400"></div>
+        {profile.bannerUrl ? (
+          <img src={profile.bannerUrl} alt="Cover" className="h-16 w-full object-cover" />
+        ) : (
+          <div className="h-16 w-full bg-gradient-to-r from-blue-600 to-blue-400"></div>
+        )}
 
         <div className="px-4 pb-4 flex flex-col items-center text-center -mt-8 relative">
           {/* Avatar */}
@@ -34,9 +38,11 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
           </Link>
 
           {/* Name */}
-          <h2 className="mt-3 text-base font-semibold text-gray-900 hover:underline cursor-pointer">
-            {profile.companyName} {profile.isBoosted && "⭐"}
-          </h2>
+          <Link href="/profile" className="block mt-3">
+            <h2 className="text-base font-semibold text-gray-900 hover:underline cursor-pointer">
+              {profile.companyName} {profile.isBoosted && "⭐"}
+            </h2>
+          </Link>
 
           {/* Subtitle */}
           <p className="mt-1 text-xs text-gray-500">

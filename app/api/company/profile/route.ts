@@ -85,12 +85,12 @@ const profileSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const { user, error } = await getUser();
-    if (error || !user){
-        return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();
-    
+
     const dealIn = formData.getAll("dealIn").map(String);
     const lookingFor = formData.getAll("lookingFor").map(String);
 
@@ -119,30 +119,30 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.companyProfile.create({
-        data: { ...validation.data, userId: user.id, logoUrl, bannerUrl }
+      data: { ...validation.data, userId: user.id, logoUrl, bannerUrl }
     });
 
-    await prisma.user.update({ 
-      where: { id: user.id }, 
-      data: { 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
         isOnboarded: true,
         ...(logoUrl && { image: logoUrl })
-      } 
+      }
     });
 
     (async () => {
-        const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
-        
-        let combinedNeeds = [...validation.data.lookingFor];
+      const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
 
-        if (aiDataset) {
-          const aiRecommendations = getCrossConnections(aiDataset);
-          combinedNeeds = [...combinedNeeds, ...aiRecommendations];
+      let combinedNeeds = [...validation.data.lookingFor];
 
-          await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
-        }
+      if (aiDataset) {
+        const aiRecommendations = getCrossConnections(aiDataset);
+        combinedNeeds = [...combinedNeeds, ...aiRecommendations];
 
-        await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
+        await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
+      }
+
+      await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
     })().catch(console.error);
 
     return NextResponse.json({ success: true, message: "Profile created successfully" }, { status: 201 });
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const { user, error } = await getUser();
-    if (error || !user){
+    if (error || !user) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
@@ -173,7 +173,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const existing = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
-    if (!existing){
+    if (!existing) {
       return NextResponse.json({ success: false, message: "Company profile Not found" }, { status: 404 });
     }
 
@@ -183,7 +183,7 @@ export async function PUT(req: NextRequest) {
     if (newLogo && newLogo.size > 0) {
       if (existing.logoUrl) await deleteFile(existing.logoUrl);
       logoUrl = await uploadImage(newLogo, "logos");
-      
+
       // Update User image to keep pfp in sync
       await prisma.user.update({ where: { id: user.id }, data: { image: logoUrl } });
     }
@@ -202,18 +202,18 @@ export async function PUT(req: NextRequest) {
     });
 
     (async () => {
-        const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
-        
-        let combinedNeeds = [...validation.data.lookingFor];
+      const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
 
-        if (aiDataset) {
-          const aiRecommendations = getCrossConnections(aiDataset);
-          combinedNeeds = [...combinedNeeds, ...aiRecommendations];
+      let combinedNeeds = [...validation.data.lookingFor];
 
-          await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
-        }
+      if (aiDataset) {
+        const aiRecommendations = getCrossConnections(aiDataset);
+        combinedNeeds = [...combinedNeeds, ...aiRecommendations];
 
-        await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
+        await prisma.companyProfile.update({ where: { userId: user.id }, data: { exchangeDataset: aiDataset } });
+      }
+
+      await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
     })();
 
     return NextResponse.json({ success: true, message: "Profile updated successfully" }, { status: 200 });

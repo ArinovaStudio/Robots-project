@@ -1,7 +1,8 @@
-import { Boxes, Network, Sparkles, MessageSquare, Search, Home, Bell, User } from "lucide-react";
+import { Boxes, Network, Sparkles, MessageSquare, Search, Home, Bell, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { signOut } from "next-auth/react";
@@ -14,21 +15,63 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUserStore();
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLFormElement>(null);
 
   const { data: countsData } = useSWR(user ? "/api/user/counts" : null, fetcher, {
-    refreshInterval: 10000, // Poll every 10s
+    refreshInterval: 10000,
     revalidateOnFocus: true,
   });
 
   const unreadNotifications = countsData?.data?.unreadNotifications || 0;
   const pendingConnections = countsData?.data?.pendingConnections || 0;
 
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
+        const json = await res.json();
+        if (json.success) {
+          setSuggestions(json.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch suggestions", error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const search = formData.get("search");
-    if (search) {
-      router.push(`/search?search=${encodeURIComponent(search.toString())}`);
+    if (searchQuery) {
+      setShowSuggestions(false);
+      router.push(`/search?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -45,16 +88,69 @@ export default function Navbar() {
             <span className="text-xl font-bold text-gray-900 hidden sm:block">Connecto</span>
           </Link>
           
-          <form onSubmit={handleSearch} className="hidden md:flex relative ml-2">
+          <form ref={searchRef} onSubmit={handleSearch} className="hidden md:flex relative ml-2">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </div>
             <input
               type="text"
               name="search"
-              className="block w-[240px] lg:w-[300px] pl-10 pr-3 py-2 border border-transparent rounded-md leading-5 bg-[#EEF3F8] placeholder-gray-500 focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-1 focus:ring-blue-500 sm:text-sm transition-colors"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              className="block w-[240px] lg:w-[320px] pl-10 pr-3 py-2 border border-transparent rounded-md leading-5 bg-[#EEF3F8] placeholder-gray-500 focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-1 focus:ring-blue-500 sm:text-sm transition-colors"
               placeholder="Search for people, companies, posts..."
             />
+            {isSearching && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+              </div>
+            )}
+            
+            {showSuggestions && searchQuery.trim().length >= 2 && (
+              <div className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden py-1 z-50">
+                {suggestions.length > 0 ? (
+                  suggestions.map((suggestion) => (
+                    <Link
+                      key={suggestion.id}
+                      href={suggestion.href}
+                      onClick={() => setShowSuggestions(false)}
+                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
+                        {suggestion.image ? (
+                          <img src={suggestion.image} alt={suggestion.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-gray-400 text-sm">
+                            {suggestion.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-sm font-medium text-gray-900 truncate">{suggestion.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{suggestion.subtitle}</p>
+                      </div>
+                    </Link>
+                  ))
+                ) : !isSearching ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    No results found for "{searchQuery}"
+                  </div>
+                ) : null}
+                <div 
+                  className="px-4 py-2 border-t border-gray-100 text-sm font-medium text-blue-600 hover:bg-blue-50 cursor-pointer text-center"
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    router.push(`/search?search=${encodeURIComponent(searchQuery)}`);
+                  }}
+                >
+                  See all results
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
