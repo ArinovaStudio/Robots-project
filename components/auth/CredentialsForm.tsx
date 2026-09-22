@@ -80,7 +80,39 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
   };
 
   return (
-    <div className="space-y-3 mt-1 pb-4">
+    <div className="space-y-4 mt-1 pb-4">
+      {/* Social login (at top like login page) */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/signup" })}
+          className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]"
+        >
+          <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={16} height={16} />
+          Google
+        </button>
+        <button
+          type="button"
+          onClick={() => signIn("facebook", { callbackUrl: "/signup" })}
+          className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]"
+        >
+          <Facebook className="h-4 w-4 text-[#1877F2]" />
+          Facebook
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-white px-3 text-xs font-bold uppercase tracking-widest text-gray-400">
+            or sign up with email
+          </span>
+        </div>
+      </div>
+
       <div className="space-y-1">
         <label className="text-sm font-medium text-slate-700">Email</label>
         <div className="relative">
@@ -143,26 +175,6 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
       </Button>
 
       {error && <p className="text-red-500 text-sm text-center pt-1">{error}</p>}
-
-      {/* Divider */}
-      <div className="my-4 flex items-center gap-4">
-        <Separator className="flex-1" />
-        <span className="text-sm text-slate-400">Or</span>
-        <Separator className="flex-1" />
-      </div>
-
-      {/* Social Buttons */}
-      <div className="space-y-3">
-        <Button onClick={() => signIn("google", { callbackUrl: "/signup" })} variant="outline" type="button" className="h-10 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100">
-          <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="google" width={18} height={18} />
-          Sign in with Google
-        </Button>
-
-        <Button onClick={() => signIn("facebook", { callbackUrl: "/signup" })} variant="outline" type="button" className="h-10 w-full justify-center gap-3 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100">
-          <Facebook className="h-5 w-5 fill-[#1877F2] text-[#1877F2]" />
-          Sign in with Facebook
-        </Button>
-      </div>
     </div>
   );
 }

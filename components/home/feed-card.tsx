@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bookmark, MessageCircle, MoreVertical, Share2, ThumbsUp, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import ShareModal from "../modals/share-modal";
@@ -237,10 +237,10 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
       </div>
         
       {currentPost.media && currentPost.media.length > 0 && (
-        <div className="bg-gray-50 border-y border-gray-100">
-          <MediaSlider 
-            key={currentPost.media.map((m: any) => m.id).join('-')} 
-            media={currentPost.media} 
+        <div className="px-4 pb-1">
+          <MediaSlider
+            key={currentPost.media.map((m: any) => m.id).join('-')}
+            media={currentPost.media}
           />
         </div>
       )}
@@ -277,27 +277,11 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
 
       {/* Latest Comment Showcase */}
       {!showComments && latestComment && (
-        <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm rounded-b-lg">
-          <div className="flex items-start gap-2">
-            {latestComment.author?.company?.logoUrl || latestComment.author?.image ? (
-              <img 
-                src={latestComment.author?.company?.logoUrl || latestComment.author?.image} 
-                className="w-6 h-6 rounded-full object-cover shrink-0" 
-                alt="Logo" 
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
-                {(latestComment.author?.company?.companyName || latestComment.author?.name || "U").charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1 bg-gray-100 rounded-lg p-2">
-              <div className="font-semibold text-gray-900 text-xs">
-                {latestComment.author?.company?.companyName || latestComment.author?.name || "User"}
-              </div>
-              <p className="text-gray-700 text-xs mt-0.5 line-clamp-2">{latestComment.content}</p>
-            </div>
-          </div>
-        </div>
+        <LatestCommentPreview
+          comment={latestComment}
+          currentUser={currentUser}
+          onExpandComments={() => setShowComments(true)}
+        />
       )}
 
       {showComments && (
@@ -340,6 +324,132 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         onConfirm={handleDeletePost}
         onCancel={() => setShowDeleteConfirm(false)}
       />
+    </div>
+  );
+}
+
+/* ──────────────── Latest Comment Preview with Dots Menu ──────────────── */
+function LatestCommentPreview({ comment, currentUser, onExpandComments }: { comment: any; currentUser: any; onExpandComments: () => void }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const [displayContent, setDisplayContent] = useState(comment.content);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const isOwner = currentUser?.id === comment.authorId;
+  const authorName = comment.author?.company?.companyName || comment.author?.name || "User";
+  const avatarSrc = comment.author?.company?.logoUrl || comment.author?.image;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this comment?")) return;
+    const res = await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
+    if (res.ok) setIsDeleted(true);
+    setShowMenu(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim() || editContent === displayContent) return setIsEditing(false);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/comments/${comment.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent }),
+      });
+      if (res.ok) {
+        setDisplayContent(editContent);
+        setIsEditing(false);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isDeleted) return null;
+
+  return (
+    <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm">
+      <div className="flex items-start gap-2">
+        {/* Avatar */}
+        {avatarSrc ? (
+          <img src={avatarSrc} className="w-7 h-7 rounded-full object-cover shrink-0 border border-gray-100" alt={authorName} />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
+            {authorName.charAt(0).toUpperCase()}
+          </div>
+        )}
+
+        {/* Bubble */}
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="space-y-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                rows={2}
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-full transition">Cancel</button>
+                <button onClick={handleSaveEdit} disabled={isSaving} className="px-3 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-full transition disabled:opacity-50">
+                  {isSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-100 rounded-xl px-3 py-2 relative group">
+              <span className="font-semibold text-gray-900 text-xs">{authorName} </span>
+              <span className="text-gray-700 text-xs line-clamp-2">{displayContent}</span>
+            </div>
+          )}
+
+          <button onClick={onExpandComments} className="mt-1 text-[11px] font-semibold text-blue-600 hover:underline pl-1">
+            View all comments
+          </button>
+        </div>
+
+        {/* Three-dot menu — only for comment owner */}
+        {isOwner && !isEditing && (
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition opacity-0 group-hover:opacity-100"
+              style={{ opacity: showMenu ? 1 : undefined }}
+            >
+              <MoreVertical size={14} />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-6 w-32 bg-white border border-gray-200 shadow-lg rounded-xl z-20 overflow-hidden py-1">
+                <button
+                  onClick={() => { setIsEditing(true); setShowMenu(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+                >
+                  <Edit2 size={12} /> Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition"
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

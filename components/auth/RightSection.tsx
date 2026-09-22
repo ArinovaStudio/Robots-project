@@ -98,7 +98,7 @@ export default function RightSection() {
 
                       <div className="mt-5 flex items-center gap-3">
                         <div className="h-10 w-10 relative rounded-full overflow-hidden bg-white/20">
-                          <Image src={item.image} alt={item.name} fill className="object-cover"/>
+                          <Image src={item.image} alt={item.name} fill sizes="40px" className="object-cover"/>
                         </div>
 
                         <div>

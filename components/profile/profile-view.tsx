@@ -160,8 +160,16 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
         <div className="p-6 sm:p-8 pt-0 sm:pt-0 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative">
           <div className="-mt-12 sm:-mt-16 h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-lg border-4 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center z-10 relative">
-            {company.logoUrl ? (
-              <Image src={company.logoUrl} alt="Logo" fill className="object-cover" />
+            {company.logoUrl && company.logoUrl !== "null" ? (
+              <img 
+                src={company.logoUrl} 
+                alt="Logo" 
+                className="h-full w-full object-cover" 
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = `<span class="text-5xl font-bold text-gray-300">${initial}</span>`;
+                }}
+              />
             ) : (
               <span className="text-5xl font-bold text-gray-300">{initial}</span>
             )}
@@ -191,6 +199,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   >
                     <Layers size={16} /> Connection Requests
                   </Link>
+                  <button
+                    onClick={() => toast.success("Verification application submitted! We will review it shortly.")}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition shadow-sm border border-blue-200"
+                  >
+                    <CheckCircle size={16} /> Apply for Verification
+                  </button>
                   <button
                     onClick={() => setShowEditModal(true)}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"

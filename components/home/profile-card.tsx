@@ -29,10 +29,18 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
                 text-2xl font-bold text-blue-600
               "
             >
-              {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt="Logo" className="h-full w-full object-cover" />
+              {profile.logoUrl && profile.logoUrl !== "null" ? (
+                <img 
+                  src={profile.logoUrl} 
+                  alt="Logo" 
+                  className="h-full w-full object-cover" 
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = profile.companyName?.charAt(0).toUpperCase() || 'C';
+                  }}
+                />
               ) : (
-                profile.companyName.charAt(0).toUpperCase()
+                profile.companyName?.charAt(0).toUpperCase() || "C"
               )}
             </div>
           </Link>
