@@ -11,6 +11,7 @@ import PostComments from "./post-comments";
 import MediaSlider from "./media-slider";
 import Link from "next/link";
 import Image from "next/image";
+import VerificationBadge from "@/components/ui/VerificationBadge";
 
 export default function FeedCard({ post, currentUser, onUnsave }: { post: any, currentUser: any, onUnsave?: () => void }) {
   const [isDeleted, setIsDeleted] = useState(false);
@@ -131,7 +132,10 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
             </Link>
             <div>
               <Link href={`/profile/${currentPost.author?.id}`}>
-                <h3 className="text-sm font-bold text-gray-900 hover:text-blue-600 hover:underline">{authorName}</h3>
+                <h3 className="text-sm font-bold text-gray-900 hover:text-blue-600 hover:underline flex items-center gap-1.5">
+                  <span>{authorName}</span>
+                  <VerificationBadge status={currentPost.author?.verificationStatus} size="xs" />
+                </h3>
               </Link>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-xs text-gray-500">
@@ -381,7 +385,7 @@ function LatestCommentPreview({ comment, currentUser, onExpandComments }: { comm
 
   return (
     <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 group">
         {/* Avatar */}
         {avatarSrc ? (
           <img src={avatarSrc} className="w-7 h-7 rounded-full object-cover shrink-0 border border-gray-100" alt={authorName} />
@@ -410,7 +414,7 @@ function LatestCommentPreview({ comment, currentUser, onExpandComments }: { comm
               </div>
             </div>
           ) : (
-            <div className="bg-gray-100 rounded-xl px-3 py-2 relative group">
+            <div className="bg-gray-100 rounded-xl px-3 py-2">
               <span className="font-semibold text-gray-900 text-xs">{authorName} </span>
               <span className="text-gray-700 text-xs line-clamp-2">{displayContent}</span>
             </div>
@@ -426,8 +430,9 @@ function LatestCommentPreview({ comment, currentUser, onExpandComments }: { comm
           <div className="relative shrink-0" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition opacity-0 group-hover:opacity-100"
-              style={{ opacity: showMenu ? 1 : undefined }}
+              className={`p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition ${
+                showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
             >
               <MoreVertical size={14} />
             </button>

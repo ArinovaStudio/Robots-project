@@ -6,18 +6,29 @@ export async function uploadFile(file: File, subfolder: string = ""): Promise<st
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   if (!cloudName || !apiKey || !apiSecret) {
-    console.warn("Cloudinary credentials missing. Falling back to placeholder URL.");
-    return `https://via.placeholder.com/800x400?text=${encodeURIComponent(file.name)}`;
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const targetDir = path.join(process.cwd(), "public", "uploads", subfolder);
+      await fs.mkdir(targetDir, { recursive: true });
+
+      const sanitizedFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const filePath = path.join(targetDir, sanitizedFilename);
+      await fs.writeFile(filePath, buffer);
+
+      return `/uploads/${subfolder ? subfolder + "/" : ""}${sanitizedFilename}`;
+    } catch (err) {
+      console.warn("Local upload fallback failed:", err);
+      return `https://via.placeholder.com/800x400?text=${encodeURIComponent(file.name)}`;
+    }
   }
 
   const formData = new FormData();
   formData.append("file", file);
   
-  // Create an unsigned upload preset in your Cloudinary settings, or use signature-based upload
-  // For simplicity in this server-side function, we generate a signature
-  
-  // Using simple unsigned upload for now if you configure 'connecto_preset' in Cloudinary
-  // Alternatively, use a signed upload logic here. We'll use a preset for ease of config.
   formData.append("upload_preset", process.env.CLOUDINARY_UPLOAD_PRESET || "ml_default");
   if (subfolder) {
     formData.append("folder", subfolder);

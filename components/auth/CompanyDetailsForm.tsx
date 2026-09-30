@@ -198,7 +198,7 @@ export default function CompanyDetailsForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Company Logo</label>
+          <label className="text-sm font-medium text-slate-700">Company Logo <span className="text-xs text-slate-400 font-normal ml-1">(Recommended 1:1)</span></label>
           <div className="relative">
             <input id="company-logo" type="file" accept="image/*" className="hidden" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
             <div className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4">
@@ -209,7 +209,7 @@ export default function CompanyDetailsForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Banner Image</label>
+          <label className="text-sm font-medium text-slate-700">Banner Image <span className="text-xs text-slate-400 font-normal ml-1">(Recommended 16:9)</span></label>
           <div className="relative">
             <input id="company-banner" type="file" accept="image/*" className="hidden" onChange={(e) => setBanner(e.target.files?.[0] || null)} />
             <div className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4">

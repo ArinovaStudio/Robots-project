@@ -38,9 +38,6 @@ export default function CreatePostModal({
 
   useEffect(() => {
     if (isOpen && initialType) {
-      if (initialType === "IMAGE") imageInputRef.current?.click();
-      if (initialType === "VIDEO") videoInputRef.current?.click();
-      if (initialType === "DOCUMENT") docInputRef.current?.click();
       if (initialType === "EVENT") setIsEventModalOpen(true);
     }
   }, [isOpen, initialType]);

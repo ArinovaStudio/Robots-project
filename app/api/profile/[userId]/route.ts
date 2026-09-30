@@ -13,6 +13,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         id: true,
         name: true,
         image: true,
+        verificationStatus: true,
         createdAt: true,
         company: true, 
         _count: {
@@ -71,6 +72,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       userId: targetUser.id,
       name: targetUser.name,
       image: targetUser.image,
+      verificationStatus: targetUser.verificationStatus || "UNVERIFIED",
       joinedAt: targetUser.createdAt,
       company: targetUser.company ? {
         ...targetUser.company,

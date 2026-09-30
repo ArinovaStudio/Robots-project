@@ -146,6 +146,7 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
               <label htmlFor="banner-upload" className="absolute top-3 right-3 cursor-pointer bg-black/50 text-white p-2 rounded-full shadow-lg border border-white/20 transition-transform group-hover:scale-105 hover:bg-black/70">
                 <Pencil size={14} />
               </label>
+              <span className="absolute top-3 right-12 text-[10px] font-medium text-white/90 bg-black/50 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">16:9 Recommended</span>
               <input type="file" id="banner-upload" accept="image/*" className="hidden" onChange={handleBannerChange} />
             </div>
 
@@ -166,6 +167,7 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
                   <Pencil size={14} />
                 </div>
               </label>
+              <div className="absolute -bottom-6 w-full text-center text-[10px] text-gray-500 font-medium">1:1 Ratio</div>
             </div>
           </div>
 

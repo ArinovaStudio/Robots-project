@@ -9,12 +9,15 @@ import ConnectModal from "./modals/connect-modal";
 import { toast } from "sonner"; 
 import { Plus } from "lucide-react";
 
+import VerificationBadge from "./ui/VerificationBadge";
+
 interface CompanyMatch {
   userId: string;
   companyName: string;
   logoUrl: string | null;
   type: string;
   isBoosted: boolean;
+  verificationStatus?: string;
 }
 
 export default function SuggestedProfiles() {
@@ -93,8 +96,11 @@ export default function SuggestedProfiles() {
 
               <div className="flex flex-col items-start w-full overflow-hidden">
                 <div className="flex items-center gap-1.5 w-full">
-                  <Link href={`/profile/${company.userId}`} className="truncate">
-                    <h4 className="text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer">{company.companyName}</h4>
+                  <Link href={`/profile/${company.userId}`} className="truncate flex items-center gap-1">
+                    <h4 className="text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer flex items-center gap-1">
+                      <span className="truncate">{company.companyName}</span>
+                      <VerificationBadge status={company.verificationStatus} size="xs" />
+                    </h4>
                   </Link>
                   {company.isBoosted && (
                     <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded font-medium">

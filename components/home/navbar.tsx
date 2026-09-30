@@ -76,7 +76,7 @@ export default function Navbar() {
   };
 
   return (
-    <div className="sticky top-0 z-50 border-b bg-white">
+    <header className="sticky top-0 z-50 border-b bg-white">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5">
         
         {/* Left: Logo & Search */}
@@ -155,7 +155,7 @@ export default function Navbar() {
         </div>
 
         {/* Right: Navigation */}
-        <div className="flex items-center h-full gap-2 sm:gap-6">
+        <nav className="flex items-center h-full gap-2 sm:gap-6">
           <NavItem
             href="/explore"
             icon={<Home size={22} />}
@@ -224,9 +224,9 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
+        </nav>
       </div>
-    </div>
+    </header>
   );
 }
 

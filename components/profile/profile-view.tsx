@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Link as LinkIcon, Users, Building2, UserPlus,
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -15,16 +15,21 @@ import ConnectModal from "../modals/connect-modal";
 import EditProfileModal from "../modals/edit-profile-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Pencil } from "lucide-react";
+import FeedCard from "@/components/home/feed-card";
+import { useUserStore } from "@/store/AuthStore";
+import VerificationBadge from "@/components/ui/VerificationBadge";
 
 interface ProfileViewProps {
   userId: string;
 }
 
 export default function ProfileView({ userId }: ProfileViewProps) {
+  const { user } = useUserStore();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [recentPosts, setRecentPosts] = useState<any[]>([]);
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
@@ -35,12 +40,22 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/profile/${userId}`);
+        const [res, postsRes] = await Promise.all([
+          fetch(`/api/profile/${userId}`),
+          fetch(`/api/user/feed/explore?page=1&limit=2&userId=${userId}`)
+        ]);
+        
         const json = await res.json();
+        const postsJson = await postsRes.json();
+        
         if (json.success) {
           setProfile(json.data);
           setIsFollowing(json.data.viewerState.isFollowing);
           setConnectionStatus(json.data.viewerState.connectionStatus);
+        }
+        
+        if (postsJson.success) {
+          setRecentPosts(postsJson.data);
         }
       } catch (error) {
         console.error("Failed to load profile", error);
@@ -179,7 +194,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center justify-center sm:justify-start gap-2">
-                  {company.companyName}
+                  <span>{company.companyName}</span>
+                  <VerificationBadge status={profile.verificationStatus} size="md" />
                   {company.isBoosted && <span className="px-2 py-0.5 bg-gray-100 text-[10px] uppercase font-bold text-gray-600 rounded">Boosted</span>}
                 </h1>
                 <p className="text-gray-500 font-medium mt-1 text-sm">{company.type} • Founded {company.yearOfEstablishment}</p>
@@ -199,12 +215,41 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   >
                     <Layers size={16} /> Connection Requests
                   </Link>
-                  <button
-                    onClick={() => toast.success("Verification application submitted! We will review it shortly.")}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition shadow-sm border border-blue-200"
-                  >
-                    <CheckCircle size={16} /> Apply for Verification
-                  </button>
+
+                  {profile.verificationStatus === "VERIFIED" ? (
+                    <div className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 border border-blue-200 shadow-sm select-none">
+                      <VerificationBadge status="VERIFIED" size="sm" showTooltip={false} /> Verified
+                    </div>
+                  ) : profile.verificationStatus === "PENDING" ? (
+                    <Link
+                      href="/verification"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 transition shadow-sm border border-amber-200"
+                    >
+                      <Clock size={16} /> Verification Pending
+                    </Link>
+                  ) : profile.verificationStatus === "MORE_INFO_REQUIRED" ? (
+                    <Link
+                      href="/verification"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 transition shadow-sm border border-purple-200"
+                    >
+                      <ShieldCheck size={16} /> Info Required — Update Request
+                    </Link>
+                  ) : profile.verificationStatus === "REJECTED" ? (
+                    <Link
+                      href="/verification"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-red-50 text-red-700 hover:bg-red-100 transition shadow-sm border border-red-200"
+                    >
+                      <ShieldCheck size={16} /> Reapply for Verification
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/verification"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition shadow-sm border border-blue-200"
+                    >
+                      <ShieldCheck size={16} /> Apply for Verification
+                    </Link>
+                  )}
+
                   <button
                     onClick={() => setShowEditModal(true)}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
@@ -335,6 +380,23 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               </div>
             </div>
           )}
+
+          {/* Recent Posts — inside main column */}
+          {recentPosts.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">Recent Posts</h2>
+                <Link href={`/profile/${userId}/posts`} className="text-sm font-semibold text-blue-600 hover:underline">
+                  View all →
+                </Link>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {recentPosts.map((post) => (
+                  <FeedCard key={post.id} post={post} currentUser={user} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar Info Panel */}
@@ -428,11 +490,14 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 </div>
               </Link>
             )}
+
+
           </div>
 
         </div>
       </div>
       </ScrollReveal>
+
     </div>
   );
 }

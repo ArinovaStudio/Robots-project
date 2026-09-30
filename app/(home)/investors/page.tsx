@@ -1,5 +1,18 @@
+import type { Metadata } from "next";
 import { Briefcase, Lock, Sparkles } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Investor Matchmaking - Pitch Angel & VC Investors",
+  description: "Gain access to a curated network of angel investors, venture capitalists, and private equity firms on Connecto.",
+  alternates: {
+    canonical: "/investors",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function InvestorsPage() {
   return (

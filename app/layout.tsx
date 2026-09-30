@@ -4,9 +4,22 @@ import "./globals.css";
 import AuthProvider from "@/components/providers/SessionProvider";
 import { Toaster } from "sonner";
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connecto.com";
+
 export const metadata: Metadata = {
-  title: "Connecto - B2B Matchmaking",
-  description: "Connect with the right businesses and grow your network.",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "Connecto - Business Network to Exchange Services",
+    template: "%s | Connecto",
+  },
+  description: "Find and offer B2B services. Connect with verified businesses.",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -18,7 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`${sfPro.className} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#f5f5f5]">
         <AuthProvider>
-            <Toaster position="bottom-center" />
+            <Toaster position="bottom-left" />
             {children}
         </AuthProvider>
       </body>

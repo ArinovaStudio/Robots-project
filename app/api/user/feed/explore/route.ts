@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
                 id: true,
                 name: true,
                 image: true,
+                verificationStatus: true,
                 company: { 
                   select: { 
                     companyName: true, 

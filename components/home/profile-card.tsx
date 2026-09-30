@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import EditProfileModal from "../modals/edit-profile-modal";
 import Link from "next/link";
+import VerificationBadge from "@/components/ui/VerificationBadge";
 
 export default function ProfileCard({ profile, refreshProfile }: any) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -47,8 +48,10 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
 
           {/* Name */}
           <Link href="/profile" className="block mt-3">
-            <h2 className="text-base font-semibold text-gray-900 hover:underline cursor-pointer">
-              {profile.companyName} {profile.isBoosted && "⭐"}
+            <h2 className="text-base font-semibold text-gray-900 hover:underline cursor-pointer flex items-center justify-center gap-1.5">
+              <span>{profile.companyName}</span>
+              <VerificationBadge status={profile.user?.verificationStatus || profile.verificationStatus} size="xs" />
+              {profile.isBoosted && "⭐"}
             </h2>
           </Link>
 

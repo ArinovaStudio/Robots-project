@@ -8,6 +8,7 @@ import {
   MessageSquare,
   PackagePlus,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 export const navItems = [
@@ -15,6 +16,7 @@ export const navItems = [
     title: "Overview",
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { label: "Verification Requests", href: "/admin/verifications", icon: ShieldCheck },
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Plans", href: "/admin/plans", icon: PackagePlus },
       { label: "Reports", href: "/admin/reports", icon: AlertCircle },
