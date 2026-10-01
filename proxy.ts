@@ -1,36 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-
-import { getUser } from "./lib/auth";
+import { getToken } from "next-auth/jwt";
 
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  const { user } = await getUser();
+  // 1. Immediately pass all API routes & static files through without interference
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml"
+  ) {
+    return NextResponse.next();
+  }
 
-  // If user is logged in and trying to access "/", redirect to "/explore"
-  if (user && pathname === "/") {
+  // 2. Read NextAuth JWT token (Edge & middleware safe)
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isAuthenticated = !!token;
+
+  // 3. If logged in and visiting landing page "/", redirect to "/explore"
+  if (isAuthenticated && pathname === "/") {
     const exploreUrl = req.nextUrl.clone();
     exploreUrl.pathname = "/explore";
     return NextResponse.redirect(exploreUrl);
   }
 
-  // Public pages
-  const publicPages = ["/login", "/signup", "/"];
+  // 4. Public indexable pages allowed for everyone (visitors & search crawlers)
+  const isPublicPath =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/directory" ||
+    pathname === "/explore" ||
+    pathname === "/marketplace" ||
+    pathname === "/collaborate" ||
+    pathname === "/investors" ||
+    pathname.startsWith("/profile/");
 
-  if (publicPages.includes(pathname) || pathname.startsWith("/api/")) {
+  if (isPublicPath) {
     return NextResponse.next();
   }
 
-  // Not logged in
-  if (!user) {
+  // 5. Private pages require authentication
+  if (!isAuthenticated) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);
   }
 
-  // Admin protection
+  // 6. Admin protection
   if (pathname.startsWith("/admin")) {
-    if (user.role !== "ADMIN") {
+    if (token?.role !== "ADMIN") {
       const exploreUrl = req.nextUrl.clone();
       exploreUrl.pathname = "/explore";
       return NextResponse.redirect(exploreUrl);
@@ -42,6 +64,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 };

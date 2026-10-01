@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "Robots Project — Verification Workflow",
+    "_postman_id": "robots-verification-workflow",
+    "description": "Full E2E tests for the verification workflow.\n\nFolders:\n1. User: Get Verification Status\n2. User: Submit Verification Application\n3. Admin: List All Applications\n4. Admin: Get Single Application\n5. Admin: Add Internal Note\n6. Admin: Actions (Approve / Reject / More Info)\n7. Verify DB State After Actions\n\nSetup: Import this file AND the companion environment file.\nMake sure your dev server is running on http://localhost:3000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "applicationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 — User: Get Verification Status",
+      "item": [
+        {
+          "name": "GET verification status (authenticated user)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('success is true', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.data).to.have.property('id');", "    pm.expect(body.data).to.have.property('verificationStatus');", "});", "const body = pm.response.json();", "if (body.data && body.data.verificationApplication) {", "    pm.collectionVariables.set('applicationId', body.data.verificationApplication.id);", "}"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] } }
+        },
+        {
+          "name": "GET verification status (no auth) → 401",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));", "pm.test('success is false', () => { pm.expect(pm.response.json().success).to.be.false; });"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] } }
+        }
+      ]
+    },
+    {
+      "name": "02 — User: Submit Verification Application",
+      "item": [
+        {
+          "name": "POST submit — missing fullName → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('required fields error', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/required fields/i);", "});"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "username", "value": "testuser", "type": "text" }, { "key": "email", "value": "test@example.com", "type": "text" }, { "key": "reason", "value": "Testing", "type": "text" }, { "key": "accountUsage", "value": "PERSONAL", "type": "text" }, { "key": "accountType", "value": "INDIVIDUAL", "type": "text" }, { "key": "declaration", "value": "true", "type": "text" }] },
+            "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] }
+          }
+        },
+        {
+          "name": "POST submit — declaration not confirmed → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('declaration error', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/declaration/i);", "});"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "fullName", "value": "Test User", "type": "text" }, { "key": "username", "value": "testuser", "type": "text" }, { "key": "email", "value": "test@example.com", "type": "text" }, { "key": "reason", "value": "Testing purposes", "type": "text" }, { "key": "accountUsage", "value": "PERSONAL", "type": "text" }, { "key": "accountType", "value": "INDIVIDUAL", "type": "text" }, { "key": "declaration", "value": "false", "type": "text" }] },
+            "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] }
+          }
+        },
+        {
+          "name": "POST submit — no idDocument → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('idDocument required', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/identity verification document is required/i);", "});"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "fullName", "value": "Test User", "type": "text" }, { "key": "username", "value": "testuser", "type": "text" }, { "key": "email", "value": "test@example.com", "type": "text" }, { "key": "reason", "value": "Testing purposes", "type": "text" }, { "key": "accountUsage", "value": "PERSONAL", "type": "text" }, { "key": "accountType", "value": "INDIVIDUAL", "type": "text" }, { "key": "declaration", "value": "true", "type": "text" }] },
+            "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] }
+          }
+        },
+        {
+          "name": "POST submit — no auth → 401",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));", "pm.test('success is false', () => { pm.expect(pm.response.json().success).to.be.false; });"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "formdata", "formdata": [{ "key": "fullName", "value": "Test User", "type": "text" }] },
+            "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] }
+          }
+        },
+        {
+          "name": "POST submit — SUCCESS ✅ (attach idDocument file!)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Application submitted', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.message).to.match(/submitted successfully/i);", "    pm.expect(body.data).to.have.property('id');", "    pm.expect(body.data.status).to.equal('PENDING');", "    pm.collectionVariables.set('applicationId', body.data.id);", "    console.log('Saved applicationId:', body.data.id);", "});"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "fullName", "value": "Test User", "type": "text" },
+                { "key": "username", "value": "testuser123", "type": "text" },
+                { "key": "email", "value": "test@example.com", "type": "text" },
+                { "key": "phone", "value": "+91 98765 43210", "type": "text" },
+                { "key": "dob", "value": "1995-06-15", "type": "text" },
+                { "key": "location", "value": "Mumbai, India", "type": "text" },
+                { "key": "reason", "value": "I want to be verified to build trust with my connections on the platform.", "type": "text" },
+                { "key": "accountUsage", "value": "RECRUITING", "type": "text" },
+                { "key": "accountType", "value": "INDIVIDUAL", "type": "text" },
+                { "key": "additionalInfo", "value": "Software engineer with 5+ years of experience.", "type": "text" },
+                { "key": "socialLinks", "value": "[\"https://linkedin.com/in/testuser\"]", "type": "text" },
+                { "key": "declaration", "value": "true", "type": "text" },
+                { "key": "idDocument", "description": "⚠️ REQUIRED: Attach a real PDF/JPG/PNG under 10MB", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] },
+            "description": "⚠️ Attach a real file to the `idDocument` field before sending.\nThis saves the applicationId to the collection variable for admin tests."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Admin: List All Applications",
+      "item": [
+        {
+          "name": "GET verifications — no admin auth → 403",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));", "pm.test('success is false', () => { pm.expect(pm.response.json().success).to.be.false; });"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/admin/verifications", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications"] } }
+        },
+        {
+          "name": "GET verifications — default list",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Has data + stats + pagination', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.data).to.be.an('array');", "    pm.expect(body.stats).to.have.all.keys('total','pending','approved','rejected','infoRequired');", "    pm.expect(body.pagination.page).to.equal(1);", "    pm.expect(body.pagination.limit).to.equal(10);", "    if (body.data.length > 0 && !pm.collectionVariables.get('applicationId')) {", "        pm.collectionVariables.set('applicationId', body.data[0].id);", "    }", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications"] } }
+        },
+        {
+          "name": "GET verifications — status=PENDING",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('All items are PENDING', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    body.data.forEach(app => pm.expect(app.status).to.equal('PENDING'));", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications?status=PENDING", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications"], "query": [{ "key": "status", "value": "PENDING" }] } }
+        },
+        {
+          "name": "GET verifications — status=VERIFIED",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('All items are VERIFIED', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    body.data.forEach(app => pm.expect(app.status).to.equal('VERIFIED'));", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications?status=VERIFIED", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications"], "query": [{ "key": "status", "value": "VERIFIED" }] } }
+        },
+        {
+          "name": "GET verifications — search + sort + pagination",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Limit respected', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.data.length).to.be.at.most(5);", "    pm.expect(body.pagination.limit).to.equal(5);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications?sort=oldest&page=1&limit=5&search=test", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications"], "query": [{ "key": "sort", "value": "oldest" }, { "key": "page", "value": "1" }, { "key": "limit", "value": "5" }, { "key": "search", "value": "test" }] } }
+        }
+      ]
+    },
+    {
+      "name": "04 — Admin: Get Single Application",
+      "item": [
+        {
+          "name": "GET by ID — no admin auth → 403",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}"] } }
+        },
+        {
+          "name": "GET by ID — not found → 404",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));", "pm.test('not found message', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/not found/i);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications/nonexistent-id-000", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "nonexistent-id-000"] } }
+        },
+        {
+          "name": "GET by ID — SUCCESS ✅",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Full application detail returned', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.data).to.have.property('id');", "    pm.expect(body.data).to.have.property('status');", "    pm.expect(body.data).to.have.property('user');", "    pm.expect(body.data).to.have.property('history').that.is.an('array');", "    pm.expect(body.data).to.have.property('adminNotes').that.is.an('array');", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "05 — Admin: Add Internal Note",
+      "item": [
+        {
+          "name": "POST note — empty note → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('empty note error', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/empty/i);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"note\": \"   \" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}"] } }
+        },
+        {
+          "name": "POST note — not found → 404",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"note\": \"Valid note\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/nonexistent-id-000", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "nonexistent-id-000"] } }
+        },
+        {
+          "name": "POST note — SUCCESS ✅",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Note added successfully', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.message).to.match(/note added successfully/i);", "    pm.expect(body.data).to.have.property('id');", "    pm.expect(body.data).to.have.property('note');", "    pm.expect(body.data).to.have.property('authorName');", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"note\": \"Application looks legitimate. ID document is clear. Awaiting final review.\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "06 — Admin: Actions",
+      "item": [
+        {
+          "name": "POST action — no auth → 403",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"APPROVE\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — invalid action → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('invalid action error', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/invalid admin action/i);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"INVALID_ACTION\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — not found → 404",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));", "pm.test('not found', () => { pm.expect(pm.response.json().message).to.match(/not found/i); });"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"APPROVE\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/nonexistent-id-000/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "nonexistent-id-000", "action"] } }
+        },
+        {
+          "name": "POST action — REJECT without reason → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('rejection reason required', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/rejection reason is required/i);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"REJECT\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — REQUEST_MORE_INFO without message → 400",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));", "pm.test('infoRequestMessage required', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.false;", "    pm.expect(body.message).to.match(/message detailing required information is required/i);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"REQUEST_MORE_INFO\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — REQUEST_MORE_INFO — SUCCESS ✅",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Status → MORE_INFO_REQUIRED', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.message).to.include('MORE_INFO_REQUIRED');", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"action\": \"REQUEST_MORE_INFO\",\n  \"infoRequestMessage\": \"Please upload a clearer photo of your government ID. The current image is too blurry.\"\n}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — REJECT — SUCCESS ✅",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Status → REJECTED', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.message).to.include('REJECTED');", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"action\": \"REJECT\",\n  \"rejectionReason\": \"The provided ID document appears to be expired. Please reapply with a valid government-issued ID.\"\n}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        },
+        {
+          "name": "POST action — APPROVE — SUCCESS ✅",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Status → VERIFIED', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.message).to.include('VERIFIED');", "});"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }, { "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"action\": \"APPROVE\" }", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}", "action"] } }
+        }
+      ]
+    },
+    {
+      "name": "07 — Verify DB State After Actions",
+      "item": [
+        {
+          "name": "GET application — confirm history records exist",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('History records exist', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    pm.expect(body.data.history.length).to.be.greaterThan(0);", "    console.log('Current status:', body.data.status);", "    console.log('History entries:', body.data.history.length);", "    console.log('Admin notes:', body.data.adminNotes.length);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{adminSessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/admin/verifications/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "verifications", "{{applicationId}}"] } }
+        },
+        {
+          "name": "GET user status — confirm verificationStatus updated in DB",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('User verificationStatus reflects admin action', () => {", "    const body = pm.response.json();", "    pm.expect(body.success).to.be.true;", "    console.log('User verificationStatus:', body.data.verificationStatus);", "    pm.expect(['PENDING','VERIFIED','REJECTED','MORE_INFO_REQUIRED']).to.include(body.data.verificationStatus);", "});"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [{ "key": "Cookie", "value": "{{sessionCookie}}", "type": "text" }], "url": { "raw": "{{baseUrl}}/api/verification", "host": ["{{baseUrl}}"], "path": ["api", "verification"] } }
+        }
+      ]
+    }
+  ]
+}
