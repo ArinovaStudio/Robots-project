@@ -1,5 +1,6 @@
 import { User, Bell, CreditCard, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import ChangePasswordSection from "@/components/settings/change-password-section";
 
 export default function SettingsPage() {
   return (
@@ -42,22 +43,6 @@ export default function SettingsPage() {
           </div>
         </Link>
 
-        {/* Security Settings */}
-        <Link href="#" className="group block bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-md hover:border-blue-200 transition-all">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900">Security</h2>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">
-            Change your password, enable two-factor authentication, and manage active sessions.
-          </p>
-          <div className="text-sm font-medium text-emerald-600 flex items-center gap-1 group-hover:gap-2 transition-all">
-            Update Password <ArrowRight className="w-4 h-4" />
-          </div>
-        </Link>
-
         {/* Billing Settings */}
         <Link href="#" className="group block bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-md hover:border-blue-200 transition-all">
           <div className="flex items-center gap-4 mb-4">
@@ -74,6 +59,9 @@ export default function SettingsPage() {
           </div>
         </Link>
       </div>
+
+      {/* Change Password — fully functional */}
+      <ChangePasswordSection />
     </section>
   );
 }

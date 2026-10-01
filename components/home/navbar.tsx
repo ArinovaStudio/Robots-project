@@ -1,4 +1,4 @@
-import { Boxes, Network, Sparkles, MessageSquare, Search, Home, Bell, User, Loader2 } from "lucide-react";
+import { Network, MessageSquare, Search, Home, Bell, User, Loader2, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -206,19 +206,30 @@ export default function Navbar() {
                   {user?.name || "Me"} <span className="ml-0.5 text-[8px]">▼</span>
                 </span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white z-[100]">
-                <div className="px-2 py-1.5 text-sm text-gray-500 font-medium truncate">
-                  {user?.email}
+              <DropdownMenuContent align="end" className="w-52 bg-white z-[100]">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || "User"}</p>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/profile">View Profile</Link>
+                <DropdownMenuItem asChild className="cursor-pointer gap-2">
+                  <Link href="/profile">
+                    <User className="w-4 h-4" />
+                    View Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer gap-2">
+                  <Link href="/settings">
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50" 
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                   onClick={() => signOut({ callbackUrl: "/login" })}
                 >
+                  <LogOut className="w-4 h-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
