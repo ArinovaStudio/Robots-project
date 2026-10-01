@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Link as LinkIcon, Users, Building2, UserPlus,
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -250,6 +250,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     </Link>
                   )}
 
+                  <Link
+                    href="/settings"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition shadow-sm"
+                  >
+                    <Settings size={16} /> Settings
+                  </Link>
                   <button
                     onClick={() => setShowEditModal(true)}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
