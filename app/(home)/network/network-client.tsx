@@ -21,7 +21,7 @@ export default function NetworkClient() {
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: countsData } = useSWR("/api/user/counts", fetcher);
+  const { data: countsData, mutate: mutateCounts } = useSWR("/api/user/counts", fetcher);
   const pendingRequestsCount = countsData?.data?.pendingConnections || 0;
 
   const [connectionPage, setConnectionPage] = useState(1);
@@ -90,6 +90,24 @@ export default function NetworkClient() {
       setDisconnectingId(null);
     }
   };
+
+  useEffect(() => {
+    const markRequestsAsRead = async () => {
+      try {
+        const response = await fetch("/api/network/connect/pending", {
+          method: "PATCH",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to mark connection requests as read");
+        }
+        await mutateCounts();
+      } catch (error) {
+        console.error("Failed to clear connection request badge", error);
+      }
+    };
+
+    markRequestsAsRead();
+  }, [mutateCounts]);
 
   useEffect(() => {
     if (activeTab === "connections" || activeTab === "sent") {

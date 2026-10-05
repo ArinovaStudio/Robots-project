@@ -8,6 +8,7 @@ import { Bed, Check, X, Loader2 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
+import { mutate } from "swr";
 
 interface ConnectionRequest {
   connectionId: string;
@@ -55,6 +56,7 @@ export default function ConnectionRequests() {
       if (data.success) {
         toast.success(data.message);
         setRequests((prev) => prev.filter((req) => req.connectionId !== connectionId));
+        await mutate("/api/user/counts");
       } else {
         toast.error(data.message);
       }

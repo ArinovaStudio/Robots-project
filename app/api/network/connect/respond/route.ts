@@ -42,6 +42,16 @@ export async function POST(req: NextRequest) {
       data: { status: action }
     });
 
+    await prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+        actorId: connection.senderId,
+        type: "CONNECTION_REQUEST",
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
+
     if (action === "ACCEPTED") {
       // Create mutual follows
       await prisma.follow.createMany({

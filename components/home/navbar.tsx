@@ -22,13 +22,13 @@ export default function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLFormElement>(null);
 
-  const { data: countsData } = useSWR(user ? "/api/user/counts" : null, fetcher, {
+  const { data: countsData, mutate: mutateCounts } = useSWR(user ? "/api/user/counts" : null, fetcher, {
     refreshInterval: 10000,
     revalidateOnFocus: true,
   });
 
   const unreadNotifications = countsData?.data?.unreadNotifications || 0;
-  const pendingConnections = countsData?.data?.pendingConnections || 0;
+  const pendingConnections = countsData?.data?.unreadConnectionRequests || 0;
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -72,6 +72,20 @@ export default function Navbar() {
     if (searchQuery) {
       setShowSuggestions(false);
       router.push(`/search?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleNetworkClick = async () => {
+    try {
+      const response = await fetch("/api/network/connect/pending", {
+        method: "PATCH",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to mark connection requests as read");
+      }
+      await mutateCounts();
+    } catch (error) {
+      console.error("Failed to clear connection request badge", error);
     }
   };
 
@@ -169,6 +183,7 @@ export default function Navbar() {
             label="Network"
             isActive={pathname === "/network"}
             badge={pendingConnections > 0 ? pendingConnections : undefined}
+            onClick={handleNetworkClick}
           />
 
           <NavItem
@@ -246,17 +261,20 @@ function NavItem({
   label,
   href,
   isActive,
-  badge
+  badge,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   href: string;
   isActive: boolean;
   badge?: number;
+  onClick?: () => void;
 }) {
   return (
     <Link 
       href={href}
+      onClick={onClick}
       className={`relative flex h-full flex-col items-center justify-center gap-1 transition-colors min-w-[60px] ${
         isActive ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"
       }`}

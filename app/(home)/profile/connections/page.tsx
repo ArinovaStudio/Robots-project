@@ -5,6 +5,7 @@ import { Loader2, Link as LinkIcon, UserPlus } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
+import { mutate } from "swr";
 import ConnectionCard from "@/components/network/connection-card";
 import PendingCard from "@/components/network/pending-card";
 
@@ -131,6 +132,7 @@ export default function ConnectionsPage() {
       
       if (data.success) {
         toast.success(data.message);
+        await mutate("/api/user/counts");
         
         // Remove from pending list
         const acceptedUser = pending.find(p => p.connectionId === connectionId);

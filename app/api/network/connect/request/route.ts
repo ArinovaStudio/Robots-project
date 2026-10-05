@@ -52,13 +52,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await prisma.connection.create({
-      data: {
-        senderId: user.id,
-        receiverId: receiverId,
-        message: message || null,
-        status: "PENDING"
-      }
+    await prisma.$transaction(async (tx) => {
+      await tx.connection.create({
+        data: {
+          senderId: user.id,
+          receiverId,
+          message: message || null,
+          status: "PENDING",
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: receiverId,
+          actorId: user.id,
+          type: "CONNECTION_REQUEST",
+          content: `${user.name || "Someone"} sent you a connection request`,
+          link: "/network",
+        },
+      });
     });
 
     return NextResponse.json({ success: true, message: "Connection request sent successfully" }, { status: 200 });

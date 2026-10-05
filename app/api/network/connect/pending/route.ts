@@ -46,3 +46,67 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PATCH() {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json(
+        { success: false, message: error || "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const pendingRequests = await tx.connection.findMany({
+        where: { receiverId: user.id, status: "PENDING" },
+        select: { senderId: true },
+      });
+      const pendingSenderIds = pendingRequests.map((request) => request.senderId);
+      const existingNotifications = await tx.notification.findMany({
+        where: {
+          userId: user.id,
+          type: "CONNECTION_REQUEST",
+          actorId: { in: pendingSenderIds },
+        },
+        select: { actorId: true },
+      });
+      const notifiedSenderIds = new Set(
+        existingNotifications.map((notification) => notification.actorId)
+      );
+      const unnotifiedSenderIds = pendingSenderIds.filter(
+        (senderId) => !notifiedSenderIds.has(senderId)
+      );
+
+      if (unnotifiedSenderIds.length > 0) {
+        await tx.notification.createMany({
+          data: unnotifiedSenderIds.map((actorId) => ({
+            userId: user.id,
+            actorId,
+            type: "CONNECTION_REQUEST",
+            content: "You received a connection request",
+            link: "/network",
+            isRead: true,
+          })),
+        });
+      }
+
+      await tx.notification.updateMany({
+        where: {
+          userId: user.id,
+          type: "CONNECTION_REQUEST",
+          isRead: false,
+        },
+        data: { isRead: true },
+      });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to mark connection requests as read", error);
+    return NextResponse.json(
+      { success: false, message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

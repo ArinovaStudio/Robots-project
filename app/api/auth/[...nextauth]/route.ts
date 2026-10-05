@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           image: user.image,
           isOnboarded: user.isOnboarded,
+          role: user.role,
         };
       }
     })
@@ -64,17 +65,19 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.isOnboarded = user.isOnboarded;
+        token.role = user.role;
         if (user.image) token.picture = user.image;
       } else if (token.email) {
 
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { id: true, isOnboarded: true, image: true },
+          select: { id: true, isOnboarded: true, image: true, role: true },
         });
 
         if (dbUser) {
           token.id = dbUser.id;
           token.isOnboarded = dbUser.isOnboarded;
+          token.role = dbUser.role;
           if (dbUser.image) token.picture = dbUser.image;
         }
       }
@@ -84,6 +87,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.isOnboarded = token.isOnboarded as boolean;
+        session.user.role = token.role ?? "USER";
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;

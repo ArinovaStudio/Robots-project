@@ -6,16 +6,16 @@
  */
 
 import { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import type { JWT } from "next-auth/jwt";
 
-// Mock the auth module
-jest.mock("@/lib/auth", () => ({
-  getUser: jest.fn(),
+jest.mock("next-auth/jwt", () => ({
+  getToken: jest.fn(),
 }));
 
-import { getUser } from "@/lib/auth";
 import proxy from "../proxy";
 
-const mockGetUser = getUser as jest.MockedFunction<typeof getUser>;
+const mockGetToken = getToken as jest.MockedFunction<typeof getToken>;
 
 function createRequest(path: string) {
   return new NextRequest(new URL(path, "http://localhost:3000"));
@@ -23,7 +23,7 @@ function createRequest(path: string) {
 
 describe("Proxy (Route Protection)", () => {
   afterEach(() => {
-    mockGetUser.mockReset();
+    mockGetToken.mockReset();
   });
 
   describe("Public pages", () => {
@@ -51,7 +51,7 @@ describe("Proxy (Route Protection)", () => {
 
   describe("Protected pages", () => {
     it("should redirect to /login when user is not authenticated", async () => {
-      mockGetUser.mockResolvedValueOnce({ user: null, error: "Unauthorized" });
+      mockGetToken.mockResolvedValueOnce(null);
 
       const res = await proxy(createRequest("/feed"));
       expect(res.status).toBe(307);
@@ -59,10 +59,7 @@ describe("Proxy (Route Protection)", () => {
     });
 
     it("should allow authenticated user to access /feed", async () => {
-      mockGetUser.mockResolvedValueOnce({
-        user: { id: "1", email: "a@b.com", role: "USER" } as any,
-        error: null,
-      });
+      mockGetToken.mockResolvedValueOnce({ role: "USER" } as JWT);
 
       const res = await proxy(createRequest("/feed"));
       expect(res.status).not.toBe(307);
@@ -71,23 +68,17 @@ describe("Proxy (Route Protection)", () => {
 
   describe("Admin protection", () => {
     it("should redirect non-admin users from /admin routes", async () => {
-      mockGetUser.mockResolvedValueOnce({
-        user: { id: "1", email: "user@test.com", role: "USER" } as any,
-        error: null,
-      });
+      mockGetToken.mockResolvedValueOnce({ role: "USER" } as JWT);
 
-      const res = await proxy(createRequest("/admin/dashboard"));
+      const res = await proxy(createRequest("/admin"));
       expect(res.status).toBe(307);
       expect(res.headers.get("location")).toContain("/explore");
     });
 
     it("should allow admin users to access /admin routes", async () => {
-      mockGetUser.mockResolvedValueOnce({
-        user: { id: "1", email: "admin@test.com", role: "ADMIN" } as any,
-        error: null,
-      });
+      mockGetToken.mockResolvedValueOnce({ role: "ADMIN" } as JWT);
 
-      const res = await proxy(createRequest("/admin/dashboard"));
+      const res = await proxy(createRequest("/admin"));
       expect(res.status).not.toBe(307);
     });
   });
