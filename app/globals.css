@@ -135,8 +135,51 @@
   }
 }
 
+@keyframes landing-hero-gradient-drift {
+  0%, 100% {
+    background-position: 50% 0%;
+  }
+  50% {
+    background-position: 50% 100%;
+  }
+}
+
+@keyframes landing-hero-light-sweep {
+  from {
+    transform: translateX(-150%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(450%) skewX(-18deg);
+  }
+}
+
+@keyframes landing-hero-dashboard-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.landing-hero-gradient {
+  background-size: 100% 180%;
+  animation: landing-hero-gradient-drift 12s ease-in-out infinite;
+}
+
+.landing-hero-light {
+  animation: landing-hero-light-sweep 8s ease-in-out infinite;
+}
+
+.landing-hero-dashboard {
+  animation: landing-hero-dashboard-float 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .landing-marquee {
+  .landing-marquee,
+  .landing-hero-gradient,
+  .landing-hero-light,
+  .landing-hero-dashboard {
     animation: none;
   }
 }

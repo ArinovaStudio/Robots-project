@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight, ArrowLeftRight, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, Factory, Handshake, Laptop, MessageCircle, Search,
@@ -145,12 +145,58 @@ function DashboardMockup() {
 
 /* ───────────────────────── Hero ───────────────────────── */
 function HeroSection() {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    const updateScrollEffects = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const scene = sceneRef.current;
+        const backdrop = backdropRef.current;
+        const dashboard = dashboardRef.current;
+        if (!scene || !backdrop || !dashboard) return;
+
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reducedMotion) {
+          backdrop.style.opacity = "1";
+          backdrop.style.transform = "none";
+          dashboard.style.opacity = "1";
+          dashboard.style.transform = "none";
+          return;
+        }
+
+        const { top } = scene.getBoundingClientRect();
+        const reveal = Math.max(0, Math.min(1, (window.innerHeight * 0.9 - top) / (window.innerHeight * 0.65)));
+        const remaining = 1 - reveal;
+
+        backdrop.style.opacity = String(reveal);
+        backdrop.style.transform = `translate3d(0, ${30 * remaining}px, 0) scale(${0.96 + reveal * 0.04})`;
+        dashboard.style.opacity = String(reveal);
+        dashboard.style.transform = `perspective(1400px) translate3d(0, ${48 * remaining}px, 0) rotateX(${-14 * remaining}deg) scale(${0.94 + reveal * 0.06})`;
+        scene.style.transform = `translate3d(0, ${-Math.min(window.scrollY * 0.025, 20)}px, 0)`;
+      });
+    };
+
+    updateScrollEffects();
+    window.addEventListener("scroll", updateScrollEffects, { passive: true });
+    window.addEventListener("resize", updateScrollEffects);
+    return () => {
+      window.removeEventListener("scroll", updateScrollEffects);
+      window.removeEventListener("resize", updateScrollEffects);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <section className="relative overflow-hidden bg-white pt-28 pb-16 lg:pt-40 lg:pb-24">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f7ff_1px,transparent_1px),linear-gradient(to_bottom,#f0f7ff_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-60 [mask-image:radial-gradient(ellipse_80%_70%_at_50%_0%,#000_40%,transparent_100%)]" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/8 rounded-full blur-3xl" />
 
-      <div className="relative mx-auto flex max-w-[1280px] flex-col items-center px-5 sm:px-8 text-center">
+      <div className="relative z-10 mx-auto flex max-w-[1280px] flex-col items-center px-5 text-center sm:px-8">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/80 px-4 py-1.5 backdrop-blur-sm">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
@@ -194,7 +240,25 @@ function HeroSection() {
           <span>Built for <strong className="text-gray-800 font-bold">businesses that grow together</strong></span>
         </div>
 
-        <DashboardMockup />
+        <div ref={sceneRef} className="relative isolate w-full max-w-[1100px] py-8 sm:py-12">
+          <div ref={backdropRef} className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl shadow-[0_28px_90px_rgba(55,83,225,0.28)] ring-1 ring-blue-300/40 sm:rounded-[1.75rem]">
+            <div
+              aria-hidden="true"
+              className="landing-hero-gradient absolute -inset-y-20 inset-x-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 8%, rgba(255,255,255,0.82), transparent 42%), radial-gradient(ellipse at 14% 78%, rgba(102,130,255,0.76), transparent 48%), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0 4%, rgba(20,56,220,0.035) 4% 8%), linear-gradient(180deg, #dce4ff 0%, #8296ff 40%, #405ff5 100%)",
+              }}
+            />
+            <div aria-hidden="true" className="landing-hero-light absolute -inset-y-10 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent blur-xl" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-blue-950/10" />
+          </div>
+          <div ref={dashboardRef} className="relative [transform-origin:center_bottom]">
+            <div className="landing-hero-dashboard">
+              <DashboardMockup />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -637,8 +701,12 @@ function CTASection() {
 /* ────────────── Footer ────────────── */
 function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white py-12">
-      <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+    <footer className="overflow-hidden border-t border-gray-200 bg-white pt-12">
+      <div className="mx-auto max-w-[1280px] px-5 pb-12 sm:px-8">
+        <h2 className="mb-10 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          <span className="block text-gray-400">AI moves fast.</span>
+          <span className="block text-gray-900">Stay ahead with Connecto.</span>
+        </h2>
         <div className="flex flex-col items-center gap-5 md:flex-row md:justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-sm group-hover:shadow-md group-hover:shadow-blue-600/30 ${ease}`}>
@@ -654,6 +722,11 @@ function Footer() {
             <span>© {new Date().getFullYear()} Connecto</span>
           </div>
         </div>
+      </div>
+      <div aria-hidden="true" className="pointer-events-none select-none overflow-hidden">
+        <p className="translate-y-[0.12em] text-center text-[clamp(8rem,27vw,26rem)] font-black leading-[0.72] tracking-[-0.09em] text-gray-100">
+          Connecto
+        </p>
       </div>
     </footer>
   );
