@@ -146,13 +146,134 @@ export default function ProfileView({ userId }: ProfileViewProps) {
     );
   }
 
-  if (!profile || !profile.company) {
+  if (!profile || (!profile.company && !profile.investor)) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="text-center p-8 bg-white rounded-[32px] shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800">Profile Not Found</h2>
-          <p className="text-slate-500 mt-2">This user hasn't completed their company profile yet.</p>
+          <p className="text-slate-500 mt-2">This user hasn&apos;t completed their profile yet.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (profile.investor && !profile.company) {
+    const { investor, stats, viewerState } = profile;
+    const displayName = profile.name || "Investor";
+    const initial = displayName.charAt(0).toUpperCase();
+
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 pb-20">
+        <ScrollReveal direction="down">
+          <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="h-32 bg-gradient-to-r from-indigo-800 via-blue-700 to-sky-500 sm:h-48" />
+            <div className="relative flex flex-col items-center gap-4 p-6 pt-0 sm:flex-row sm:items-start sm:gap-6 sm:p-8 sm:pt-0">
+              <div className="-mt-12 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-50 text-4xl font-bold text-blue-700 shadow-sm sm:-mt-16 sm:h-32 sm:w-32">
+                {profile.image ? (
+                  <img src={profile.image} alt={displayName} className="h-full w-full object-cover" />
+                ) : initial}
+              </div>
+              <div className="mt-2 w-full flex-1 text-center sm:mt-4 sm:text-left">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{displayName}</h1>
+                    <p className="mt-1 text-sm font-medium text-gray-500">
+                      {investor.firmName ? `${investor.investorType} · ${investor.firmName}` : investor.investorType}
+                    </p>
+                    {investor.location && (
+                      <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-gray-500 sm:justify-start">
+                        <MapPin size={15} /> {investor.location}
+                      </p>
+                    )}
+                  </div>
+                  {viewerState.isOwnProfile ? (
+                    <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+                      <Link href="/profile/followers" className="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                        <Users size={16} className="mr-2 inline" /> Manage Network
+                      </Link>
+                      <Link href="/profile/connections" className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                        <Layers size={16} className="mr-2 inline" /> Connections
+                      </Link>
+                      <Link href="/settings" className="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                        <Settings size={16} className="mr-2 inline" /> Settings
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-3 sm:justify-start">
+                      <button
+                        onClick={toggleFollow}
+                        disabled={isFollowLoading}
+                        className={`flex min-w-[120px] items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition ${isFollowing ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+                      >
+                        {isFollowLoading ? <Loader2 size={16} className="animate-spin" /> : isFollowing ? <CheckCircle size={16} /> : <UserPlus size={16} />}
+                        {isFollowing ? "Following" : "Follow"}
+                      </button>
+                      <button
+                        onClick={toggleConnect}
+                        disabled={isConnectLoading || connectionStatus === "PENDING"}
+                        className="flex min-w-[130px] items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                        {connectionStatus === "PENDING" ? "Pending" : connectionStatus === "ACCEPTED" ? "Connected" : "Connect"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 flex justify-center gap-8 sm:justify-start">
+                  <div><span className="block text-xl font-bold text-gray-900">{stats.followers}</span><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Followers</span></div>
+                  <div><span className="block text-xl font-bold text-gray-900">{stats.connections}</span><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Connections</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </ScrollReveal>
+
+        <ScrollReveal direction="up" delay={0.1}>
+          <section className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Investment focus</h2>
+              <dl className="space-y-4 text-sm">
+                <div>
+                  <dt className="font-semibold text-gray-500">Sectors</dt>
+                  <dd className="mt-1 flex flex-wrap gap-2">
+                    {investor.sectors.map((sector: string) => <span key={sector} className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{sector}</span>)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-gray-500">Investment stages</dt>
+                  <dd className="mt-1 flex flex-wrap gap-2">
+                    {investor.stages.map((stage: string) => <span key={stage} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">{stage}</span>)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-gray-500">Typical investment range</dt>
+                  <dd className="mt-1 text-gray-800">{investor.investmentRange}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">About the investor</h2>
+              <div className="space-y-3 text-sm text-gray-600">
+                {investor.firmName && <p><span className="font-semibold text-gray-800">Firm: </span>{investor.firmName}</p>}
+                {investor.location && <p className="flex items-center gap-2"><MapPin size={16} />{investor.location}</p>}
+                {investor.website && <a href={investor.website} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline"><LinkIcon size={16} />Website</a>}
+                {investor.linkedInUrl && <a href={investor.linkedInUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">LinkedIn profile</a>}
+              </div>
+            </div>
+          </section>
+        </ScrollReveal>
+
+        {showConnectModal && (
+          <ConnectModal
+            receiverId={userId}
+            companyName={displayName}
+            onClose={() => setShowConnectModal(false)}
+            onSuccess={(message) => {
+              setConnectionStatus("PENDING");
+              toast.success(message);
+            }}
+          />
+        )}
       </div>
     );
   }

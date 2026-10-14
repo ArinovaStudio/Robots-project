@@ -23,8 +23,9 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
           clearUser();
         } else if (status === "authenticated") {
           // If user hasn't completed onboarding, redirect to signup to finish step 2
-          if (session?.user?.isOnboarded === false && pathname !== "/signup") {
-            router.replace("/signup");
+          const onboardingPaths = ["/signup", "/signup/investor", "/register/company"];
+          if (session?.user?.isOnboarded === false && !onboardingPaths.includes(pathname)) {
+            router.replace(session.user.accountType === "INVESTOR" ? "/signup/investor" : "/register/company");
             return; // Don't set loaded — prevent main app UI from rendering
           }
 
@@ -44,7 +45,9 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
               name: displayName,
               image: user.image,
               role: user.role,
-              company: user.company
+              accountType: user.accountType,
+              company: user.company,
+              investor: user.investor,
             });
           }
         }

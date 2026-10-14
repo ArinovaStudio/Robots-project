@@ -42,7 +42,7 @@ function LandingNav() {
           <Link href="/login" className={`hidden sm:inline-flex rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 ${ease}`}>
             Log in
           </Link>
-          <Link href="/signup"
+          <Link href="/register/company"
             className={`inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 hover:shadow-blue-600/35 hover:-translate-y-0.5 active:translate-y-0 ${ease}`}>
             Get started <ChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -218,7 +218,7 @@ function HeroSection() {
         </p>
 
         <div className="mb-6 flex flex-col items-center gap-4 sm:flex-row">
-          <Link href="/signup"
+          <Link href="/register/company"
             className={`inline-flex items-center gap-2 rounded-full bg-blue-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 ${ease}`}>
             Start for free — no credit card
             <ArrowRight className="h-5 w-5" />
@@ -567,7 +567,7 @@ function RoadmapSection() {
   const phases = [
     { status: "Available now", title: "Business network", description: "Create a business profile, discover services, connect and message businesses.", active: true },
     { status: "Building on the network", title: "Growth tools", description: "More ways to promote your business and understand your reach.", active: false },
-    { status: "Coming later", title: "Investor connections", description: "A future way to help businesses meet investors through the network.", active: false },
+    { status: "Investor signup open", title: "Investor profiles", description: "Investors can now create profiles and share their focus, stages, and typical investment range.", active: true, href: "/signup/investor" },
   ];
   return (
     <section className="bg-white py-20 sm:py-24">
@@ -583,6 +583,11 @@ function RoadmapSection() {
               <h3 className="mt-2 text-lg font-extrabold text-gray-900">{phase.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-gray-500">{phase.description}</p>
               {!phase.active && <p className="mt-4 text-xs font-semibold text-gray-400">Planned for a future phase</p>}
+              {phase.href && (
+                <Link href={phase.href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700">
+                  Join as an investor <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </article>
           ))}
         </div>
@@ -618,7 +623,7 @@ function PricingSection() {
             <ul className="my-6 space-y-3">
               {included.map((item) => <li key={item} className="flex items-center gap-2 text-sm font-medium text-gray-700"><Check className="h-4 w-4 text-blue-600" />{item}</li>)}
             </ul>
-            <Link href="/signup" className={`flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 ${ease}`}>
+            <Link href="/register/company" className={`flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 ${ease}`}>
               Join Connecto free <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -643,7 +648,7 @@ function FAQSection() {
     ["Who can join?", "Businesses of different sizes and industries can create a profile and take part in the network."],
     ["Is it free?", "Connecto is free to join during early access. Any future paid plans will be communicated before they launch."],
     ["How does service exchange work?", "Businesses can list what they offer and connect with others to discuss a service trade or another kind of collaboration."],
-    ["When will investor connections launch?", "Investor connections are planned for a future phase. The current network is focused on business discovery and connections."],
+    ["Can investors sign up now?", "Yes. Investors can create a profile and share their investment focus. Investor-business matching and connections will be added in a future phase."],
   ];
   return (
     <section className="bg-white py-20 sm:py-24">
@@ -652,7 +657,7 @@ function FAQSection() {
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Need to know</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">Questions? We’ve got you.</h2>
           <p className="mt-4 max-w-sm text-base leading-relaxed text-gray-500">A few answers to help you get started with Connecto.</p>
-          <Link href="/signup" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700">Get started <ArrowRight className="h-4 w-4" /></Link>
+          <Link href="/register/company" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700">Get started <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <div className="space-y-3">
           {questions.map(([question, answer], index) => (
@@ -687,7 +692,7 @@ function CTASection() {
           <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
             Create your business profile and start building relationships that move your business forward.
           </p>
-          <Link href="/signup"
+          <Link href="/register/company"
             className={`mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-4 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:-translate-y-0.5 ${ease}`}>
             Join Connecto free
             <ArrowRight className="h-4 w-4" />

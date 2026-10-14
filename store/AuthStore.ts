@@ -7,8 +7,19 @@ export interface User {
   email: string;
   image?: string | null;
   role?: "USER" | "ADMIN";
+  accountType?: "BUSINESS" | "INVESTOR";
   isVerified?: boolean;
   company?: any;
+  investor?: {
+    investorType: string;
+    firmName: string | null;
+    sectors: string[];
+    stages: string[];
+    investmentRange: string;
+    location: string | null;
+    website: string | null;
+    linkedInUrl: string | null;
+  } | null;
 }
 
 interface UserStore {

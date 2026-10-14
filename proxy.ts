@@ -31,6 +31,8 @@ export default async function proxy(req: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/signup/investor" ||
+    pathname === "/register/company" ||
     pathname === "/forgot-password" ||
     pathname === "/directory" ||
     pathname === "/explore" ||

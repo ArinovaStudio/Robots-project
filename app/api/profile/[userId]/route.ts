@@ -16,6 +16,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         verificationStatus: true,
         createdAt: true,
         company: true, 
+        investor: true,
         _count: {
           select: {
             followers: true,
@@ -78,6 +79,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         ...targetUser.company,
         logoUrl: targetUser.company.logoUrl || targetUser.image
       } : null,
+      investor: targetUser.investor,
       stats: {
         followers: targetUser._count.followers,
         following: targetUser._count.following,

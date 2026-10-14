@@ -10,7 +10,10 @@ export async function GET() {
       return NextResponse.json( { success: false, message: error || "Unauthorized" }, { status: 401 } );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { id: user.id }, include: { company: true} });
+    const existingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { company: true, investor: true },
+    });
     if (!existingUser) {
       return NextResponse.json( { success: false, message: "User not found" }, { status: 404 } );
     }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Briefcase, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, Briefcase } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -31,30 +31,18 @@ export default function InvestorsPage() {
           </div>
 
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
-            Investor Matchmaking
+            Investor profiles
           </h1>
           
           <p className="text-lg text-slate-300 max-w-xl mx-auto mb-10 leading-relaxed">
-            Gain access to a curated network of angel investors, venture capitalists, and private equity firms looking to fund innovative businesses in your sector.
+            Investor signup is now open. Create a profile to share your investment focus, preferred stages, and typical investment range with businesses on Connecto.
           </p>
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-10 w-full max-w-2xl text-left flex items-start gap-4 backdrop-blur-sm">
-            <Lock className="w-8 h-8 text-amber-400 shrink-0 mt-1" />
-            <div>
-              <h3 className="text-white font-semibold text-lg flex items-center gap-2">
-                Premium Feature <Sparkles className="w-4 h-4 text-amber-400" />
-              </h3>
-              <p className="text-slate-400 text-sm mt-1">
-                The Investor Directory is exclusively available to Connecto Pro members. Upgrade your account to unlock direct messaging, pitch deck hosting, and priority matching with verified investors.
-              </p>
-            </div>
-          </div>
-
-          <Link 
-            href="#" 
+          <Link
+            href="/signup/investor"
             className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-8 py-3.5 rounded-full transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)]"
           >
-            Upgrade to Connecto Pro
+            Create investor profile <ArrowRight className="ml-2 inline h-4 w-4" />
           </Link>
         </div>
       </div>

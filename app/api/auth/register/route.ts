@@ -7,6 +7,7 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters"),
   otp: z.string().length(6),
+  accountType: z.enum(["BUSINESS", "INVESTOR"]).default("BUSINESS"),
 });
 
 export async function POST(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: validation.error.issues[0].message }, { status: 400 });
     }
 
-    const { email, password, otp } = validation.data;
+    const { email, password, otp, accountType } = validation.data;
 
     const otpRecord = await prisma.otp.findUnique({ where: { email_type: { email, type: "VERIFY_EMAIL" } } });
 
@@ -37,12 +38,16 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     
-    await prisma.user.create({ data: { email, password: hashedPassword, emailVerified: new Date() } });
-
-    await prisma.otp.delete({ where: { email_type: { email, type: "VERIFY_EMAIL" } } });
+    await prisma.$transaction([
+      prisma.user.create({
+        data: { email, password: hashedPassword, accountType, emailVerified: new Date() },
+      }),
+      prisma.otp.delete({ where: { email_type: { email, type: "VERIFY_EMAIL" } } }),
+    ]);
 
     return NextResponse.json({ success: true, message: "Registration successful" }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error("Failed to register user:", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }

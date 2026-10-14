@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
-export default function CredentialsForm({ onNext }: { onNext: () => void }) {
+export default function CredentialsForm({
+  onNext,
+  accountType = "BUSINESS",
+}: {
+  onNext: () => void;
+  accountType?: "BUSINESS" | "INVESTOR";
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -55,7 +61,7 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, otp }),
+        body: JSON.stringify({ email, password, otp, accountType }),
       });
       const data = await res.json();
       
@@ -85,7 +91,7 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
-          onClick={() => signIn("google", { callbackUrl: "/signup" })}
+          onClick={() => signIn("google", { callbackUrl: accountType === "INVESTOR" ? "/signup/investor" : "/register/company" })}
           className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]"
         >
           <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={16} height={16} />
@@ -93,7 +99,7 @@ export default function CredentialsForm({ onNext }: { onNext: () => void }) {
         </button>
         <button
           type="button"
-          onClick={() => signIn("facebook", { callbackUrl: "/signup" })}
+          onClick={() => signIn("facebook", { callbackUrl: accountType === "INVESTOR" ? "/signup/investor" : "/register/company" })}
           className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]"
         >
           <Facebook className="h-4 w-4 text-[#1877F2]" />

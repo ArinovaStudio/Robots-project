@@ -38,6 +38,11 @@ describe("Proxy (Route Protection)", () => {
       expect(res.status).not.toBe(307);
     });
 
+    it("should allow access to /register/company without auth", async () => {
+      const res = await proxy(createRequest("/register/company"));
+      expect(res.status).not.toBe(307);
+    });
+
     it("should allow access to / (landing) without auth", async () => {
       const res = await proxy(createRequest("/"));
       expect(res.status).not.toBe(307);

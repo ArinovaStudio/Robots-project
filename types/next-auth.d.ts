@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string;
       isOnboarded: boolean;
       role: string;
+      accountType: "BUSINESS" | "INVESTOR";
     } & DefaultSession["user"];
   }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
     id: string;
     isOnboarded: boolean;
     role?: string;
+    accountType?: "BUSINESS" | "INVESTOR";
   }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     id: string;
     isOnboarded: boolean;
     role?: string;
+    accountType?: "BUSINESS" | "INVESTOR";
   }
 }

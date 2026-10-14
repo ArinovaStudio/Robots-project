@@ -13,6 +13,11 @@ enum Role {
   ADMIN
 }
 
+enum AccountType {
+  BUSINESS
+  INVESTOR
+}
+
 enum UserStatus {
   ACTIVE
   SUSPENDED
@@ -34,6 +39,7 @@ model User {
   emailVerified DateTime?
   image String?
   role Role @default(USER)
+  accountType AccountType @default(BUSINESS)
   status UserStatus @default(ACTIVE)
   verificationStatus VerificationStatus @default(UNVERIFIED)
   isOnboarded Boolean @default(false)
@@ -43,6 +49,7 @@ model User {
 
   accounts Account[]
   company CompanyProfile?
+  investor InvestorProfile?
   verificationApplication VerificationApplication?
   followers Follow[] @relation("Followers")
   following Follow[] @relation("Following")
@@ -170,6 +177,24 @@ model CompanyProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   profileViews ProfileViewStat[]
   impressions SearchImpressionStat[]
+}
+
+model InvestorProfile {
+  id String @id @default(uuid())
+  userId String @unique
+  investorType String
+  firmName String?
+  sectors String[]
+  stages String[]
+  investmentRange String
+  location String?
+  website String?
+  linkedInUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum OtpType {

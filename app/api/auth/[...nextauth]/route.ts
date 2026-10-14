@@ -51,6 +51,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           isOnboarded: user.isOnboarded,
           role: user.role,
+          accountType: user.accountType,
         };
       }
     })
@@ -66,18 +67,20 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.isOnboarded = user.isOnboarded;
         token.role = user.role;
+        token.accountType = user.accountType;
         if (user.image) token.picture = user.image;
       } else if (token.email) {
 
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { id: true, isOnboarded: true, image: true, role: true },
+          select: { id: true, isOnboarded: true, image: true, role: true, accountType: true },
         });
 
         if (dbUser) {
           token.id = dbUser.id;
           token.isOnboarded = dbUser.isOnboarded;
           token.role = dbUser.role;
+          token.accountType = dbUser.accountType;
           if (dbUser.image) token.picture = dbUser.image;
         }
       }
@@ -88,6 +91,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.isOnboarded = token.isOnboarded as boolean;
         session.user.role = token.role ?? "USER";
+        session.user.accountType = token.accountType === "INVESTOR" ? "INVESTOR" : "BUSINESS";
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;
