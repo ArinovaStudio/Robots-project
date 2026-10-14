@@ -7,11 +7,11 @@ import { DashboardSkeleton } from "./_components/DashboardSkeletons";
 import {
   Activity,
   BadgeIndianRupee,
-  Briefcase,
   Building2,
   CreditCard,
   FileText,
   MessageCircle,
+  TrendingDown,
   TrendingUp,
   UserPlus,
   Users,
@@ -27,6 +27,7 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Legend,
   Tooltip,
   XAxis,
   YAxis,
@@ -41,109 +42,120 @@ const overviewIcons = {
   connections: UserPlus,
   revenue: BadgeIndianRupee,
 };
-export function formatAnalytics(apiData: any) {
+interface AnalyticsComparison {
+  current: number;
+  previous: number;
+}
+
+interface AdminAnalyticsData {
+  generatedAt: string;
+  overview: {
+    totalUsers: number;
+    totalCompanies: number;
+    totalConnections: number;
+    totalRevenue: number;
+  };
+  engagement: {
+    posts: number;
+    comments: number;
+    messages: number;
+    saved: number;
+  };
+  growth: Array<{
+    month: string;
+    users: number;
+    companies: number;
+    connections: number;
+    revenue: number;
+  }>;
+  comparisons: {
+    users: AnalyticsComparison;
+    companies: AnalyticsComparison;
+    connections: AnalyticsComparison;
+    revenue: AnalyticsComparison;
+  };
+  recentActivities: Array<{ icon: string; title: string; time: string }>;
+  health: {
+    usersToday: number;
+    companiesToday: number;
+    messagesToday: number;
+    totalInvestors: number;
+    boostedProfiles: number;
+    successfulPaymentsToday: number;
+  };
+}
+
+interface AdminAnalyticsResponse {
+  success: boolean;
+  message?: string;
+  data: AdminAnalyticsData;
+}
+
+export function formatAnalytics(apiData: AdminAnalyticsData) {
   if (!apiData) return null;
 
-  const { overview, engagement, growth, plans, health } = apiData;
-
-  const maxPlanUsers = Math.max(
-    ...plans.map((p: any) => p._count.subscriptions),
-    1
-  );
+  const { overview, engagement, growth, comparisons, health, recentActivities } = apiData;
+  const formatChange = (current: number, previous: number) => {
+    if (previous === 0) return current === 0 ? "0%" : "New";
+    const change = ((current - previous) / previous) * 100;
+    return `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
+  };
+  const getComparison = (values: { current: number; previous: number }) => ({
+    growth: formatChange(values.current, values.previous),
+    growthDirection: values.current > values.previous ? "up" :
+      values.current < values.previous ? "down" : "flat",
+  });
+  const totalEngagement = engagement.posts + engagement.comments + engagement.messages + engagement.saved;
 
   return {
     overviewCards: [
       {
         title: "Total Users",
         value: overview.totalUsers.toLocaleString(),
-        growth: "+12.5%",
+        ...getComparison(comparisons.users),
         icon: "users",
       },
       {
         title: "Company Profiles",
         value: overview.totalCompanies.toLocaleString(),
-        growth: "+8.2%",
+        ...getComparison(comparisons.companies),
         icon: "companies",
       },
       {
         title: "Connections",
         value: overview.totalConnections.toLocaleString(),
-        growth: "+18.4%",
+        ...getComparison(comparisons.connections),
         icon: "connections",
       },
       {
         title: "Revenue",
-        value: `₹${Number(overview.totalRevenue || 0).toLocaleString()}`,
-        growth: "+22.1%",
+        value: `₹${Number(overview.totalRevenue || 0).toLocaleString("en-IN")}`,
+        ...getComparison(comparisons.revenue),
         icon: "revenue",
       },
     ],
 
-    growthData: growth.users.map((u: any, i: number) => ({
-      month: new Date(u.createdAt).toLocaleString("default", {
-        month: "short",
-      }),
-      users: u._count,
-      companies: growth.companies[i]?._count || 0,
-    })),
+    growthData: growth,
 
     postStats: [
-      { name: "Posts", value: engagement.posts, color: "#2563eb" },
-      { name: "Comments", value: engagement.comments, color: "#16a34a" },
-      { name: "Messages", value: engagement.messages, color: "#f59e0b" },
-      { name: "Saved", value: engagement.saved, color: "#dc2626" },
+      { name: "Posts", value: totalEngagement ? (engagement.posts / totalEngagement) * 100 : 0, count: engagement.posts, color: "#2563eb" },
+      { name: "Comments", value: totalEngagement ? (engagement.comments / totalEngagement) * 100 : 0, count: engagement.comments, color: "#16a34a" },
+      { name: "Messages", value: totalEngagement ? (engagement.messages / totalEngagement) * 100 : 0, count: engagement.messages, color: "#f59e0b" },
+      { name: "Saved", value: totalEngagement ? (engagement.saved / totalEngagement) * 100 : 0, count: engagement.saved, color: "#dc2626" },
     ],
 
-    revenueData: growth.users.map((u: any) => ({
-      month: new Date(u.createdAt).toLocaleString("default", {
-        month: "short",
-      }),
-      revenue: overview.totalRevenue || 0,
-    })),
+    revenueData: growth.map((item) => ({ month: item.month, revenue: item.revenue })),
 
-    planData: plans.map((p: any) => ({
-      name: p.name,
-      users: p._count.subscriptions,
-      percentage: (p._count.subscriptions / maxPlanUsers) * 100,
-    })),
-
-    conversionRate:
-      overview.totalUsers > 0
-        ? ((health.newSubscriptions / overview.totalUsers) * 100).toFixed(1)
-        : 0,
-
-    retentionRate: 91.4,
-
-    recentActivities: [
-      {
-        icon: "users",
-        title: `${health.dailyUsers.toLocaleString()} new users registered today`,
-        time: "Today",
-      },
-      {
-        icon: "companies",
-        title: `${health.companiesToday} company profiles created`,
-        time: "Today",
-      },
-      {
-        icon: "payments",
-        title: `${health.successfulPayments} successful payments`,
-        time: "Today",
-      },
-      {
-        icon: "messages",
-        title: `${health.messagesToday} messages exchanged`,
-        time: "Today",
-      },
-    ],
+    recentActivities,
+    generatedAt: apiData.generatedAt,
 
     platformHealth: [
       {
-        label: "Daily Active Users",
-        value: health.dailyUsers.toLocaleString(),
+        label: "New Users Today",
+        value: health.usersToday.toLocaleString(),
       },
       {
-        label: "Companies Today",
+        label: "Company Profiles Today",
         value: health.companiesToday,
       },
       {
@@ -151,71 +163,28 @@ export function formatAnalytics(apiData: any) {
         value: health.messagesToday,
       },
       {
-        label: "New Subscriptions",
-        value: health.newSubscriptions,
+        label: "Investor Profiles",
+        value: health.totalInvestors,
       },
       {
-        label: "Boosted Profiles",
+        label: "Boosted Company Profiles",
         value: health.boostedProfiles,
       },
       {
-        label: "Successful Payments",
-        value: health.successfulPayments,
+        label: "Successful Payments Today",
+        value: health.successfulPaymentsToday,
       },
     ],
   };
 }
-const defaultAnalytics = {
-  overviewCards: [
-    {
-      title: "Total Users",
-      value: "0",
-      growth: "+0%",
-      icon: "users",
-    },
-    {
-      title: "Company Profiles",
-      value: "0",
-      growth: "+0%",
-      icon: "companies",
-    },
-    {
-      title: "Connections",
-      value: "0",
-      growth: "+0%",
-      icon: "connections",
-    },
-    {
-      title: "Revenue",
-      value: "₹0",
-      growth: "+0%",
-      icon: "revenue",
-    },
-  ],
-
-  growthData: [],
-
-  postStats: [],
-
-  revenueData: [],
-
-  planData: [],
-
-  conversionRate: 0,
-
-  retentionRate: 0,
-
-  recentActivities: [],
-
-  platformHealth: [],
-};
 
 export default function AdminDashboard() {
-  const { data, error, isLoading } = useSWR("/api/admin/analytics", fetcher);
-
-  const analytics = data?.data
-    ? formatAnalytics(data?.data)!
-    : defaultAnalytics;
+  const { data, error, isLoading, mutate, isValidating } = useSWR<AdminAnalyticsResponse>("/api/admin/analytics", fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: true,
+  });
+  const analytics = data?.success ? formatAnalytics(data.data) : null;
+  const analyticsError = error || (data && !data.success ? new Error(data.message || "Failed to load analytics") : undefined);
 
   return (
     <main>
@@ -232,31 +201,39 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          {/* <div className="flex items-center gap-3">
-            <button className="rounded-xl border bg-white px-4 py-2 text-sm font-medium">
-              Last 7 Days
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            {analytics?.generatedAt && (
+              <span>
+                Updated {new Date(analytics.generatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => mutate()}
+              disabled={isValidating}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {isValidating ? "Refreshing..." : "Refresh"}
             </button>
-
-            <button className="rounded-xl bg-[#050a30] px-4 py-2 text-sm font-medium text-white">
-              Export Report
-            </button>
-          </div> */}
+          </div>
         </div>
 
         <ErrorLoading
           loading={isLoading}
-          error={error}
+          error={analyticsError}
           dataLength={analytics ? 1 : 0}
           loadingCard={DashboardSkeleton}
           className="space-y-5"
         >
+          {analytics && (
           <>
             {/* Overview Cards */}
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {analytics.overviewCards.map((card: any) => {
+              {analytics.overviewCards.map((card) => {
                 const Icon =
                   overviewIcons[card.icon as keyof typeof overviewIcons] ||
                   Users;
+                const ChangeIcon = card.growthDirection === "down" ? TrendingDown : TrendingUp;
 
                 return (
                   <div
@@ -271,9 +248,13 @@ export default function AdminDashboard() {
                           {card.value}
                         </h2>
 
-                        <div className="mt-3 flex items-center gap-1 text-sm font-medium text-green-600">
-                          <TrendingUp className="h-4 w-4" />
-                          {card.growth}
+                        <div className={`mt-3 flex items-center gap-1 text-sm font-medium ${
+                          card.growthDirection === "down" ? "text-red-600" :
+                          card.growthDirection === "flat" ? "text-gray-500" : "text-green-600"
+                        }`}>
+                          <ChangeIcon className="h-4 w-4" />
+                          <span>{card.growth}</span>
+                          <span className="ml-1 text-xs font-normal text-gray-400">vs same period last month</span>
                         </div>
                       </div>
 
@@ -293,11 +274,11 @@ export default function AdminDashboard() {
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-[#050a30]">
-                      User & Company Growth
+                      Users, Companies & Connections
                     </h2>
 
                     <p className="text-sm text-gray-500">
-                      Monthly onboarding analytics
+                      Monthly new users, company profiles and accepted connections
                     </p>
                   </div>
 
@@ -354,6 +335,7 @@ export default function AdminDashboard() {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
+                      <Legend />
 
                       <Area
                         type="monotone"
@@ -369,6 +351,13 @@ export default function AdminDashboard() {
                         stroke="#14b8a6"
                         fill="url(#companyGradient)"
                         strokeWidth={3}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="connections"
+                        stroke="#f59e0b"
+                        fill="transparent"
+                        strokeWidth={2}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -399,7 +388,7 @@ export default function AdminDashboard() {
                         paddingAngle={4}
                       >
                         {analytics.postStats.map(
-                          (entry: any, index: number) => (
+                          (entry, index: number) => (
                             <Cell key={index} fill={entry.color} />
                           )
                         )}
@@ -411,7 +400,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  {analytics.postStats.map((item: any) => (
+                  {analytics.postStats.map((item) => (
                     <div
                       key={item.name}
                       className="flex items-center gap-2 rounded-xl bg-[#f8fafc] p-3"
@@ -426,7 +415,9 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-sm font-medium">{item.name}</p>
 
-                        <p className="text-xs text-gray-500">{item.value}%</p>
+                        <p className="text-xs text-gray-500">
+                          {item.count.toLocaleString()} · {item.value.toFixed(1)}%
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -434,18 +425,17 @@ export default function AdminDashboard() {
               </div>
             </section>
 
-            {/* Revenue + Plans */}
-            <section className="grid gap-6 lg:grid-cols-2">
-              {/* Revenue */}
+            {/* Revenue */}
+            <section>
               <div className="rounded-3xl bg-white p-5 shadow-sm">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-[#050a30]">
-                      Subscription Revenue
+                      Payment Revenue
                     </h2>
 
                     <p className="text-sm text-gray-500">
-                      Monthly platform earnings
+                      Monthly successful payments (INR)
                     </p>
                   </div>
 
@@ -458,8 +448,8 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
                       <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
+                      <YAxis tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN")}`} />
+                      <Tooltip formatter={(value) => [`₹${Number(value).toLocaleString("en-IN")}`, "Revenue"]} />
 
                       <Bar
                         dataKey="revenue"
@@ -468,64 +458,6 @@ export default function AdminDashboard() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Plans */}
-              <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-[#050a30]">
-                      Subscription Plans
-                    </h2>
-
-                    <p className="text-sm text-gray-500">
-                      Active paid users by plan
-                    </p>
-                  </div>
-
-                  <Briefcase className="h-5 w-5 text-gray-400" />
-                </div>
-
-                <div className="space-y-5">
-                  {analytics.planData.map((plan: any) => (
-                    <div key={plan.name}>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">{plan.name}</span>
-
-                        <span className="text-sm text-gray-500">
-                          {plan.users} users
-                        </span>
-                      </div>
-
-                      <div className="h-3 overflow-hidden rounded-full bg-gray-100">
-                        <div
-                          className="h-full rounded-full bg-[#4338ca]"
-                          style={{
-                            width: `${plan.percentage}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl bg-[#eef2ff] p-4">
-                    <p className="text-sm text-gray-500">Conversion Rate</p>
-
-                    <h3 className="mt-2 text-2xl font-bold text-[#050a30]">
-                      {analytics.conversionRate}%
-                    </h3>
-                  </div>
-
-                  <div className="rounded-2xl bg-[#ecfdf5] p-4">
-                    <p className="text-sm text-gray-500">Retention Rate</p>
-
-                    <h3 className="mt-2 text-2xl font-bold text-[#050a30]">
-                      {analytics.retentionRate}%
-                    </h3>
-                  </div>
                 </div>
               </div>
             </section>
@@ -549,8 +481,11 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-4">
+                  {!analytics.recentActivities.length && (
+                    <p className="py-8 text-center text-sm text-gray-500">No recent activity yet.</p>
+                  )}
                   {analytics.recentActivities.map(
-                    (item: any, index: number) => {
+                    (item, index) => {
                       const Icon =
                         {
                           users: Users,
@@ -595,7 +530,7 @@ export default function AdminDashboard() {
                 </h2>
 
                 <div className="mt-6 space-y-5">
-                  {analytics.platformHealth.map((item: any) => (
+                  {analytics.platformHealth.map((item) => (
                     <div
                       key={item.label}
                       className="flex items-center justify-between border-b pb-3"
@@ -613,6 +548,7 @@ export default function AdminDashboard() {
               </div>
             </section>
           </>
+          )}
         </ErrorLoading>
       </div>
     </main>
