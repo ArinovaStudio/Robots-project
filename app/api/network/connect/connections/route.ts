@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { updatedAt: 'desc' },
         include: {
-          sender: { select: { id: true, name: true, image: true, company: true } },
-          receiver: { select: { id: true, name: true, image: true, company: true } }
+          sender: { select: { id: true, name: true, image: true, accountType: true, company: true, investor: true } },
+          receiver: { select: { id: true, name: true, image: true, accountType: true, company: true, investor: true } }
         }
       }),
       prisma.connection.count({ where: whereClause })
@@ -48,13 +48,18 @@ export async function GET(req: NextRequest) {
     const formattedConnections = connections.map(conn => {
       const isSender = conn.senderId === user.id;
       const otherUser = isSender ? conn.receiver : conn.sender;
+      const isOtherInvestor = otherUser.accountType === "INVESTOR";
 
       return {
         id: conn.id,
         connectionId: conn.id,
         connectedAt: conn.updatedAt,
-        name: otherUser.company?.companyName || otherUser.name || "Unknown User",
+        name: isOtherInvestor
+          ? (otherUser.name || otherUser.investor?.firmName || "Investor")
+          : (otherUser.company?.companyName || otherUser.name || "Unknown Company"),
         company: otherUser.company,
+        investor: otherUser.investor,
+        accountType: otherUser.accountType,
         image: otherUser.image || otherUser.company?.logoUrl || null,
         userId: otherUser.id,
       };

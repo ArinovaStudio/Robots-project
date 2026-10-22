@@ -184,12 +184,45 @@ model InvestorProfile {
   userId String @unique
   investorType String
   firmName String?
+  phone String?
+  country String?
+  city String?
+  currentDesignation String?
+  currentCompany String?
+  entityLegalName String?
+  entityType String?
+  registrationNumber String?
+  registeredCountry String?
+  officialWebsite String?
+  representativeName String?
+  representativeDesignation String?
+  typicalInvestmentAmount String?
+  totalCapitalAvailable String?
+  currency String?
+  investmentFrequency String?
+  expectedTimeline String?
+  sourceOfFunds String?
+  canProvideFinancialEvidence Boolean @default(false)
+  hasPreviousInvestments Boolean @default(false)
+  previousInvestmentCount Int?
+  previousStartups String[] @default([])
+  previousInvestmentRange String?
+  industriesInvested String[] @default([])
+  yearsExperience Int?
+  portfolioUrl String?
+  references String?
   sectors String[]
   stages String[]
   investmentRange String
   location String?
   website String?
   linkedInUrl String?
+  locations String[] @default([])
+  investmentStructures String[] @default([])
+  ownershipPreference String?
+  investorRole String?
+  mentorshipInterest Boolean @default(false)
+  investmentThesis String? @db.VarChar(500)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ChevronRight, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { DEAL_IN_OPTIONS, LOOKING_FOR_OPTIONS } from "@/lib/constants";
 
 export default function CompanyDetailsForm() {
   const router = useRouter();
+  const { update } = useSession();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -50,7 +52,14 @@ export default function CompanyDetailsForm() {
     if (!formData.yearOfEstablishment) validationErrors.push("Founded year is required.");
     if (!formData.type) validationErrors.push("Please select a company type.");
     if (dealIn.length === 0) validationErrors.push("Please select at least one service you deal in.");
-    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) validationErrors.push("Website must be a valid URL (e.g. https://example.com).");
+    let formattedWebsite = formData.website.trim();
+    if (formattedWebsite && !/^https?:\/\//i.test(formattedWebsite)) {
+      formattedWebsite = `https://${formattedWebsite}`;
+    }
+
+    if (formattedWebsite && !/^https?:\/\/.+/i.test(formattedWebsite)) {
+      validationErrors.push("Website must be a valid URL (e.g. https://example.com).");
+    }
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -62,7 +71,9 @@ export default function CompanyDetailsForm() {
     setErrors([]);
 
     const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+    Object.entries({ ...formData, website: formattedWebsite }).forEach(([key, value]) => {
+      data.append(key, value);
+    });
     
     dealIn.forEach((item) => data.append("dealIn", item));
     lookingFor.forEach((item) => data.append("lookingFor", item));
@@ -78,6 +89,13 @@ export default function CompanyDetailsForm() {
         toast.error(result.message || "Failed to create profile.");
       } else {
         toast.success("Company profile created successfully!");
+        try {
+          if (update) {
+            await update();
+          }
+        } catch {
+          // ignore
+        }
         window.location.href = "/explore";
       }
     } catch {

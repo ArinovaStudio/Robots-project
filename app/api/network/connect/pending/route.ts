@@ -20,21 +20,42 @@ export async function GET(req: NextRequest) {
         skip, take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          sender: { select: { id: true, name: true, image: true, company: true } }
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              accountType: true,
+              company: true,
+              investor: true
+            }
+          }
         }
       }),
       prisma.connection.count({ where: { receiverId: user.id, status: "PENDING" } })
     ]);
 
-    const formattedRequests = pendingRequests.map(req => ({
-      connectionId: req.id,
-      message: req.message,
-      requestedAt: req.createdAt,
-      companyName: req.sender.company?.companyName || req.sender.name || "Unknown User",
-      logoUrl: req.sender.company?.logoUrl || null,
-      type: req.sender.company?.type || "User",
-      userId: req.sender.id,
-    }));
+    const formattedRequests = pendingRequests.map(req => {
+      const isInvestor = req.sender.accountType === "INVESTOR";
+      return {
+        connectionId: req.id,
+        message: req.message,
+        requestedAt: req.createdAt,
+        companyName: isInvestor
+          ? (req.sender.name || req.sender.investor?.firmName || "Investor")
+          : (req.sender.company?.companyName || req.sender.name || "Unknown Company"),
+        logoUrl: isInvestor
+          ? (req.sender.image || null)
+          : (req.sender.company?.logoUrl || req.sender.image || null),
+        type: isInvestor
+          ? (req.sender.investor?.firmName
+              ? `${req.sender.investor.investorType} · ${req.sender.investor.firmName}`
+              : (req.sender.investor?.investorType || "Investor"))
+          : (req.sender.company?.type || "Business"),
+        userId: req.sender.id,
+        isInvestor
+      };
+    });
 
     return NextResponse.json({
       success: true,

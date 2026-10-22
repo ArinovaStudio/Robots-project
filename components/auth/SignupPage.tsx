@@ -23,8 +23,27 @@ export default function SignupPage({
     status === "authenticated" && session?.user?.isOnboarded === false ? 2 : step;
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.isOnboarded) {
-      router.push("/explore");
+    if (session?.user?.accountType) {
+      setAccountType(session.user.accountType === "INVESTOR" ? "INVESTOR" : "BUSINESS");
+    }
+  }, [session?.user?.accountType]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      if (session?.user?.isOnboarded) {
+        router.push("/explore");
+        return;
+      }
+
+      // Check DB via /api/auth/me in case session token is still refreshing
+      fetch("/api/auth/me")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && (json.data?.isOnboarded || json.data?.company || json.data?.investor)) {
+            router.push("/explore");
+          }
+        })
+        .catch(() => {});
     }
   }, [status, session?.user?.isOnboarded, router]);
 

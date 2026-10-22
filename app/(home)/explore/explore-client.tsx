@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AchievementPost from "@/components/home/achievements-post";
+import InvestorDashboardWidget from "@/components/home/investor-dashboard-widget";
 import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -62,6 +63,13 @@ export default function ExploreClient() {
   return (
     <div className="space-y-5 pb-20">
       <h1 className="sr-only">Connecto B2B Feed & Updates</h1>
+
+      {user?.accountType === "INVESTOR" && (
+        <ScrollReveal direction="down">
+          <InvestorDashboardWidget user={user} />
+        </ScrollReveal>
+      )}
+
       <ScrollReveal direction="down">
         <AchievementPost />
       </ScrollReveal>

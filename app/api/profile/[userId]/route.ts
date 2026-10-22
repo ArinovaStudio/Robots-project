@@ -13,6 +13,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         id: true,
         name: true,
         image: true,
+        accountType: true,
         verificationStatus: true,
         createdAt: true,
         company: true, 
@@ -33,6 +34,37 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
     }
 
     const totalConnections = targetUser._count.sentConnections + targetUser._count.receivedConnections;
+
+    // Calculate dynamic Connected Investors (for companies) and Connected Companies (for investors)
+    const [connectedInvestorsCount, connectedCompaniesCount, recordedInvestments] = await Promise.all([
+      prisma.connection.count({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { senderId: userId, receiver: { accountType: "INVESTOR" } },
+            { receiverId: userId, sender: { accountType: "INVESTOR" } }
+          ]
+        }
+      }),
+      prisma.connection.count({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { senderId: userId, receiver: { accountType: "BUSINESS" } },
+            { receiverId: userId, sender: { accountType: "BUSINESS" } }
+          ]
+        }
+      }),
+      prisma.$queryRaw<any[]>`
+        SELECT id, "companyName", amount, stage, year, notes, "createdAt"
+        FROM "InvestorInvestment"
+        WHERE "investorId" = ${userId}
+        ORDER BY "createdAt" DESC
+      `.catch(() => [])
+    ]);
+
+    const baseInvestedCount = targetUser.investor?.previousInvestmentCount || targetUser.investor?.previousStartups?.length || 0;
+    const investedInCount = baseInvestedCount + recordedInvestments.length;
 
     let isFollowing = false;
     let connectionStatus = null;
@@ -73,17 +105,24 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       userId: targetUser.id,
       name: targetUser.name,
       image: targetUser.image,
+      accountType: targetUser.accountType,
       verificationStatus: targetUser.verificationStatus || "UNVERIFIED",
       joinedAt: targetUser.createdAt,
       company: targetUser.company ? {
         ...targetUser.company,
         logoUrl: targetUser.company.logoUrl || targetUser.image
       } : null,
-      investor: targetUser.investor,
+      investor: targetUser.investor ? {
+        ...targetUser.investor,
+        recordedInvestments
+      } : null,
       stats: {
         followers: targetUser._count.followers,
         following: targetUser._count.following,
-        connections: totalConnections
+        connections: totalConnections,
+        connectedInvestors: connectedInvestorsCount,
+        connectedCompanies: connectedCompaniesCount,
+        investedIn: investedInCount
       },
       viewerState: {
         isFollowing,

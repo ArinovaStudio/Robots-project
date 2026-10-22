@@ -4,15 +4,23 @@ import { useEffect, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Store, ShoppingBag, Target } from "lucide-react";
+import { Store, ShoppingBag, Target, Sparkles, ArrowRight, ShieldAlert } from "lucide-react";
+import { useUserStore } from "@/store/AuthStore";
+import Link from "next/link";
 
 export default function MarketplaceClient() {
+  const { user } = useUserStore();
+  const isInvestor = user?.accountType === "INVESTOR";
   const [activeTab, setActiveTab] = useState<"suppliers" | "buyers">("suppliers");
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [buyers, setBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMatches = async () => {
+    if (isInvestor) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const endpoint = activeTab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers";
@@ -32,7 +40,50 @@ export default function MarketplaceClient() {
 
   useEffect(() => {
     fetchMatches();
-  }, [activeTab]);
+  }, [activeTab, isInvestor]);
+
+  if (isInvestor) {
+    return (
+      <section className="mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50/40 p-8 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-amber-100 p-3 text-amber-700 shrink-0">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <div className="flex-1">
+              <span className="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-800 uppercase tracking-wider">
+                Investor Account Notice
+              </span>
+              <h1 className="mt-2 text-2xl font-bold text-gray-900">
+                Service Exchange Unavailable for Investors
+              </h1>
+              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                As an investor on Connecto, you cannot exchange services. B2B service swapping and vendor matching are reserved strictly for registered business accounts.
+              </p>
+              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                Instead, you have full access to our dedicated <strong className="text-gray-900">Investor Portal</strong>, where you can explore curated startup ideas, live products, active pitch decks, and connect with companies doing good in your selected preferences.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/investors/portal"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition"
+                >
+                  <Sparkles className="w-4 h-4" /> Open Investor Portal <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/investors/portal?tab=performers"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  View Companies Matching Your Preferences
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">

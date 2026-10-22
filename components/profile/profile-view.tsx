@@ -6,15 +6,16 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Link as LinkIcon, Users, Building2, UserPlus,
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings, Landmark
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
 import ConnectModal from "../modals/connect-modal";
 import EditProfileModal from "../modals/edit-profile-modal";
+import RecordInvestmentModal from "../modals/record-investment-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
-import { Pencil } from "lucide-react";
+import { Pencil, PlusCircle, Briefcase } from "lucide-react";
 import FeedCard from "@/components/home/feed-card";
 import { useUserStore } from "@/store/AuthStore";
 import VerificationBadge from "@/components/ui/VerificationBadge";
@@ -29,6 +30,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [loading, setLoading] = useState(true);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRecordInvestmentModal, setShowRecordInvestmentModal] = useState(false);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
 
   const [isFollowing, setIsFollowing] = useState(false);
@@ -219,9 +221,23 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     </div>
                   )}
                 </div>
-                <div className="mt-6 flex justify-center gap-8 sm:justify-start">
-                  <div><span className="block text-xl font-bold text-gray-900">{stats.followers}</span><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Followers</span></div>
-                  <div><span className="block text-xl font-bold text-gray-900">{stats.connections}</span><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Connections</span></div>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-2 text-center sm:text-left shadow-xs">
+                    <span className="block text-xl font-extrabold text-blue-900">{stats.connectedCompanies ?? 0}</span>
+                    <span className="text-[11px] font-bold text-blue-700 tracking-tight">connected companies - {stats.connectedCompanies ?? 0}</span>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2 text-center sm:text-left shadow-xs">
+                    <span className="block text-xl font-extrabold text-emerald-900">{stats.investedIn ?? 0}</span>
+                    <span className="text-[11px] font-bold text-emerald-700 tracking-tight">invested in - {stats.investedIn ?? 0}</span>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-center sm:text-left">
+                    <span className="block text-xl font-bold text-gray-900">{stats.followers}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Followers</span>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-center sm:text-left">
+                    <span className="block text-xl font-bold text-gray-900">{stats.connections}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Connections</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -236,18 +252,18 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 <div>
                   <dt className="font-semibold text-gray-500">Sectors</dt>
                   <dd className="mt-1 flex flex-wrap gap-2">
-                    {investor.sectors.map((sector: string) => <span key={sector} className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{sector}</span>)}
+                    {investor.sectors?.map((sector: string) => <span key={sector} className="rounded-full bg-blue-50 px-3 py-1 text-blue-700 font-medium">{sector}</span>)}
                   </dd>
                 </div>
                 <div>
                   <dt className="font-semibold text-gray-500">Investment stages</dt>
                   <dd className="mt-1 flex flex-wrap gap-2">
-                    {investor.stages.map((stage: string) => <span key={stage} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">{stage}</span>)}
+                    {investor.stages?.map((stage: string) => <span key={stage} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 font-medium">{stage}</span>)}
                   </dd>
                 </div>
                 <div>
                   <dt className="font-semibold text-gray-500">Typical investment range</dt>
-                  <dd className="mt-1 text-gray-800">{investor.investmentRange}</dd>
+                  <dd className="mt-1 text-gray-800 font-semibold">{investor.investmentRange}</dd>
                 </div>
               </dl>
             </div>
@@ -263,6 +279,65 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           </section>
         </ScrollReveal>
 
+        {/* Portfolio & Invested Companies Section */}
+        <ScrollReveal direction="up" delay={0.2}>
+          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-emerald-600" />
+                <h2 className="text-lg font-bold text-gray-900">
+                  Portfolio & Companies Invested In
+                </h2>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                  invested in - {stats.investedIn ?? 0}
+                </span>
+              </div>
+              {viewerState.isOwnProfile && (
+                <button
+                  onClick={() => setShowRecordInvestmentModal(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs"
+                >
+                  <PlusCircle size={15} /> Record Investment
+                </button>
+              )}
+            </div>
+
+            {investor.recordedInvestments?.length > 0 || investor.previousStartups?.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {investor.recordedInvestments?.map((inv: any) => (
+                  <div key={inv.id} className="rounded-xl border border-gray-100 bg-gray-50/70 p-4 transition hover:border-gray-200">
+                    <div className="flex items-start justify-between">
+                      <h4 className="font-bold text-gray-900 text-sm">{inv.companyName}</h4>
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{inv.stage}</span>
+                    </div>
+                    {inv.amount && <p className="mt-1 text-xs font-semibold text-gray-700">{inv.amount}</p>}
+                    <p className="mt-1 text-[11px] text-gray-400">Invested {inv.year || "Recently"}</p>
+                    {inv.notes && <p className="mt-2 text-xs text-gray-500 line-clamp-2">{inv.notes}</p>}
+                  </div>
+                ))}
+                {investor.previousStartups?.map((startup: string, idx: number) => (
+                  <div key={idx} className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
+                    <h4 className="font-bold text-gray-900 text-sm">{startup}</h4>
+                    <span className="mt-1 inline-block rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Angel / Portfolio</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+                <p>No investments recorded in this portfolio yet.</p>
+                {viewerState.isOwnProfile && (
+                  <button
+                    onClick={() => setShowRecordInvestmentModal(true)}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:underline"
+                  >
+                    <PlusCircle size={14} /> Add your first invested company
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+        </ScrollReveal>
+
         {showConnectModal && (
           <ConnectModal
             receiverId={userId}
@@ -271,6 +346,21 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             onSuccess={(message) => {
               setConnectionStatus("PENDING");
               toast.success(message);
+            }}
+          />
+        )}
+
+        {showRecordInvestmentModal && (
+          <RecordInvestmentModal
+            onClose={() => setShowRecordInvestmentModal(false)}
+            onSuccess={() => {
+              // Refresh profile
+              const refresh = async () => {
+                const res = await fetch(`/api/profile/${userId}`);
+                const json = await res.json();
+                if (json.success) setProfile(json.data);
+              };
+              refresh();
             }}
           />
         )}
@@ -335,6 +425,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-white text-gray-700 hover:bg-gray-50 transition border border-gray-200 shadow-sm"
                   >
                     <Layers size={16} /> Connection Requests
+                  </Link>
+                  <Link
+                    href="/company/pitches"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition border border-indigo-200 shadow-sm"
+                  >
+                    <Landmark size={16} /> Pitches & Funding
                   </Link>
 
                   {profile.verificationStatus === "VERIFIED" ? (
@@ -453,7 +549,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6 mt-6">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-6 mt-6">
+              <div className="rounded-xl border border-purple-200 bg-purple-50/80 px-4 py-2 text-center sm:text-left shadow-xs">
+                <span className="font-extrabold text-purple-900 text-xl block">{stats.connectedInvestors ?? 0}</span>
+                <span className="text-[11px] font-bold text-purple-700 tracking-tight">Connected Investors - {stats.connectedInvestors ?? 0}</span>
+              </div>
+              <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
               <div className="flex flex-col items-center sm:items-start">
                 <span className="font-bold text-gray-900 text-xl">{stats.followers}</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Followers</span>

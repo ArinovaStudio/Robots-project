@@ -8,36 +8,42 @@ import ErrorScreen from "./FullPageErrorScreen";
 
 export function SessionSync({ children }: { children: React.ReactNode }) {
   const { setUser, clearUser } = useUserStore();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-
     const fetchData = async () => {
       try {
-
         if (status === "unauthenticated") {
           clearUser();
         } else if (status === "authenticated") {
-          // If user hasn't completed onboarding, redirect to signup to finish step 2
+          // Fetch real user data from DB to get the true onboarding status
+          const req = await fetch("/api/auth/me");
+          const res = await req.json();
+          if (!res.success) {
+            throw Error(res.message);
+          }
+          const user = res.data || {};
+          const isReallyOnboarded = Boolean(user.isOnboarded || user.company || user.investor);
+
           const onboardingPaths = ["/signup", "/signup/investor", "/register/company"];
-          if (session?.user?.isOnboarded === false && !onboardingPaths.includes(pathname)) {
-            router.replace(session.user.accountType === "INVESTOR" ? "/signup/investor" : "/register/company");
-            return; // Don't set loaded — prevent main app UI from rendering
+
+          // If DB says the user genuinely hasn't completed onboarding, route them to step 2
+          if (!isReallyOnboarded && !onboardingPaths.includes(pathname)) {
+            router.replace(user.accountType === "INVESTOR" ? "/signup/investor" : "/register/company");
+            return;
           }
 
-          // Only fetch user data if onboarded (or already on /signup)
-          if (session?.user?.isOnboarded !== false) {
-            const req = await fetch("/api/auth/me");
-            const res = await req.json();
-            if (!res.success) {
-              throw Error(res.message);
+          if (isReallyOnboarded) {
+            // If NextAuth session was still lagging behind, update the token
+            if (session?.user?.isOnboarded === false && update) {
+              update();
             }
-            const user = res.data || {};
-            const displayName = user.name || user.email?.split('@')[0] || "User";
+
+            const displayName = user.name || user.email?.split("@")[0] || "User";
 
             setUser({
               email: user.email,
@@ -56,11 +62,11 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
       } finally {
         setTimeout(() => {
           setLoaded(true);
-        }, 2000);
+        }, 400);
       }
-    }
+    };
     fetchData();
-  }, [status, session, pathname, router, setUser, clearUser]);
+  }, [status, pathname, router, setUser, clearUser, update]);
 
   if (error) {
     return <ErrorScreen message={error} />

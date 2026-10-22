@@ -19,8 +19,9 @@ export default async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = !!token;
 
-  // 3. If logged in and visiting landing page "/", redirect to "/explore"
-  if (isAuthenticated && pathname === "/") {
+  // 3. Onboarded users visiting the landing page go to the app.
+  // Incomplete users must be able to leave onboarding and return to the public landing page.
+  if (isAuthenticated && token?.isOnboarded !== false && pathname === "/") {
     const exploreUrl = req.nextUrl.clone();
     exploreUrl.pathname = "/explore";
     return NextResponse.redirect(exploreUrl);

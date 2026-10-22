@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { AlertCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { INVESTMENT_RANGES, INVESTMENT_STAGES, INVESTOR_TYPES } from "@/lib/inve
 
 export default function InvestorDetailsForm() {
   const router = useRouter();
+  const { update } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -64,8 +66,14 @@ export default function InvestorDetailsForm() {
       }
 
       toast.success("Investor profile created successfully!");
-      router.replace("/explore");
-      router.refresh();
+      try {
+        if (update) {
+          await update();
+        }
+      } catch {
+        // ignore
+      }
+      window.location.href = "/explore";
     } catch {
       setError("Network error. Please check your connection and try again.");
       toast.error("Could not save your investor profile.");

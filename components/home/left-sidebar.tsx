@@ -13,10 +13,25 @@ export default function LeftSidebar() {
   const [loading, setLoading] = useState(true);
   const user = useUserStore((state) => state.user);
 
+  const [investorStats, setInvestorStats] = useState<{ connectedCompanies: number; investedIn: number } | null>(null);
+
   const fetchProfile = async () => {
     if (user?.accountType === "INVESTOR") {
-      setProfileData(null);
-      setLoading(false);
+      try {
+        const res = await fetch(`/api/profile/${user.id}`);
+        const json = await res.json();
+        if (json.success && json.data?.stats) {
+          setInvestorStats({
+            connectedCompanies: json.data.stats.connectedCompanies || 0,
+            investedIn: json.data.stats.investedIn || 0
+          });
+        }
+      } catch {
+        // ignore
+      } finally {
+        setProfileData(null);
+        setLoading(false);
+      }
       return;
     }
 
@@ -35,7 +50,7 @@ export default function LeftSidebar() {
 
   useEffect(() => {
     fetchProfile();
-  }, [user?.accountType]);
+  }, [user?.accountType, user?.id]);
 
   if (loading) {
     return (
@@ -48,7 +63,7 @@ export default function LeftSidebar() {
   return (
     <div className="space-y-4">
       {user?.accountType === "INVESTOR" ? (
-        <InvestorSidebarCard user={user} />
+        <InvestorSidebarCard user={user} stats={investorStats} />
       ) : profileData ? (
         <ProfileCard profile={profileData} refreshProfile={fetchProfile} />
       ) : null}
@@ -57,7 +72,7 @@ export default function LeftSidebar() {
   );
 }
 
-function InvestorSidebarCard({ user }: { user: User }) {
+function InvestorSidebarCard({ user, stats }: { user: User; stats: { connectedCompanies: number; investedIn: number } | null }) {
   const investor = user.investor;
   const displayName = user.name || "Investor";
 
@@ -78,6 +93,19 @@ function InvestorSidebarCard({ user }: { user: User }) {
         <p className="mt-1 text-xs text-gray-500">
           {investor?.firmName || investor?.investorType || "Investor"}
         </p>
+
+        {/* Dynamic Connected Companies & Invested In badges */}
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-left">
+          <div className="rounded-lg bg-blue-50/80 p-2 text-center">
+            <span className="block text-base font-bold text-blue-900">{stats?.connectedCompanies ?? 0}</span>
+            <span className="text-[10px] font-semibold text-blue-700 leading-tight block">connected companies</span>
+          </div>
+          <div className="rounded-lg bg-emerald-50/80 p-2 text-center">
+            <span className="block text-base font-bold text-emerald-900">{stats?.investedIn ?? 0}</span>
+            <span className="text-[10px] font-semibold text-emerald-700 leading-tight block">invested in</span>
+          </div>
+        </div>
+
         {investor?.sectors?.length ? (
           <p className="mt-3 line-clamp-2 text-xs leading-5 text-gray-500">
             Investing in {investor.sectors.join(", ")}

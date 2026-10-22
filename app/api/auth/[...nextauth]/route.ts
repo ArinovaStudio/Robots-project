@@ -61,16 +61,17 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
-
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.isOnboarded = user.isOnboarded;
         token.role = user.role;
         token.accountType = user.accountType;
         if (user.image) token.picture = user.image;
-      } else if (token.email) {
+      }
 
+      // If user was not yet onboarded or client called update(), refresh directly from DB
+      if (token.email && (!user || trigger === "update" || token.isOnboarded === false)) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: { id: true, isOnboarded: true, image: true, role: true, accountType: true },

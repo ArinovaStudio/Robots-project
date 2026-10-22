@@ -17,6 +17,7 @@ interface ConnectionRequest {
   logoUrl: string | null;
   type: string;
   message: string | null;
+  isInvestor?: boolean;
 }
 
 export default function ConnectionRequests() {
@@ -118,7 +119,14 @@ export default function ConnectionRequests() {
                     <Link href={`/profile/${req.userId}`} className="truncate block">
                       <h4 className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline">{req.companyName}</h4>
                     </Link>
-                    <p className="text-xs text-gray-500 truncate">{req.type}</p>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <p className="text-xs text-gray-500 truncate">{req.type}</p>
+                      {req.isInvestor && (
+                        <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold text-purple-700 border border-purple-200 shrink-0">
+                          Investor
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

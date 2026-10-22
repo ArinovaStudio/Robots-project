@@ -118,8 +118,14 @@ export async function POST(req: NextRequest) {
       bannerUrl = await uploadImage(bannerFile, "banners");
     }
 
-    await prisma.companyProfile.create({
-      data: { ...validation.data, userId: user.id, logoUrl, bannerUrl }
+    await prisma.companyProfile.upsert({
+      where: { userId: user.id },
+      create: { ...validation.data, userId: user.id, logoUrl, bannerUrl },
+      update: {
+        ...validation.data,
+        ...(logoUrl && { logoUrl }),
+        ...(bannerUrl && { bannerUrl }),
+      },
     });
 
     await prisma.user.update({
@@ -146,8 +152,9 @@ export async function POST(req: NextRequest) {
     })().catch(console.error);
 
     return NextResponse.json({ success: true, message: "Profile created successfully" }, { status: 201 });
-  } catch {
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Failed to create company profile:", error);
+    return NextResponse.json({ success: false, message: error?.message || "Internal server error" }, { status: 500 });
   }
 }
 

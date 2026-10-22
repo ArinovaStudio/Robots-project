@@ -48,6 +48,23 @@ describe("Proxy (Route Protection)", () => {
       expect(res.status).not.toBe(307);
     });
 
+    it("should let authenticated users with incomplete profiles return to the landing page", async () => {
+      mockGetToken.mockResolvedValueOnce({ isOnboarded: false } as JWT);
+
+      const res = await proxy(createRequest("/"));
+
+      expect(res.status).not.toBe(307);
+    });
+
+    it("should redirect onboarded users from the landing page to /explore", async () => {
+      mockGetToken.mockResolvedValueOnce({ isOnboarded: true } as JWT);
+
+      const res = await proxy(createRequest("/"));
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toContain("/explore");
+    });
+
     it("should allow access to API routes without auth", async () => {
       const res = await proxy(createRequest("/api/auth/session"));
       expect(res.status).not.toBe(307);
