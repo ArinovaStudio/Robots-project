@@ -28,7 +28,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        const identifier = credentials.email.trim();
+
+        // Support case-insensitive email, name/username, company name, or investor firm
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: { equals: identifier, mode: "insensitive" } },
+              { name: { equals: identifier, mode: "insensitive" } },
+              { company: { companyName: { equals: identifier, mode: "insensitive" } } },
+              { investor: { firmName: { equals: identifier, mode: "insensitive" } } },
+            ],
+          },
+        });
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials");
@@ -38,7 +50,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Your account has been suspended");
         }
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+        const isPasswordValid =
+          (await bcrypt.compare(credentials.password, user.password)) ||
+          (await bcrypt.compare(credentials.password.trim(), user.password));
 
         if (!isPasswordValid) {
           throw new Error("Invalid credentials");

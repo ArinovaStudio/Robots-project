@@ -59,9 +59,9 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = await signIn("credentials", { email: email.trim(), password, redirect: false });
     if (res?.error) {
-      setError("Invalid email or password. Please try again.");
+      setError("Invalid email, username, or password. Please try again.");
       setLoading(false);
     } else {
       router.refresh();
@@ -156,13 +156,14 @@ export default function LoginPage() {
               {/* Credentials form */}
               <form onSubmit={handleCredentialsLogin} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-bold text-gray-700">Email address</label>
+                  <label className="block text-sm font-bold text-gray-700">Email address or username</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     <Input
-                      type="email" required
+                      type="text" required
+                      autoCapitalize="none" autoCorrect="off" spellCheck={false}
                       value={email} onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@company.com"
+                      placeholder="name@company.com or username"
                       className="h-12 rounded-xl border-gray-200 bg-gray-50 pl-10 text-gray-900 font-medium placeholder:text-gray-400 placeholder:font-normal focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500 transition-all"
                     />
                   </div>
