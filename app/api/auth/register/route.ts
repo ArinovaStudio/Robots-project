@@ -33,6 +33,16 @@ export async function POST(req: NextRequest) {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
+      if (!existingUser.isOnboarded) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "An account with this email already exists but setup is incomplete. Please sign in to complete your profile.",
+            isIncomplete: true,
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ success: false, message: "User already exists" }, { status: 400 });
     }
 

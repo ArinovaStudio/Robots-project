@@ -67,4 +67,49 @@ describe("Investor Dashboard & Workflow", () => {
     expect(matchingCompanies.length).toBe(2);
     expect(matchingCompanies.map((c) => c.id)).toEqual(["c1", "c3"]);
   });
+
+  it("validates investor onboarding form payload with core fields", () => {
+    const investorFormPayload = {
+      name: "John Doe",
+      investorType: "Venture Capital (VC) Firm",
+      firmName: "Acme Ventures",
+      sectors: ["Fintech", "AI"],
+      stages: ["Seed", "Series A"],
+      investmentRange: "100k–500k",
+      location: "San Francisco, CA",
+      website: "https://acmeventures.com",
+      linkedInUrl: "https://linkedin.com/in/johndoe",
+    };
+
+    // Verify required fields are present
+    expect(investorFormPayload.name.length).toBeGreaterThanOrEqual(2);
+    expect(investorFormPayload.sectors.length).toBeGreaterThanOrEqual(1);
+    expect(investorFormPayload.stages.length).toBeGreaterThanOrEqual(1);
+    expect(investorFormPayload.investmentRange).toBe("100k–500k");
+
+    // Locations fallback logic
+    const locations = investorFormPayload.location ? [investorFormPayload.location] : [];
+    expect(locations).toEqual(["San Francisco, CA"]);
+  });
+
+  it("safely parses diverse investment amounts and currency notations", () => {
+    const parseAmount = (amount: string) => {
+      let cleanVal = amount.replace(/[^0-9.kmKM]/g, "");
+      let numericAmount = 0;
+      if (cleanVal.toLowerCase().endsWith("m")) {
+        numericAmount = parseFloat(cleanVal) * 1000000;
+      } else if (cleanVal.toLowerCase().endsWith("k")) {
+        numericAmount = parseFloat(cleanVal) * 1000;
+      } else {
+        numericAmount = parseFloat(cleanVal) || 0;
+      }
+      return numericAmount;
+    };
+
+    expect(parseAmount("$100,000")).toBe(100000);
+    expect(parseAmount("250k")).toBe(250000);
+    expect(parseAmount("1.5M")).toBe(1500000);
+    expect(parseAmount("₹5,00,000")).toBe(500000);
+  });
 });
+

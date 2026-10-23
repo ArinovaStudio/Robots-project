@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       companyName.trim(),
       amount || null,
       stage || "Seed",
-      year ? parseInt(year, 10) : new Date().getFullYear(),
+      year && !isNaN(parseInt(String(year), 10)) ? parseInt(String(year), 10) : new Date().getFullYear(),
       notes || null
     );
 

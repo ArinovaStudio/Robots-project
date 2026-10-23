@@ -15,9 +15,39 @@ export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
 
+  const redirectAfterAuth = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      const json = await res.json();
+      if (json.success && json.data) {
+        const user = json.data;
+        const isReallyOnboarded = Boolean(user.isOnboarded || user.company || user.investor);
+        if (!isReallyOnboarded) {
+          router.replace(user.accountType === "INVESTOR" ? "/signup/investor" : "/register/company");
+          return;
+        }
+      }
+    } catch {
+      // fallback to explore if me check fails
+    }
+    router.replace("/explore");
+  };
+
   useEffect(() => {
-    if (status === "authenticated") router.push("/explore");
-  }, [status, router]);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get("email");
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      redirectAfterAuth();
+    }
+  }, [status]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +65,7 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       router.refresh();
-      router.push("/explore");
+      await redirectAfterAuth();
     }
   };
 

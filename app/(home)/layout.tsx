@@ -33,7 +33,7 @@ export default function DashboardLayout({
           {/* Left */}
           {!isMessages && (
             <div className="col-span-3 hidden xl:block">
-              <div className="sticky top-24">
+              <div className="sticky top-[84px] max-h-[calc(100vh-100px)] overflow-y-auto overscroll-contain sidebar-scroll pr-1">
                 <LeftSidebar />
               </div>
             </div>
@@ -50,8 +50,10 @@ export default function DashboardLayout({
 
           {/* Right */}
           {showRightSidebar && !isMessages && (
-            <div className="hidden col-span-3 xl:block scroll-mt-24">
-              <div className="sticky top-0">{rightSidebar}</div>
+            <div className="hidden col-span-3 xl:block">
+              <div className="sticky top-[84px] max-h-[calc(100vh-100px)] overflow-y-auto overscroll-contain sidebar-scroll pr-1">
+                {rightSidebar}
+              </div>
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Mail, ChevronRight, Eye, EyeOff, Check, X } from "lucide-react";
 import { FaFacebook as Facebook } from "react-icons/fa";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -180,7 +181,22 @@ export default function CredentialsForm({
         <ChevronRight className="ml-2 h-4 w-4" />
       </Button>
 
-      {error && <p className="text-red-500 text-sm text-center pt-1">{error}</p>}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-600 space-y-2">
+          <p className="font-semibold text-center">{error}</p>
+          {(error.toLowerCase().includes("already exists") || error.toLowerCase().includes("incomplete")) && (
+            <div className="pt-2 border-t border-red-100 text-center text-xs text-gray-700">
+              <span>Account already created? </span>
+              <Link
+                href={`/login?email=${encodeURIComponent(email)}`}
+                className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+              >
+                Sign in to complete setup <ChevronRight className="w-3 h-3 inline" />
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

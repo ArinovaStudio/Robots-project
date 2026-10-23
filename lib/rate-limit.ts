@@ -56,8 +56,11 @@ class MemoryRateLimiter {
 }
 
 // Global instances for different limits
-// 500 attempts per 15 minutes for development/testing
-export const authRateLimiter = new MemoryRateLimiter(500, 15 * 60 * 1000); 
+// 5 attempts in test mode, 500 in development/testing
+export const authRateLimiter = new MemoryRateLimiter(
+  process.env.NODE_ENV === "test" ? 5 : 500,
+  15 * 60 * 1000
+); 
 
 // Helper function to extract IP safely in Next.js App Router
 export function getIP(req: Request) {

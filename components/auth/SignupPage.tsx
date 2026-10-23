@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, LogOut, RefreshCw } from "lucide-react";
 import RightSection from "@/components/auth/RightSection";
 import CredentialsForm from "@/components/auth/CredentialsForm";
 import CompanyDetailsForm from "@/components/auth/CompanyDetailsForm";
 import InvestorDetailsForm from "@/components/auth/InvestorDetailsForm";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function SignupPage({
   defaultAccountType = "BUSINESS",
@@ -17,16 +17,22 @@ export default function SignupPage({
 }) {
   const [step, setStep] = useState(1);
   const [accountType, setAccountType] = useState<"BUSINESS" | "INVESTOR">(defaultAccountType);
+  const [dbUser, setDbUser] = useState<any>(null);
   const router = useRouter();
   const { data: session, status } = useSession();
-  const activeStep =
-    status === "authenticated" && session?.user?.isOnboarded === false ? 2 : step;
+
+  // If user is authenticated, they have completed Step 1 (Account creation) and are on Step 2 (Profile setup).
+  const activeStep = status === "authenticated" ? 2 : step;
 
   useEffect(() => {
     if (session?.user?.accountType) {
-      setAccountType(session.user.accountType === "INVESTOR" ? "INVESTOR" : "BUSINESS");
+      if (defaultAccountType === "INVESTOR" && session?.user?.isOnboarded === false) {
+        setAccountType("INVESTOR");
+      } else {
+        setAccountType(session.user.accountType === "INVESTOR" ? "INVESTOR" : "BUSINESS");
+      }
     }
-  }, [session?.user?.accountType]);
+  }, [session?.user?.accountType, session?.user?.isOnboarded, defaultAccountType]);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -39,13 +45,24 @@ export default function SignupPage({
       fetch("/api/auth/me")
         .then((res) => res.json())
         .then((json) => {
-          if (json.success && (json.data?.isOnboarded || json.data?.company || json.data?.investor)) {
-            router.push("/explore");
+          if (json.success && json.data) {
+            setDbUser(json.data);
+            const user = json.data;
+            if (user.isOnboarded || user.company || user.investor) {
+              router.push("/explore");
+              return;
+            }
+            if (user.accountType === "INVESTOR" || defaultAccountType === "INVESTOR") {
+              setAccountType("INVESTOR");
+            } else {
+              setAccountType("BUSINESS");
+            }
+            setStep(2);
           }
         })
         .catch(() => {});
     }
-  }, [status, session?.user?.isOnboarded, router]);
+  }, [status, session?.user?.isOnboarded, defaultAccountType, router]);
 
   if (status === "loading") {
     return (
@@ -137,10 +154,42 @@ export default function SignupPage({
                   </div>
                 </fieldset>
               ) : (
-                <div className="mb-6 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-sm">
-                  <span className="font-semibold text-blue-800">
-                    Signing up as {accountType === "INVESTOR" ? "an investor" : "a business"}
-                  </span>
+                <div className="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 p-4 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                        Step 2 of 2: Profile Setup
+                      </span>
+                      <p className="mt-1 text-sm text-gray-800 font-medium">
+                        Signed in as{" "}
+                        <span className="font-bold text-gray-950">
+                          {session?.user?.email || dbUser?.email || "User"}
+                        </span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-95"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sign out / switch
+                    </button>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-blue-100/80 flex items-center justify-between text-xs">
+                    <span className="text-gray-600 font-medium">
+                      Creating <strong className="text-blue-900 font-bold">{accountType === "INVESTOR" ? "Investor Profile" : "Company Profile"}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAccountType((prev) => (prev === "INVESTOR" ? "BUSINESS" : "INVESTOR"))}
+                      className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Switch to {accountType === "INVESTOR" ? "Business" : "Investor"}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -186,12 +235,26 @@ export default function SignupPage({
                 )}
               </div>
 
-              <p className="mt-8 text-center text-sm font-medium text-gray-500">
-                Already have an account?{" "}
-                <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
-                  Sign in
-                </Link>
-              </p>
+              {activeStep === 1 ? (
+                <p className="mt-8 text-center text-sm font-medium text-gray-500">
+                  Already have an account?{" "}
+                  <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                    Sign in
+                  </Link>
+                </p>
+              ) : (
+                <div className="mt-8 flex items-center justify-center gap-4 text-sm text-gray-500 font-medium">
+                  <span>Need help or want to restart?</span>
+                  <button
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

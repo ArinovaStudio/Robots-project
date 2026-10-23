@@ -94,11 +94,7 @@ export default function MenuCard() {
   const menu = isInvestor ? investorMenu : companyMenu;
 
   const quickLinks = isInvestor
-    ? [
-        { icon: Bookmark, label: "Saved Pitches & Posts", href: "/profile/saved-posts" },
-        { icon: Layers, label: "My Discussions", href: "/profile/my-posts" },
-        { icon: Users, label: "Investment Network", href: "/network" },
-      ]
+    ? []
     : [
         { icon: Layers, label: "My Posts", href: "/profile/my-posts" },
         { icon: Bookmark, label: "Saved Posts", href: "/profile/saved-posts" },
@@ -150,25 +146,28 @@ export default function MenuCard() {
         </div>
       )}
 
-      <div className="my-1 border-t border-gray-100" />
-
-      {quickLinks.map((item) => {
-        const isActive = pathname === item.href;
-        return (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-              isActive
-                ? "bg-blue-50 text-blue-700 font-semibold"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            }`}
-          >
-            <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
-            <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
-          </Link>
-        );
-      })}
+      {quickLinks.length > 0 && (
+        <>
+          <div className="my-1 border-t border-gray-100" />
+          {quickLinks.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+                <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
+              </Link>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

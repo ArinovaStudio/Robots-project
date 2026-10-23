@@ -24,6 +24,11 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
           const req = await fetch("/api/auth/me");
           const res = await req.json();
           if (!res.success) {
+            if (req.status === 401 || res.message === "Unauthorized") {
+              clearUser();
+              router.replace("/login");
+              return;
+            }
             throw Error(res.message);
           }
           const user = res.data || {};
@@ -69,7 +74,7 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
   }, [status, pathname, router, setUser, clearUser, update]);
 
   if (error) {
-    return <ErrorScreen message={error} />
+    return <ErrorScreen message={error} onRetry={() => { setError(""); router.refresh(); }} />
   }
   return <>{children}</>;
 }

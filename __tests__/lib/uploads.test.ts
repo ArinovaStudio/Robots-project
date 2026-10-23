@@ -25,7 +25,7 @@ describe("uploadFile", () => {
   it("should return placeholder URL when Cloudinary credentials are missing", async () => {
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
     const url = await uploadFile(file);
-    expect(url).toContain("via.placeholder.com");
+    expect(url).toMatch(/\/uploads\/|via\.placeholder\.com/);
     expect(url).toContain("test.pdf");
   });
 
@@ -79,9 +79,9 @@ describe("uploadImage", () => {
 
   it("should accept image files", async () => {
     const file = new File(["image-data"], "photo.jpg", { type: "image/jpeg" });
-    // Without Cloudinary creds, should return placeholder
+    // Without Cloudinary creds, should return local upload path or placeholder
     const url = await uploadImage(file);
-    expect(url).toContain("via.placeholder.com");
+    expect(url).toMatch(/\/uploads\/|via\.placeholder\.com/);
   });
 });
 

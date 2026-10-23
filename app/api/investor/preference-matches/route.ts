@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         user: { status: "ACTIVE" },
         ...(sectors.length > 0 ? {
           OR: [
-            { type: { in: sectors, mode: "insensitive" } },
+            { type: { in: sectors } },
             { dealIn: { hasSome: sectors } }
           ]
         } : {})
@@ -137,9 +137,11 @@ export async function GET(req: NextRequest) {
         c.dealIn.some(d => d.toLowerCase().includes(s.toLowerCase()))
       );
 
+      const idHash = c.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const matchOffset = idHash % 10;
       const matchPercentage = sectorMatched
-        ? Math.min(99, 88 + Math.floor(Math.random() * 10))
-        : Math.min(88, 75 + Math.floor(Math.random() * 10));
+        ? Math.min(99, 89 + matchOffset)
+        : Math.min(88, 75 + matchOffset);
 
       const badges: string[] = [];
       if (isVerified) badges.push("Verified Business");
