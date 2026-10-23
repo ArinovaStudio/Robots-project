@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import LandingClient from "./landing-client";
+import NexusLanding from "@/components/landing/nexus-landing";
 
 export const metadata: Metadata = {
-  title: "Connecto - Business Network to Exchange Services",
-  description: "Find and offer B2B services. Connect with verified businesses, exchange services, and discover AI-matched partners.",
+  title: "Connecto — Where businesses grow together",
+  description: "Connecto connects businesses and investors. Share work, pitch startup ideas, discover collaborators, and connect with investors who believe in your vision.",
   alternates: {
     canonical: "/",
   },
@@ -14,5 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
-  return <LandingClient />;
+  return <NexusLanding />;
 }
