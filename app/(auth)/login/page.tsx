@@ -13,7 +13,14 @@ import RightSection from "@/components/auth/RightSection";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [callbackUrl, setCallbackUrl] = useState("/explore");
 
   const redirectAfterAuth = async () => {
     try {
@@ -30,7 +37,7 @@ export default function LoginPage() {
     } catch {
       // fallback to explore if me check fails
     }
-    router.replace("/explore");
+    router.replace(callbackUrl || "/explore");
   };
 
   useEffect(() => {
@@ -40,6 +47,10 @@ export default function LoginPage() {
       if (emailParam) {
         setEmail(emailParam);
       }
+      const cb = params.get("callbackUrl");
+      if (cb && cb.startsWith("/")) {
+        setCallbackUrl(cb);
+      }
     }
   }, []);
 
@@ -48,12 +59,6 @@ export default function LoginPage() {
       redirectAfterAuth();
     }
   }, [status]);
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,13 +125,15 @@ export default function LoginPage() {
               {/* Social login */}
               <div className="mb-7 grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => signIn("google", { callbackUrl: "/explore" })}
+                  type="button"
+                  onClick={() => signIn("google", { callbackUrl: callbackUrl && callbackUrl !== "/explore" ? callbackUrl : "/register/company" })}
                   className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]">
                   <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={16} height={16} />
                   Google
                 </button>
                 <button
-                  onClick={() => signIn("facebook", { callbackUrl: "/explore" })}
+                  type="button"
+                  onClick={() => signIn("facebook", { callbackUrl: callbackUrl && callbackUrl !== "/explore" ? callbackUrl : "/register/company" })}
                   className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]">
                   <Facebook className="h-4 w-4 text-[#1877F2]" />
                   Facebook

@@ -31,19 +31,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "OTP has expired" }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: { company: true, investor: true },
+    });
     if (existingUser) {
-      if (!existingUser.isOnboarded) {
+      const isReallyOnboarded = Boolean(existingUser.isOnboarded || existingUser.company || existingUser.investor);
+      if (!isReallyOnboarded) {
         return NextResponse.json(
           {
             success: false,
             message: "An account with this email already exists but setup is incomplete. Please sign in to complete your profile.",
             isIncomplete: true,
           },
-          { status: 400 }
+          { status: 409 }
         );
       }
-      return NextResponse.json({ success: false, message: "User already exists" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "An account with this email already exists. Please sign in." }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -56,8 +60,14 @@ export async function POST(req: NextRequest) {
     ]);
 
     return NextResponse.json({ success: true, message: "Registration successful" }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to register user:", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { success: false, message: "An account with this email already exists. Please sign in." },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ success: false, message: error?.message || "Internal server error" }, { status: 500 });
   }
 }

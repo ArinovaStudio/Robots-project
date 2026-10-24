@@ -26,7 +26,8 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
           if (!res.success) {
             if (req.status === 401 || res.message === "Unauthorized") {
               clearUser();
-              router.replace("/login");
+              const callback = pathname && pathname !== "/" ? `?callbackUrl=${encodeURIComponent(pathname)}` : "";
+              router.replace(`/login${callback}`);
               return;
             }
             throw Error(res.message);

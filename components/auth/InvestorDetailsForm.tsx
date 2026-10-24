@@ -43,19 +43,29 @@ export default function InvestorDetailsForm() {
     setLoading(true);
     setError("");
     try {
+      let formattedWebsite = website.trim();
+      if (formattedWebsite && !/^https?:\/\//i.test(formattedWebsite)) {
+        formattedWebsite = `https://${formattedWebsite}`;
+      }
+
+      let formattedLinkedIn = linkedInUrl.trim();
+      if (formattedLinkedIn && !/^https?:\/\//i.test(formattedLinkedIn)) {
+        formattedLinkedIn = `https://${formattedLinkedIn}`;
+      }
+
       const response = await fetch("/api/investor/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
+          name: name.trim(),
           investorType,
-          firmName,
+          firmName: firmName.trim() || undefined,
           sectors: selectedSectors,
           stages,
           investmentRange,
-          location,
-          website,
-          linkedInUrl,
+          location: location.trim() || undefined,
+          website: formattedWebsite || undefined,
+          linkedInUrl: formattedLinkedIn || undefined,
         }),
       });
       const result = await response.json();
@@ -142,13 +152,13 @@ export default function InvestorDetailsForm() {
         </div>
         <div className="space-y-1.5">
           <label htmlFor="investor-website" className="text-sm font-medium text-slate-700">Website <span className="text-slate-400">(optional)</span></label>
-          <Input id="investor-website" type="url" value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="https://example.com" className="h-11 rounded-xl bg-slate-50" />
+          <Input id="investor-website" type="text" value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="https://example.com" className="h-11 rounded-xl bg-slate-50" />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="investor-linkedin" className="text-sm font-medium text-slate-700">LinkedIn profile <span className="text-slate-400">(optional)</span></label>
-        <Input id="investor-linkedin" type="url" value={linkedInUrl} onChange={(event) => setLinkedInUrl(event.target.value)} placeholder="https://linkedin.com/in/yourname" className="h-11 rounded-xl bg-slate-50" />
+        <Input id="investor-linkedin" type="text" value={linkedInUrl} onChange={(event) => setLinkedInUrl(event.target.value)} placeholder="https://linkedin.com/in/yourname" className="h-11 rounded-xl bg-slate-50" />
       </div>
 
       <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-blue-600 text-base font-semibold hover:bg-blue-700">

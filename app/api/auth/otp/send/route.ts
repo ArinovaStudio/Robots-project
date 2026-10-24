@@ -34,7 +34,22 @@ export async function POST(req: NextRequest) {
     if (type === "RESET_PASSWORD") {
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
-        return NextResponse.json({ success: false, message: "Email not found in our records." }, { status: 404 });
+        // Return 200 without creating an OTP to prevent account enumeration
+        return NextResponse.json(
+          { success: true, message: "If an account with this email exists, an OTP has been sent." },
+          { status: 200 }
+        );
+      }
+    } else if (type === "VERIFY_EMAIL") {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        include: { company: true, investor: true },
+      });
+      if (existingUser && (existingUser.isOnboarded || existingUser.company || existingUser.investor)) {
+        return NextResponse.json(
+          { success: false, message: "An account with this email already exists. Please sign in." },
+          { status: 409 }
+        );
       }
     }
 
@@ -55,11 +70,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!emailSent) {
-      return NextResponse.json({ success: false, message: "Failed to send email" }, { status: 500 });
+      console.error("Failed to send email to", email);
+      return NextResponse.json({ success: false, message: "Failed to send email. Please check your email configuration." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: "OTP sent successfully" }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error("Failed to send OTP:", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }

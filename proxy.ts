@@ -16,7 +16,11 @@ export default async function proxy(req: NextRequest) {
   }
 
   // 2. Read NextAuth JWT token (Edge & middleware safe)
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  let token = await getToken({ req, secret });
+  if (!token) {
+    token = await getToken({ req, secret, secureCookie: true });
+  }
   const isAuthenticated = !!token;
 
   // 3. Onboarded users visiting the landing page go to the app.
@@ -33,8 +37,10 @@ export default async function proxy(req: NextRequest) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/signup/investor" ||
+    pathname === "/register" ||
     pathname === "/register/company" ||
     pathname === "/forgot-password" ||
+    pathname === "/resend-otp" ||
     pathname === "/directory" ||
     pathname === "/explore" ||
     pathname === "/marketplace" ||
@@ -50,6 +56,10 @@ export default async function proxy(req: NextRequest) {
   if (!isAuthenticated) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/login";
+    const callback = req.nextUrl.pathname + req.nextUrl.search;
+    if (callback && callback !== "/") {
+      loginUrl.searchParams.set("callbackUrl", callback);
+    }
     return NextResponse.redirect(loginUrl);
   }
 

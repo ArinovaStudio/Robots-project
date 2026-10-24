@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     GoogleProvider({
@@ -78,7 +79,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
-        token.isOnboarded = user.isOnboarded;
+        token.isOnboarded = Boolean(user.isOnboarded);
         token.role = user.role;
         token.accountType = user.accountType;
         if (user.image) token.picture = user.image;
@@ -88,12 +89,12 @@ export const authOptions: NextAuthOptions = {
       if (token.email && (!user || trigger === "update" || token.isOnboarded === false)) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { id: true, isOnboarded: true, image: true, role: true, accountType: true },
+          include: { company: true, investor: true },
         });
 
         if (dbUser) {
           token.id = dbUser.id;
-          token.isOnboarded = dbUser.isOnboarded;
+          token.isOnboarded = Boolean(dbUser.isOnboarded || dbUser.company || dbUser.investor);
           token.role = dbUser.role;
           token.accountType = dbUser.accountType;
           if (dbUser.image) token.picture = dbUser.image;
@@ -110,6 +111,15 @@ export const authOptions: NextAuthOptions = {
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {
+        // fallback
+      }
+      return baseUrl;
     },
   },
 };

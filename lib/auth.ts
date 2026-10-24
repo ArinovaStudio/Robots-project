@@ -53,11 +53,23 @@ export async function getOnboardedUser() {
     }
 
     if (!user.isOnboarded) {
-      return { user: null, error: "company profile not found" };
+      const fullUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          isOnboarded: true,
+          company: { select: { id: true } },
+          investor: { select: { id: true } },
+        },
+      });
+
+      if (!fullUser?.isOnboarded && !fullUser?.company && !fullUser?.investor) {
+        return { user: null, error: "Profile setup incomplete" };
+      }
     }
 
     return { user, error: null };
-  } catch {
+  } catch (error) {
+    console.error("Error in getOnboardedUser:", error);
     return { user: null, error: "Internal server error" };
   }
 }

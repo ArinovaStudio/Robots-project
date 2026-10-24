@@ -14,7 +14,24 @@ import {
   INVESTOR_TYPES,
 } from "@/lib/investor-options";
 
-const optionalUrl = z.string().trim().url("Please enter a valid URL.").optional().or(z.literal("")).nullable();
+const optionalUrl = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== "string") return null;
+  const trimmed = val.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+}, z.string().url("Please enter a valid URL.").optional().nullable());
+
+const optionalString = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== "string") return null;
+  const trimmed = val.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}, z.string().optional().nullable());
+
 const optionalInteger = z.preprocess(
   (value) => (value === "" || value === null || value === undefined ? undefined : Number(value)),
   z.number().int().nonnegative().optional().nullable(),
@@ -25,13 +42,13 @@ const profileSchema = z.object({
   investorType: z.enum(INVESTOR_TYPES, {
     message: "Please select a valid investor type.",
   }),
-  firmName: z.string().trim().max(200).optional().nullable().default(""),
+  firmName: optionalString,
   sectors: z.array(z.string().trim().min(1).max(100)).min(1, "Add at least one sector.").max(20),
   stages: z.array(z.enum(INVESTMENT_STAGES)).min(1, "Select at least one investment stage."),
   investmentRange: z.enum(INVESTMENT_RANGES, {
     message: "Please select a valid investment range.",
   }),
-  location: z.string().trim().max(250).optional().nullable().default(""),
+  location: optionalString,
   website: optionalUrl,
   linkedInUrl: optionalUrl,
 
@@ -214,8 +231,11 @@ export async function POST(request: NextRequest) {
     ]);
 
     return NextResponse.json({ success: true, message: "Investor profile created successfully." }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create investor profile:", error);
-    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error?.message || "Failed to create investor profile." },
+      { status: 500 }
+    );
   }
 }
