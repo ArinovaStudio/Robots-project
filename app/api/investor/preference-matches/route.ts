@@ -104,16 +104,21 @@ export async function GET(req: NextRequest) {
         ]
       },
       select: {
+        id: true,
         senderId: true,
         receiverId: true,
         status: true
       }
     });
 
-    const connectionMap = new Map<string, string>();
+    const connectionMap = new Map<string, { status: string; connectionId: string; isSender: boolean }>();
     userConnections.forEach(c => {
       const otherId = c.senderId === user.id ? c.receiverId : c.senderId;
-      connectionMap.set(otherId, c.status);
+      connectionMap.set(otherId, {
+        status: c.status,
+        connectionId: c.id,
+        isSender: c.senderId === user.id
+      });
     });
 
     // Score and format each company
@@ -149,6 +154,8 @@ export async function GET(req: NextRequest) {
       if (recentViews > 5 || performanceScore > 50) badges.push("High Growth & Visibility");
       if (sectorMatched) badges.push(`Matches ${c.type}`);
 
+      const connInfo = connectionMap.get(c.userId);
+
       return {
         id: c.id,
         userId: c.userId,
@@ -171,7 +178,9 @@ export async function GET(req: NextRequest) {
         performanceScore,
         matchPercentage,
         badges,
-        connectionStatus: connectionMap.get(c.userId) || null
+        connectionStatus: connInfo?.status || null,
+        connectionId: connInfo?.connectionId || null,
+        isConnectionSender: connInfo?.isSender || false,
       };
     });
 

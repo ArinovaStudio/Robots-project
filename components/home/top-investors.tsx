@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Plus, Check, Clock, TrendingUp, Sparkles } from "lucide-react";
+import { Plus, Check, Clock, TrendingUp, Sparkles, MessageSquare, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ConnectModal from "@/components/modals/connect-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
@@ -22,12 +22,14 @@ interface TopInvestor {
   location: string | null;
   connectedCount: number;
   connectionStatus: string | null;
+  connectionId?: string | null;
 }
 
 export default function TopInvestors() {
   const [investors, setInvestors] = useState<TopInvestor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvestor, setSelectedInvestor] = useState<TopInvestor | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTopInvestors = async () => {
@@ -55,6 +57,32 @@ export default function TopInvestors() {
           inv.id === selectedInvestor.id ? { ...inv, connectionStatus: "PENDING" } : inv
         )
       );
+    }
+  };
+
+  const handleCancelRequest = async (investorId: string, connectionId?: string | null) => {
+    setCancellingId(investorId);
+    try {
+      const res = await fetch("/api/network/connect/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: investorId, connectionId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connection request cancelled");
+        setInvestors((prev) =>
+          prev.map((inv) =>
+            inv.id === investorId ? { ...inv, connectionStatus: null, connectionId: null } : inv
+          )
+        );
+      } else {
+        toast.error(data.message || "Failed to cancel request");
+      }
+    } catch {
+      toast.error("Failed to cancel request");
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -149,13 +177,32 @@ export default function TopInvestors() {
 
                   <div className="mt-2">
                     {investor.connectionStatus === "ACCEPTED" ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">
-                        <Check size={12} /> Connected
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">
+                          <Check size={12} /> Connected
+                        </span>
+                        <Link
+                          href={`/messages/${investor.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-600 text-white font-medium text-[11px] hover:bg-blue-700 transition"
+                        >
+                          <MessageSquare size={11} /> Message
+                        </Link>
+                      </div>
                     ) : investor.connectionStatus === "PENDING" ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-medium text-[11px] border border-amber-200">
-                        <Clock size={12} /> Pending
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-medium text-[11px] border border-amber-200">
+                          <Clock size={12} /> Pending
+                        </span>
+                        <button
+                          onClick={() => handleCancelRequest(investor.id, investor.connectionId)}
+                          disabled={cancellingId === investor.id}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-red-600 bg-red-50 hover:bg-red-100 text-[11px] font-semibold border border-red-200 transition disabled:opacity-50"
+                          title="Cancel connection request"
+                        >
+                          {cancellingId === investor.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                          Cancel
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => setSelectedInvestor(investor)}

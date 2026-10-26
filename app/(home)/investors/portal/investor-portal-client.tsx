@@ -23,6 +23,8 @@ import {
   Loader2,
   Link as LinkIcon,
   Star,
+  MessageSquare,
+  X,
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -60,6 +62,11 @@ interface PitchItem {
     isVerified: boolean;
   };
   connectionStatus: string | null;
+  connectionId?: string | null;
+  isConnectionSender?: boolean;
+  userRating?: number | null;
+  userFeedback?: string | null;
+  isRated?: boolean;
 }
 
 interface PreferenceCompany {
@@ -85,6 +92,8 @@ interface PreferenceCompany {
   matchPercentage: number;
   badges: string[];
   connectionStatus: string | null;
+  connectionId?: string | null;
+  isConnectionSender?: boolean;
 }
 
 export default function InvestorPortalClient() {
@@ -109,8 +118,45 @@ export default function InvestorPortalClient() {
 
   // Connect modal state
   const [selectedConnectCompany, setSelectedConnectCompany] = useState<{ id: string; name: string } | null>(null);
+  const [cancellingUserId, setCancellingUserId] = useState<string | null>(null);
   const [offerTarget, setOfferTarget] = useState<{ pitchId: string; pitchTitle: string; companyName: string } | null>(null);
-  const [rateTarget, setRateTarget] = useState<{ pitchId: string; pitchTitle: string } | null>(null);
+  const [rateTarget, setRateTarget] = useState<{
+    pitchId: string;
+    pitchTitle: string;
+    currentRating?: number | null;
+    currentFeedback?: string | null;
+  } | null>(null);
+
+  const handleCancelConnection = async (targetUserId: string, connectionId?: string | null) => {
+    setCancellingUserId(targetUserId);
+    try {
+      const res = await fetch("/api/network/connect/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId, connectionId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connection request cancelled");
+        setPitches((prev) =>
+          prev.map((p) =>
+            p.userId === targetUserId ? { ...p, connectionStatus: null, connectionId: null } : p
+          )
+        );
+        setPerformers((prev) =>
+          prev.map((c) =>
+            c.userId === targetUserId ? { ...c, connectionStatus: null, connectionId: null } : c
+          )
+        );
+      } else {
+        toast.error(data.message || "Failed to cancel request");
+      }
+    } catch {
+      toast.error("Failed to cancel request");
+    } finally {
+      setCancellingUserId(null);
+    }
+  };
 
   const recordPitchView = async (pitchId: string) => {
     try {
@@ -504,16 +550,47 @@ export default function InvestorPortalClient() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            onClick={() => {
-                              recordPitchView(pitch.id);
-                              setSelectedConnectCompany({ id: pitch.userId, name: pitch.company.companyName });
-                            }}
-                            className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
-                          >
-                            <Send size={13} />
-                            {pitch.connectionStatus === "ACCEPTED" ? "Message Founder" : "Connect"}
-                          </button>
+                          {pitch.connectionStatus === "ACCEPTED" ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                                <CheckCircle2 size={13} /> Connected
+                              </span>
+                              <Link
+                                href={`/messages/${pitch.userId}`}
+                                onClick={() => recordPitchView(pitch.id)}
+                                className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                              >
+                                <MessageSquare size={13} />
+                                Message Founder
+                              </Link>
+                            </>
+                          ) : pitch.connectionStatus === "PENDING" ? (
+                            <div className="flex-1 min-w-[130px] flex items-center gap-1.5">
+                              <span className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200">
+                                <Clock size={13} /> Pending
+                              </span>
+                              <button
+                                onClick={() => handleCancelConnection(pitch.userId, pitch.connectionId)}
+                                disabled={cancellingUserId === pitch.userId}
+                                className="flex items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 border border-red-200 hover:bg-red-100 transition shadow-xs disabled:opacity-50"
+                                title="Cancel Connection Request"
+                              >
+                                {cancellingUserId === pitch.userId ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                recordPitchView(pitch.id);
+                                setSelectedConnectCompany({ id: pitch.userId, name: pitch.company.companyName });
+                              }}
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                            >
+                              <Send size={13} />
+                              Connect
+                            </button>
+                          )}
 
                           <button
                             onClick={() => {
@@ -531,20 +608,39 @@ export default function InvestorPortalClient() {
                             Offer
                           </button>
 
-                          <button
-                            onClick={() => {
-                              recordPitchView(pitch.id);
-                              setRateTarget({
-                                pitchId: pitch.id,
-                                pitchTitle: pitch.title,
-                              });
-                            }}
-                            className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 transition shadow-xs"
-                            title="Rate Idea (1-5 Stars)"
-                          >
-                            <Star size={13} />
-                            Rate
-                          </button>
+                          {pitch.isRated ? (
+                            <button
+                              onClick={() => {
+                                recordPitchView(pitch.id);
+                                setRateTarget({
+                                  pitchId: pitch.id,
+                                  pitchTitle: pitch.title,
+                                  currentRating: pitch.userRating,
+                                  currentFeedback: pitch.userFeedback,
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 border border-amber-300 hover:bg-amber-200 transition shadow-xs"
+                              title={`Rated ${pitch.userRating}/5 stars. Click to update.`}
+                            >
+                              <Star size={13} className="fill-amber-500 text-amber-600" />
+                              {pitch.userRating ? `Rated (${pitch.userRating}★)` : "Rated"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                recordPitchView(pitch.id);
+                                setRateTarget({
+                                  pitchId: pitch.id,
+                                  pitchTitle: pitch.title,
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 transition shadow-xs"
+                              title="Rate Idea (1-5 Stars)"
+                            >
+                              <Star size={13} />
+                              Rate
+                            </button>
+                          )}
 
                           <Link
                             href={`/profile/${pitch.userId}`}
@@ -684,12 +780,41 @@ export default function InvestorPortalClient() {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedConnectCompany({ id: company.userId, name: company.companyName })}
-                          className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
-                        >
-                          {company.connectionStatus === "ACCEPTED" ? "Connected" : "Connect"}
-                        </button>
+                        {company.connectionStatus === "ACCEPTED" ? (
+                          <>
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                              <CheckCircle2 size={12} /> Connected
+                            </span>
+                            <Link
+                              href={`/messages/${company.userId}`}
+                              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                            >
+                              <MessageSquare size={12} /> Message
+                            </Link>
+                          </>
+                        ) : company.connectionStatus === "PENDING" ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200">
+                              <Clock size={12} /> Pending
+                            </span>
+                            <button
+                              onClick={() => handleCancelConnection(company.userId, company.connectionId)}
+                              disabled={cancellingUserId === company.userId}
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-bold text-red-600 border border-red-200 hover:bg-red-100 transition disabled:opacity-50"
+                              title="Cancel Connection Request"
+                            >
+                              {cancellingUserId === company.userId ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedConnectCompany({ id: company.userId, name: company.companyName })}
+                            className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
+                          >
+                            Connect
+                          </button>
+                        )}
                         <Link
                           href={`/profile/${company.userId}`}
                           className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-50"
@@ -739,6 +864,8 @@ export default function InvestorPortalClient() {
         <RatePitchModal
           pitchId={rateTarget.pitchId}
           pitchTitle={rateTarget.pitchTitle}
+          currentRating={rateTarget.currentRating}
+          currentFeedback={rateTarget.currentFeedback}
           onClose={() => setRateTarget(null)}
           onSuccess={() => {
             fetchPitches();

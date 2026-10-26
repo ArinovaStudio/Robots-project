@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const [unreadNotifications, pendingRequests, requestNotifications] = await Promise.all([
+    const [unreadNotifications, pendingRequests, requestNotifications, unreadMessages] = await Promise.all([
       prisma.notification.count({
         where: {
           userId: user.id,
@@ -30,6 +30,19 @@ export async function GET() {
           type: "CONNECTION_REQUEST",
         },
         select: { actorId: true, isRead: true },
+      }),
+      prisma.directMessage.count({
+        where: {
+          isRead: false,
+          isDeleted: false,
+          senderId: { not: user.id },
+          conversation: {
+            OR: [
+              { user1Id: user.id },
+              { user2Id: user.id }
+            ]
+          }
+        }
       }),
     ]);
 
@@ -51,6 +64,7 @@ export async function GET() {
         unreadNotifications,
         pendingConnections: pendingRequests.length,
         unreadConnectionRequests,
+        unreadMessages,
       }
     });
   } catch (err) {

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { signOut } from "next-auth/react";
+import { useLogout } from "@/helpers/auth-helpers";
 import { useUserStore } from "@/store/AuthStore";
 import useSWR from "swr";
 
@@ -13,6 +13,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
   const router = useRouter();
   const { user } = useUserStore();
   
@@ -29,6 +30,7 @@ export default function Navbar() {
 
   const unreadNotifications = countsData?.data?.unreadNotifications || 0;
   const pendingConnections = countsData?.data?.unreadConnectionRequests || 0;
+  const unreadMessages = countsData?.data?.unreadMessages || 0;
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -191,6 +193,7 @@ export default function Navbar() {
             icon={<MessageSquare size={22} />}
             label="Messaging"
             isActive={pathname?.startsWith("/messages")}
+            badge={unreadMessages > 0 ? unreadMessages : undefined}
           />
           
           <NavItem
@@ -242,7 +245,11 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    void handleLogout();
+                  }}
+                  onClick={() => void handleLogout()}
                 >
                   <LogOut className="w-4 h-4" />
                   Logout

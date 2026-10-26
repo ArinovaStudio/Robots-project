@@ -115,11 +115,20 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       try {
-        if (new URL(url).origin === baseUrl) return url;
+        const parsedUrl = new URL(url);
+        const parsedBase = new URL(baseUrl);
+        if (
+          parsedUrl.origin === baseUrl ||
+          parsedUrl.host === parsedBase.host ||
+          (parsedUrl.hostname === "127.0.0.1" && parsedBase.hostname === "localhost") ||
+          (parsedUrl.hostname === "localhost" && parsedBase.hostname === "127.0.0.1")
+        ) {
+          return url;
+        }
       } catch {
         // fallback
       }
-      return baseUrl;
+      return url.includes("/login") ? `${baseUrl}/login` : baseUrl;
     },
   },
 };
@@ -130,14 +139,19 @@ import { authRateLimiter, getIP } from "@/lib/rate-limit";
 const handler = NextAuth(authOptions);
 
 async function rateLimitedPOST(req: NextRequest, ctx: any) {
-  const ip = getIP(req);
-  const rateLimit = authRateLimiter.check(ip);
+  const pathname = req.nextUrl?.pathname || "";
 
-  if (!rateLimit.success) {
-    return NextResponse.json(
-      { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
-      { status: 429 }
-    );
+  // Only apply rate limiting to credentials sign-in attempts, not signout or session sync
+  if (pathname.includes("/callback/credentials")) {
+    const ip = getIP(req);
+    const rateLimit = authRateLimiter.check(ip);
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
   }
 
   return handler(req, ctx);

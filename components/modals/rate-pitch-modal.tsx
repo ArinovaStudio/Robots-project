@@ -7,6 +7,8 @@ import { toast } from "sonner";
 interface RatePitchModalProps {
   pitchId: string;
   pitchTitle: string;
+  currentRating?: number | null;
+  currentFeedback?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -14,12 +16,14 @@ interface RatePitchModalProps {
 export default function RatePitchModal({
   pitchId,
   pitchTitle,
+  currentRating,
+  currentFeedback,
   onClose,
   onSuccess,
 }: RatePitchModalProps) {
-  const [rating, setRating] = useState<number>(5);
+  const [rating, setRating] = useState<number>(currentRating || 5);
   const [hoverRating, setHoverRating] = useState<number>(0);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState(currentFeedback || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +41,7 @@ export default function RatePitchModal({
 
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "Rating submitted!");
+        toast.success(data.message || (currentRating ? "Rating updated!" : "Rating submitted!"));
         onSuccess();
         onClose();
       } else {
@@ -55,7 +59,9 @@ export default function RatePitchModal({
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
           <div>
-            <h3 className="text-base font-bold text-gray-900">Rate Pitch / Idea</h3>
+            <h3 className="text-base font-bold text-gray-900">
+              {currentRating ? "Update Rating & Feedback" : "Rate Pitch / Idea"}
+            </h3>
             <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{pitchTitle}</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1 text-gray-400 hover:bg-gray-100">
@@ -120,7 +126,7 @@ export default function RatePitchModal({
               className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
-              Submit Rating
+              {currentRating ? "Update Rating" : "Submit Rating"}
             </button>
           </div>
         </form>

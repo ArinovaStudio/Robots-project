@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin } from "lucide-react";
+import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin, MessageSquare, Clock, X, Loader2 } from "lucide-react";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ interface Performer {
     recentViews: number;
   };
   connectionStatus: string | null;
+  connectionId?: string | null;
 }
 
 export default function InvestorDashboardWidget({ user }: { user: any }) {
@@ -32,6 +33,33 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
   const [stats, setStats] = useState<{ connectedCompanies: number; investedIn: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectTarget, setConnectTarget] = useState<{ id: string; name: string } | null>(null);
+  const [cancellingUserId, setCancellingUserId] = useState<string | null>(null);
+
+  const handleCancelConnection = async (targetUserId: string, connectionId?: string | null) => {
+    setCancellingUserId(targetUserId);
+    try {
+      const res = await fetch("/api/network/connect/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId, connectionId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connection request cancelled");
+        setPerformers((prev) =>
+          prev.map((c) =>
+            c.userId === targetUserId ? { ...c, connectionStatus: null, connectionId: null } : c
+          )
+        );
+      } else {
+        toast.error(data.message || "Failed to cancel request");
+      }
+    } catch {
+      toast.error("Failed to cancel request");
+    } finally {
+      setCancellingUserId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -167,12 +195,41 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                   <span className="text-[10px] text-indigo-700 font-semibold">
                     +{company.stats.recentViews} views this wk
                   </span>
-                  <button
-                    onClick={() => setConnectTarget({ id: company.userId, name: company.companyName })}
-                    className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 transition"
-                  >
-                    {company.connectionStatus === "ACCEPTED" ? "Connected" : "Connect"}
-                  </button>
+                  {company.connectionStatus === "ACCEPTED" ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 size={11} /> Connected
+                      </span>
+                      <Link
+                        href={`/messages/${company.userId}`}
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-blue-700 transition"
+                      >
+                        <MessageSquare size={11} /> Message
+                      </Link>
+                    </div>
+                  ) : company.connectionStatus === "PENDING" ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+                        <Clock size={11} /> Pending
+                      </span>
+                      <button
+                        onClick={() => handleCancelConnection(company.userId, company.connectionId)}
+                        disabled={cancellingUserId === company.userId}
+                        className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 border border-red-200 hover:bg-red-100 transition disabled:opacity-50"
+                        title="Cancel connection request"
+                      >
+                        {cancellingUserId === company.userId ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConnectTarget({ id: company.userId, name: company.companyName })}
+                      className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 transition"
+                    >
+                      Connect
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

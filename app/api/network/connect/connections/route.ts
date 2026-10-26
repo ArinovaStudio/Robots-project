@@ -45,6 +45,31 @@ export async function GET(req: NextRequest) {
       prisma.connection.count({ where: whereClause })
     ]);
 
+    const otherUserIds = connections.map(conn => conn.senderId === user.id ? conn.receiverId : conn.senderId);
+
+    const unreadCounts = otherUserIds.length > 0 ? await prisma.directMessage.groupBy({
+      by: ['senderId'],
+      where: {
+        senderId: { in: otherUserIds },
+        isRead: false,
+        isDeleted: false,
+        conversation: {
+          OR: [
+            { user1Id: user.id },
+            { user2Id: user.id }
+          ]
+        }
+      },
+      _count: {
+        _all: true
+      }
+    }) : [];
+
+    const unreadCountMap = new Map<string, number>();
+    unreadCounts.forEach(u => {
+      unreadCountMap.set(u.senderId, u._count._all);
+    });
+
     const formattedConnections = connections.map(conn => {
       const isSender = conn.senderId === user.id;
       const otherUser = isSender ? conn.receiver : conn.sender;
@@ -62,6 +87,7 @@ export async function GET(req: NextRequest) {
         accountType: otherUser.accountType,
         image: otherUser.image || otherUser.company?.logoUrl || null,
         userId: otherUser.id,
+        unreadCount: unreadCountMap.get(otherUser.id) || 0,
       };
     });
 

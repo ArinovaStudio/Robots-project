@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { redirect } from "next/navigation";
 import { globalSocket } from "@/components/SocketAnnouncer";
+import { mutate } from "swr";
 import ChatHeader from "./chat-header";
 import MessageList from "./message-list";
 import ChatInput from "./chat-input";
@@ -29,6 +30,7 @@ export default function ChatClient({ currentUserId, targetUserId }: ChatClientPr
         if (json.success) {
           setTargetUser(json.data.targetUser);
           setMessages(json.data.messages);
+          mutate("/api/user/counts");
         } else {
           toast.error(json.message || "Failed to load chat.");
           redirect("/profile/connections");

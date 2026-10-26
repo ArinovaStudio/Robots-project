@@ -5,11 +5,24 @@ export function useLogout() {
   const clearUser = useUserStore((s) => s.clearUser);
 
   const handleLogout = async () => {
-    clearUser(); // optional UI cleanup
-
-    await signOut({
-      callbackUrl: "/login",
-    });
+    try {
+      clearUser();
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("user-store");
+          sessionStorage.clear();
+        } catch {
+          // ignore storage errors
+        }
+      }
+      await signOut({ redirect: false });
+    } catch (err) {
+      console.error("Signout error:", err);
+    } finally {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }
   };
 
   return { handleLogout };

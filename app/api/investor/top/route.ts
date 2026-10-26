@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const connectionMap = new Map<string, string>();
+    const connectionMap = new Map<string, { status: string; connectionId: string }>();
     if (currentUser?.id && investors.length > 0) {
       const investorIds = investors.map((inv) => inv.id);
       const connections = await prisma.connection.findMany({
@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
           ],
         },
         select: {
+          id: true,
           senderId: true,
           receiverId: true,
           status: true,
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
 
       for (const conn of connections) {
         const partnerId = conn.senderId === currentUser.id ? conn.receiverId : conn.senderId;
-        connectionMap.set(partnerId, conn.status);
+        connectionMap.set(partnerId, { status: conn.status, connectionId: conn.id });
       }
     }
 
@@ -72,6 +73,7 @@ export async function GET(req: NextRequest) {
       const location = inv.investor?.city
         ? `${inv.investor.city}${inv.investor.country ? `, ${inv.investor.country}` : ""}`
         : inv.investor?.location || null;
+      const connInfo = connectionMap.get(inv.id);
 
       return {
         id: inv.id,
@@ -84,7 +86,8 @@ export async function GET(req: NextRequest) {
         investmentRange: inv.investor?.investmentRange || null,
         location,
         connectedCount: (inv._count?.sentConnections || 0) + (inv._count?.receivedConnections || 0),
-        connectionStatus: connectionMap.get(inv.id) || null,
+        connectionStatus: connInfo?.status || null,
+        connectionId: connInfo?.connectionId || null,
       };
     });
 

@@ -33,11 +33,12 @@ export default function LoginPage() {
           router.replace(user.accountType === "INVESTOR" ? "/signup/investor" : "/register/company");
           return;
         }
+        router.replace(callbackUrl || "/explore");
+        return;
       }
     } catch {
-      // fallback to explore if me check fails
+      // If auth check fails, stay on login page
     }
-    router.replace(callbackUrl || "/explore");
   };
 
   useEffect(() => {

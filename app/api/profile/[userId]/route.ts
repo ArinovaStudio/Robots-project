@@ -68,6 +68,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
 
     let isFollowing = false;
     let connectionStatus = null;
+    let connectionId: string | null = null;
     const isOwnProfile = currentUser?.id === userId;
 
     if (currentUser && !isOwnProfile) {
@@ -88,6 +89,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       });
       if (connectionRecord) {
         connectionStatus = connectionRecord.status;
+        connectionId = connectionRecord.id;
       }
       
       if (targetUser.company) {
@@ -127,6 +129,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       viewerState: {
         isFollowing,
         connectionStatus,
+        connectionId,
         isOwnProfile
       }
     };

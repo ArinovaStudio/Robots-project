@@ -59,44 +59,75 @@ export async function GET(req: NextRequest) {
         ]
       },
       select: {
+        id: true,
         senderId: true,
         receiverId: true,
         status: true
       }
     });
 
-    const connectionMap = new Map<string, string>();
+    const connectionMap = new Map<string, { status: string; connectionId: string; isSender: boolean }>();
     userConnections.forEach(c => {
       const otherId = c.senderId === user.id ? c.receiverId : c.senderId;
-      connectionMap.set(otherId, c.status);
+      connectionMap.set(otherId, {
+        status: c.status,
+        connectionId: c.id,
+        isSender: c.senderId === user.id
+      });
     });
 
-    const formattedPitches = pitches.map(p => ({
-      id: p.id,
-      userId: p.userId,
-      title: p.title,
-      tagline: p.tagline,
-      type: p.type,
-      summary: p.summary,
-      sector: p.sector,
-      stage: p.stage,
-      targetAmount: p.targetAmount,
-      equityOffered: p.equityOffered,
-      highlights: Array.isArray(p.highlights) ? p.highlights : [],
-      pitchDeckUrl: p.pitchDeckUrl,
-      websiteUrl: p.websiteUrl,
-      createdAt: p.createdAt,
-      company: {
-        companyName: p.companyName || p.founderName || "Innovator Company",
-        logoUrl: p.logoUrl || p.founderImage,
-        type: p.companyType || p.sector,
-        location: p.location,
-        size: p.size,
-        founderName: p.founderName,
-        isVerified: p.verificationStatus === "VERIFIED"
-      },
-      connectionStatus: connectionMap.get(p.userId) || null
-    }));
+    // Fetch investor ratings for pitches
+    let userRatings: any[] = [];
+    try {
+      userRatings = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT "pitchId", "rating", "feedback" FROM "CompanyPitchRating" WHERE "investorId" = $1`,
+        user.id
+      );
+    } catch {
+      // ignore
+    }
+
+    const ratingMap = new Map<string, { rating: number; feedback: string | null }>();
+    userRatings.forEach(r => {
+      ratingMap.set(r.pitchId, { rating: r.rating, feedback: r.feedback });
+    });
+
+    const formattedPitches = pitches.map(p => {
+      const connInfo = connectionMap.get(p.userId);
+      const ratingInfo = ratingMap.get(p.id);
+
+      return {
+        id: p.id,
+        userId: p.userId,
+        title: p.title,
+        tagline: p.tagline,
+        type: p.type,
+        summary: p.summary,
+        sector: p.sector,
+        stage: p.stage,
+        targetAmount: p.targetAmount,
+        equityOffered: p.equityOffered,
+        highlights: Array.isArray(p.highlights) ? p.highlights : [],
+        pitchDeckUrl: p.pitchDeckUrl,
+        websiteUrl: p.websiteUrl,
+        createdAt: p.createdAt,
+        company: {
+          companyName: p.companyName || p.founderName || "Innovator Company",
+          logoUrl: p.logoUrl || p.founderImage,
+          type: p.companyType || p.sector,
+          location: p.location,
+          size: p.size,
+          founderName: p.founderName,
+          isVerified: p.verificationStatus === "VERIFIED"
+        },
+        connectionStatus: connInfo?.status || null,
+        connectionId: connInfo?.connectionId || null,
+        isConnectionSender: connInfo?.isSender || false,
+        userRating: ratingInfo?.rating || null,
+        userFeedback: ratingInfo?.feedback || null,
+        isRated: !!ratingInfo,
+      };
+    });
 
     return NextResponse.json({
       success: true,

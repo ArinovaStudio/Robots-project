@@ -6,7 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Link as LinkIcon, Users, Building2, UserPlus,
-  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings, Landmark
+  CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings, Landmark,
+  MessageSquare, X
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -98,6 +99,28 @@ export default function ProfileView({ userId }: ProfileViewProps) {
     }
   };
 
+  const handleCancelRequest = async () => {
+    setIsConnectLoading(true);
+    try {
+      const res = await fetch("/api/network/connect/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setConnectionStatus(null);
+        toast.success(data.message || "Connection request cancelled");
+      } else {
+        toast.error(data.message || "Failed to cancel request");
+      }
+    } catch {
+      toast.error("Failed to cancel request");
+    } finally {
+      setIsConnectLoading(false);
+    }
+  };
+
   const toggleConnect = async () => {
     if (connectionStatus === "ACCEPTED") {
       setIsConnectLoading(true);
@@ -123,6 +146,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       } finally {
         setIsConnectLoading(false);
       }
+    }
+    else if (connectionStatus === "PENDING") {
+      await handleCancelRequest();
     }
     else if (!connectionStatus) {
       setShowConnectModal(true);
@@ -201,7 +227,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                       </Link>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-3 sm:justify-start">
+                    <div className="flex items-center justify-center gap-3 sm:justify-start flex-wrap">
                       <button
                         onClick={toggleFollow}
                         disabled={isFollowLoading}
@@ -210,14 +236,55 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                         {isFollowLoading ? <Loader2 size={16} className="animate-spin" /> : isFollowing ? <CheckCircle size={16} /> : <UserPlus size={16} />}
                         {isFollowing ? "Following" : "Follow"}
                       </button>
-                      <button
-                        onClick={toggleConnect}
-                        disabled={isConnectLoading || connectionStatus === "PENDING"}
-                        className="flex min-w-[130px] items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
-                      >
-                        {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
-                        {connectionStatus === "PENDING" ? "Pending" : connectionStatus === "ACCEPTED" ? "Connected" : "Connect"}
-                      </button>
+
+                      {connectionStatus === "ACCEPTED" ? (
+                        <>
+                          <button
+                            onClick={toggleConnect}
+                            disabled={isConnectLoading}
+                            className="group flex min-w-[120px] items-center justify-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                          >
+                            {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : (
+                              <>
+                                <CheckCircle size={16} className="block group-hover:hidden" />
+                                <UserMinus size={16} className="hidden group-hover:block" />
+                              </>
+                            )}
+                            <span className="block group-hover:hidden">Connected</span>
+                            <span className="hidden group-hover:block">Disconnect</span>
+                          </button>
+                          <Link
+                            href={`/messages/${userId}`}
+                            className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                          >
+                            <MessageSquare size={16} /> Message
+                          </Link>
+                        </>
+                      ) : connectionStatus === "PENDING" ? (
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-medium text-amber-700">
+                            <Clock size={16} /> Pending
+                          </span>
+                          <button
+                            onClick={handleCancelRequest}
+                            disabled={isConnectLoading}
+                            className="flex items-center justify-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition disabled:opacity-50"
+                            title="Cancel Request"
+                          >
+                            {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={toggleConnect}
+                          disabled={isConnectLoading}
+                          className="flex min-w-[130px] items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+                        >
+                          {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                          Connect
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -481,7 +548,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                <div className="flex items-center gap-3 justify-center sm:justify-start flex-wrap">
                   <button
                     onClick={toggleFollow}
                     disabled={isFollowLoading}
@@ -493,29 +560,54 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     {isFollowing ? "Following" : "Follow"}
                   </button>
 
-                  <button
-                    onClick={toggleConnect}
-                    disabled={isConnectLoading || connectionStatus === "PENDING"}
-                    className={`group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[130px] justify-center ${connectionStatus === "ACCEPTED" ? "bg-green-50 text-green-700 border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200" :
-                        connectionStatus === "PENDING" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                          "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
-                      }`}
-                  >
-                    {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> :
-                      connectionStatus === "ACCEPTED" ? (
-                        <>
-                          <CheckCircle size={16} className="block group-hover:hidden" />
-                          <UserMinus size={16} className="hidden group-hover:block" />
-                        </>
-                      ) :
-                        connectionStatus === "PENDING" ? <Clock size={16} /> :
-                          <LinkIcon size={16} />}
-
-                    {connectionStatus === "ACCEPTED" ? <span className="block group-hover:hidden">Connected</span> : null}
-                    {connectionStatus === "ACCEPTED" ? <span className="hidden group-hover:block">Disconnect</span> : null}
-                    {connectionStatus === "PENDING" ? "Pending" : null}
-                    {!connectionStatus ? "Connect" : null}
-                  </button>
+                  {connectionStatus === "ACCEPTED" ? (
+                    <>
+                      <button
+                        onClick={toggleConnect}
+                        disabled={isConnectLoading}
+                        className="group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[120px] justify-center bg-green-50 text-green-700 border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      >
+                        {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : (
+                          <>
+                            <CheckCircle size={16} className="block group-hover:hidden" />
+                            <UserMinus size={16} className="hidden group-hover:block" />
+                          </>
+                        )}
+                        <span className="block group-hover:hidden">Connected</span>
+                        <span className="hidden group-hover:block">Disconnect</span>
+                      </button>
+                      <Link
+                        href={`/messages/${userId}`}
+                        className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                      >
+                        <MessageSquare size={16} /> Message
+                      </Link>
+                    </>
+                  ) : connectionStatus === "PENDING" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-medium text-amber-700">
+                        <Clock size={16} /> Pending
+                      </span>
+                      <button
+                        onClick={handleCancelRequest}
+                        disabled={isConnectLoading}
+                        className="flex items-center justify-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition disabled:opacity-50"
+                        title="Cancel Request"
+                      >
+                        {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={toggleConnect}
+                      disabled={isConnectLoading}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[130px] justify-center bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
+                    >
+                      {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                      Connect
+                    </button>
+                  )}
                 </div>
               )}
 

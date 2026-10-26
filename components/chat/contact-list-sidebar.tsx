@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { globalSocket } from "@/components/SocketAnnouncer";
+import { mutate } from "swr";
 
 export default function ContactListSidebar() {
   const pathname = usePathname();
@@ -27,6 +29,42 @@ export default function ContactListSidebar() {
     }, 500);
     return () => clearTimeout(handler);
   }, [search]);
+
+  // Real-time unread count updates via socket
+  useEffect(() => {
+    const handleReceiveDm = (newMsg: any) => {
+      setContacts((prev) =>
+        prev.map((c) => {
+          if (c.userId === newMsg.senderId) {
+            const isCurrentChat = pathname.includes(c.userId);
+            return {
+              ...c,
+              unreadCount: isCurrentChat ? 0 : (c.unreadCount || 0) + 1,
+            };
+          }
+          return c;
+        })
+      );
+      mutate("/api/user/counts");
+    };
+
+    globalSocket.on("receive_dm", handleReceiveDm);
+    return () => {
+      globalSocket.off("receive_dm", handleReceiveDm);
+    };
+  }, [pathname]);
+
+  // Clear unread count when user views this chat
+  useEffect(() => {
+    setContacts((prev) =>
+      prev.map((c) => {
+        if (pathname.includes(c.userId) && (c.unreadCount || 0) > 0) {
+          return { ...c, unreadCount: 0 };
+        }
+        return c;
+      })
+    );
+  }, [pathname]);
 
   const fetchContacts = useCallback(async () => {
     if (loading || (!hasMore && page !== 1)) return;
@@ -103,10 +141,23 @@ export default function ContactListSidebar() {
               </div>
               
               {/* Info */}
-              <div className="overflow-hidden">
-                <h3 className={`font-semibold text-sm truncate ${isActive ? "text-white" : "text-slate-900"}`}>
-                  {contact.name || "Unknown User"}
-                </h3>
+              <div className="overflow-hidden flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className={`font-semibold text-sm truncate ${isActive ? "text-white" : "text-slate-900"}`}>
+                    {contact.name || "Unknown User"}
+                  </h3>
+                  {contact.unreadCount > 0 && (
+                    <span
+                      className={`inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold rounded-full shrink-0 min-w-[20px] shadow-2xs ${
+                        isActive
+                          ? "bg-white text-blue-600"
+                          : "bg-blue-600 text-white"
+                      }`}
+                    >
+                      {contact.unreadCount}
+                    </span>
+                  )}
+                </div>
                 <p className={`text-xs truncate ${isActive ? "text-indigo-100" : "text-slate-500"}`}>
                   {contact.company?.type || "Connection"}
                 </p>

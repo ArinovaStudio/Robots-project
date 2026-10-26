@@ -8,7 +8,8 @@ import CredentialsForm from "@/components/auth/CredentialsForm";
 import CompanyDetailsForm from "@/components/auth/CompanyDetailsForm";
 import InvestorDetailsForm from "@/components/auth/InvestorDetailsForm";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useLogout } from "@/helpers/auth-helpers";
 
 export default function SignupPage({
   defaultAccountType = "BUSINESS",
@@ -20,6 +21,7 @@ export default function SignupPage({
   const [dbUser, setDbUser] = useState<any>(null);
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { handleLogout } = useLogout();
 
   // If user is authenticated, they have completed Step 1 (Account creation) and are on Step 2 (Profile setup).
   const activeStep = status === "authenticated" ? 2 : step;
@@ -169,7 +171,7 @@ export default function SignupPage({
                     </div>
                     <button
                       type="button"
-                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      onClick={handleLogout}
                       className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-95"
                     >
                       <LogOut className="h-3.5 w-3.5" />
@@ -247,7 +249,7 @@ export default function SignupPage({
                   <span>Need help or want to restart?</span>
                   <button
                     type="button"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={handleLogout}
                     className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
                   >
                     <LogOut className="h-3.5 w-3.5" />

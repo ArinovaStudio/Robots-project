@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ConnectionRequests from "@/components/home/connection-requests";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { UserMinus, UserCheck, Clock, Send, Users, Loader2, Search, MoreVertical, MessageSquare } from "lucide-react";
+import { UserMinus, UserCheck, Clock, Send, Users, Loader2, Search, MoreVertical, MessageSquare, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,6 +19,7 @@ export default function NetworkClient() {
   const [sentRequests, setSentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: countsData, mutate: mutateCounts } = useSWR("/api/user/counts", fetcher);
@@ -88,6 +89,31 @@ export default function NetworkClient() {
       toast.error("An error occurred");
     } finally {
       setDisconnectingId(null);
+    }
+  };
+
+  const handleCancelRequest = async (connectionId: string, targetUserId?: string) => {
+    setCancellingRequestId(connectionId);
+    try {
+      const res = await fetch("/api/network/connect/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, targetUserId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connection request cancelled");
+        setSentRequests((prev) =>
+          prev.filter((r) => r.id !== connectionId && r.connectionId !== connectionId)
+        );
+        await mutateCounts();
+      } else {
+        toast.error(data.message || "Failed to cancel request");
+      }
+    } catch {
+      toast.error("Failed to cancel request");
+    } finally {
+      setCancellingRequestId(null);
     }
   };
 
@@ -192,14 +218,41 @@ export default function NetworkClient() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sentRequests.map((req) => (
-                <div key={req.id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-lg">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                    {req.receiver?.name?.charAt(0) || "U"}
+                <div key={req.id} className="flex items-center justify-between gap-4 p-4 border border-gray-100 rounded-xl bg-white shadow-xs hover:border-gray-200 transition">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <Link href={`/profile/${req.receiver?.id}`} className="shrink-0">
+                      <div className="w-12 h-12 rounded-full relative overflow-hidden bg-blue-100 flex items-center justify-center text-blue-600 font-bold hover:opacity-90 transition">
+                        {req.receiver?.image ? (
+                          <Image src={req.receiver.image} alt={req.receiver.name || "User"} fill className="object-cover" />
+                        ) : (
+                          req.receiver?.name?.charAt(0) || "U"
+                        )}
+                      </div>
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/profile/${req.receiver?.id}`} className="font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline block text-sm">
+                        {req.receiver?.name}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          <Clock size={11} /> Pending
+                        </span>
+                        {req.receiver?.type && (
+                          <span className="text-xs text-gray-400 truncate">· {req.receiver.type}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <h3 className="font-semibold text-gray-900 truncate">{req.receiver?.name}</h3>
-                    <p className="text-sm text-gray-500 truncate">Status: Pending</p>
-                  </div>
+
+                  <button
+                    onClick={() => handleCancelRequest(req.id, req.receiver?.id)}
+                    disabled={cancellingRequestId === req.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition disabled:opacity-50 shrink-0"
+                    title="Cancel connection request"
+                  >
+                    {cancellingRequestId === req.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                    Cancel
+                  </button>
                 </div>
               ))}
             </div>
