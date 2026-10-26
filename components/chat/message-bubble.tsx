@@ -50,8 +50,8 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
         {/* Avatar for the sender */}
         {!isOwn && (
           <div className="size-8 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 relative mt-auto">
-            {message.sender?.company?.logoUrl ? (
-              <Image src={message.sender.company.logoUrl} alt="Logo" fill className="object-cover" />
+            {message.sender?.image || message.sender?.company?.logoUrl ? (
+              <Image src={message.sender.image || message.sender.company.logoUrl} alt="Avatar" fill className="object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center font-bold text-xs text-slate-400 bg-slate-100">
                 {message.sender?.name?.charAt(0) || "?"}

@@ -18,7 +18,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: validation.error.issues[0].message }, { status: 400 });
     }
 
-    const { email, newPassword, otp } = validation.data;
+    const { email: rawEmail, newPassword, otp } = validation.data;
+    const email = rawEmail.trim().toLowerCase();
 
     const otpRecord = await prisma.otp.findUnique({ where: { email_type: { email, type: "RESET_PASSWORD" } } });
 

@@ -48,7 +48,30 @@ export async function POST(req: NextRequest) {
       } else if (existingConnection.status === "ACCEPTED") {
         return NextResponse.json({ success: false, message: "You are already connected" }, { status: 400 });
       } else {
-        return NextResponse.json({ success: false, message: "Connection was previously rejected" }, { status: 400 });
+        // Re-request connection after prior rejection
+        await prisma.$transaction(async (tx) => {
+          await tx.connection.update({
+            where: { id: existingConnection.id },
+            data: {
+              senderId: user.id,
+              receiverId,
+              message: message || null,
+              status: "PENDING",
+            },
+          });
+
+          await tx.notification.create({
+            data: {
+              userId: receiverId,
+              actorId: user.id,
+              type: "CONNECTION_REQUEST",
+              content: `${user.name || "Someone"} sent you a connection request`,
+              link: "/network",
+            },
+          });
+        });
+
+        return NextResponse.json({ success: true, message: "Connection request sent successfully" }, { status: 200 });
       }
     }
 

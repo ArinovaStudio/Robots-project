@@ -6,6 +6,12 @@ interface ChatHeaderProps {
   user: {
     id: string;
     name: string | null;
+    image?: string | null;
+    accountType?: string | null;
+    investor?: {
+      firmName: string | null;
+      investorType?: string | null;
+    } | null;
     company: {
       logoUrl: string | null;
       companyName: string | null;
@@ -15,6 +21,12 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ user, isOnline }: ChatHeaderProps) {
+  const isInvestor = user.accountType === "INVESTOR";
+  const avatarUrl = user.image || user.company?.logoUrl;
+  const displayName = isInvestor
+    ? (user.name || user.investor?.firmName || "Investor")
+    : (user.company?.companyName || user.name || "Unknown User");
+
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/50 backdrop-blur-sm z-10 shrink-0">
       <div className="flex items-center gap-4">
@@ -29,11 +41,11 @@ export default function ChatHeader({ user, isOnline }: ChatHeaderProps) {
           {/* Avatar */}
           <div className="relative">
             <div className="size-12 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 relative group-hover:border-slate-300 transition-colors">
-              {user.company?.logoUrl ? (
-                <Image src={user.company.logoUrl} alt={user.name || "User"} fill className="object-cover" />
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center font-bold text-lg text-slate-400">
-                  {user.company?.companyName?.charAt(0) || user.name?.charAt(0) || "?"}
+                  {displayName.charAt(0) || "?"}
                 </div>
               )}
             </div>
@@ -48,7 +60,7 @@ export default function ChatHeader({ user, isOnline }: ChatHeaderProps) {
           {/* User Info */}
           <div>
             <h2 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
-              {user.company?.companyName || user.name || "Unknown User"}
+              {displayName}
             </h2>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={`text-xs font-semibold ${isOnline ? "text-emerald-500" : "text-slate-400"}`}>

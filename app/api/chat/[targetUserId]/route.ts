@@ -39,9 +39,16 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ tar
       select: {
         id: true,
         name: true,
-        company: { select: { logoUrl: true, companyName: true } }
+        image: true,
+        accountType: true,
+        company: { select: { logoUrl: true, companyName: true } },
+        investor: { select: { firmName: true, investorType: true } }
       }
     });
+
+    if (!targetUser) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
 
     const [user1Id, user2Id] = [user.id, targetUserId].sort();
     
@@ -58,7 +65,16 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ tar
           skip,
           take: limit,
           include: {
-            sender: { select: { id: true, name: true, company: { select: { logoUrl: true } } } }
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                accountType: true,
+                company: { select: { logoUrl: true, companyName: true } },
+                investor: { select: { firmName: true, investorType: true } }
+              }
+            }
           }
         }),
         prisma.directMessage.count({ where: { conversationId: conversation.id } })

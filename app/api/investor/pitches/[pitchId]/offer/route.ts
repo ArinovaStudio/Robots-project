@@ -36,6 +36,10 @@ export async function POST(
       numericAmount = parseFloat(cleanVal) || 0;
     }
 
+    if (numericAmount <= 0) {
+      return NextResponse.json({ success: false, message: "Offer amount must be a positive number." }, { status: 400 });
+    }
+
     // Find company owner of the pitch
     const pitches = await prisma.$queryRaw<any[]>`
       SELECT "userId", title FROM "CompanyPitch" WHERE id = ${pitchId} LIMIT 1
@@ -45,6 +49,9 @@ export async function POST(
     }
 
     const pitchOwnerId = pitches[0].userId;
+    if (pitchOwnerId === user.id) {
+      return NextResponse.json({ success: false, message: "You cannot make an offer on your own pitch." }, { status: 400 });
+    }
     const offerId = crypto.randomUUID();
 
     await prisma.$transaction(async (tx) => {

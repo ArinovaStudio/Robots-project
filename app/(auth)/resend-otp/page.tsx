@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import RightSection from "@/components/auth/RightSection";
 
-export default function ResendOtpPage() {
+function ResendOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -404,3 +404,18 @@ export default function ResendOtpPage() {
     </div>
   );
 }
+
+export default function ResendOtpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 text-sm">
+          Loading verification...
+        </div>
+      }
+    >
+      <ResendOtpContent />
+    </Suspense>
+  );
+}
+

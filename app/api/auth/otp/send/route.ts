@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: validation.error.issues[0].message }, { status: 400 });
     }
 
-    const { email, type } = validation.data;
+    const { email: rawEmail, type } = validation.data;
+    const email = rawEmail.trim().toLowerCase();
 
     if (type === "RESET_PASSWORD") {
       const user = await prisma.user.findUnique({ where: { email } });

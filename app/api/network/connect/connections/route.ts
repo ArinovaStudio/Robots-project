@@ -24,8 +24,12 @@ export async function GET(req: NextRequest) {
       whereClause.AND = [
         {
           OR: [
+            { sender: { name: { contains: search, mode: "insensitive" } } },
+            { receiver: { name: { contains: search, mode: "insensitive" } } },
             { sender: { company: { companyName: { contains: search, mode: "insensitive" } } } },
-            { receiver: { company: { companyName: { contains: search, mode: "insensitive" } } } }
+            { receiver: { company: { companyName: { contains: search, mode: "insensitive" } } } },
+            { sender: { investor: { firmName: { contains: search, mode: "insensitive" } } } },
+            { receiver: { investor: { firmName: { contains: search, mode: "insensitive" } } } }
           ]
         }
       ];

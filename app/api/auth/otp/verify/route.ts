@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, otp, type } = validation.data;
+    const { email: rawEmail, otp, type } = validation.data;
+    const email = rawEmail.trim().toLowerCase();
 
     const record = await prisma.otp.findUnique({
       where: { email_type: { email, type } },

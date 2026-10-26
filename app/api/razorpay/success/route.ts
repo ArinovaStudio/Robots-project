@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       }),
 
       ...(transaction.plan.givesBoost ? [
-        prisma.companyProfile.update({
+        prisma.companyProfile.updateMany({
           where: { userId: user.id },
           data: { isBoosted: true }
         })

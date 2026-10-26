@@ -16,23 +16,41 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const companies = await prisma.companyProfile.findMany({
-      where: {
-        OR: [
-          { companyName: { contains: query, mode: "insensitive" } },
-          { type: { contains: query, mode: "insensitive" } }
-        ]
-      },
-      take: 4,
-      select: {
-        userId: true,
-        companyName: true,
-        logoUrl: true,
-        type: true,
-      }
-    });
+    const [companies, investors] = await Promise.all([
+      prisma.companyProfile.findMany({
+        where: {
+          OR: [
+            { companyName: { contains: query, mode: "insensitive" } },
+            { type: { contains: query, mode: "insensitive" } }
+          ]
+        },
+        take: 3,
+        select: {
+          userId: true,
+          companyName: true,
+          logoUrl: true,
+          type: true,
+        }
+      }),
+      prisma.investorProfile.findMany({
+        where: {
+          OR: [
+            { firmName: { contains: query, mode: "insensitive" } },
+            { investorType: { contains: query, mode: "insensitive" } },
+            { user: { name: { contains: query, mode: "insensitive" } } }
+          ]
+        },
+        take: 3,
+        select: {
+          userId: true,
+          firmName: true,
+          investorType: true,
+          user: { select: { name: true, image: true } }
+        }
+      })
+    ]);
 
-    const formatted = companies.map(c => ({
+    const formattedCompanies = companies.map(c => ({
       id: c.userId,
       name: c.companyName,
       image: c.logoUrl,
@@ -41,7 +59,16 @@ export async function GET(req: NextRequest) {
       href: `/profile/${c.userId}`
     }));
 
-    return NextResponse.json({ success: true, data: formatted });
+    const formattedInvestors = investors.map(i => ({
+      id: i.userId,
+      name: i.user?.name || i.firmName || "Investor",
+      image: i.user?.image || null,
+      subtitle: i.firmName ? `${i.investorType} · ${i.firmName}` : i.investorType,
+      type: "INVESTOR",
+      href: `/profile/${i.userId}`
+    }));
+
+    return NextResponse.json({ success: true, data: [...formattedCompanies, ...formattedInvestors].slice(0, 5) });
   } catch (error) {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }

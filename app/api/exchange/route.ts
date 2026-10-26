@@ -63,10 +63,11 @@ export async function GET(req: NextRequest) {
     `;
 
     let formattedData = matchedCompanies.map(company => {
-      let matchReason = `Based on AI analysis, their offerings in ${company.dealIn[0]} strongly align with your business needs.`;
+      const primaryOffering = (company.dealIn && company.dealIn.length > 0 && company.dealIn[0]) ? company.dealIn[0] : (company.type || "their industry");
+      let matchReason = `Based on AI analysis, their offerings in ${primaryOffering} strongly align with your business needs.`;
       
       if (crossConnections.length > 0) {
-        matchReason = `Our AI suggests you might need ${crossConnections[0]}, which semantically matches their offerings in ${company.dealIn[0]}.`;
+        matchReason = `Our AI suggests you might need ${crossConnections[0]}, which semantically matches their offerings in ${primaryOffering}.`;
       }
 
       return {

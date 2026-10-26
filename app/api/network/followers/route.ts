@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           follower: {
-            select: { id: true, email: true, company: true }
+            select: { id: true, name: true, image: true, email: true, accountType: true, company: true, investor: true }
           }
         }
       }),
@@ -40,13 +40,32 @@ export async function GET(req: NextRequest) {
 
     const mutualSet = new Set(mutualFollows.map(mf => mf.followingId));
 
-    const formattedFollowers = followersData.map(f => ({
-      followId: f.id,
-      followedAt: f.createdAt,
-      ...f.follower.company,
-      userId: f.follower.id,
-      isFollowing: mutualSet.has(f.follower.id),
-    }));
+    const formattedFollowers = followersData.map(f => {
+      const isInvestor = f.follower.accountType === "INVESTOR";
+      return {
+        followId: f.id,
+        followedAt: f.createdAt,
+        name: isInvestor
+          ? (f.follower.name || f.follower.investor?.firmName || "Investor")
+          : (f.follower.company?.companyName || f.follower.name || "Unknown Company"),
+        companyName: isInvestor
+          ? (f.follower.name || f.follower.investor?.firmName || "Investor")
+          : (f.follower.company?.companyName || f.follower.name || "Unknown Company"),
+        logoUrl: isInvestor
+          ? (f.follower.image || null)
+          : (f.follower.company?.logoUrl || f.follower.image || null),
+        type: isInvestor
+          ? (f.follower.investor?.firmName
+              ? `${f.follower.investor.investorType} · ${f.follower.investor.firmName}`
+              : (f.follower.investor?.investorType || "Investor"))
+          : (f.follower.company?.type || "Business"),
+        company: f.follower.company,
+        investor: f.follower.investor,
+        userId: f.follower.id,
+        isInvestor,
+        isFollowing: mutualSet.has(f.follower.id),
+      };
+    });
 
     return NextResponse.json({
       success: true,

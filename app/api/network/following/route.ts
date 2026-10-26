@@ -22,19 +22,38 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           following: {
-            select: { id: true, company: true }
+            select: { id: true, name: true, image: true, accountType: true, company: true, investor: true }
           }
         }
       }),
       prisma.follow.count({ where: { followerId: user.id } })
     ]);
 
-    const formattedFollowing = followingData.map(f => ({
-      followId: f.id,
-      followedAt: f.createdAt,
-      ...f.following.company, 
-      userId: f.following.id,
-    }));
+    const formattedFollowing = followingData.map(f => {
+      const isInvestor = f.following.accountType === "INVESTOR";
+      return {
+        followId: f.id,
+        followedAt: f.createdAt,
+        name: isInvestor
+          ? (f.following.name || f.following.investor?.firmName || "Investor")
+          : (f.following.company?.companyName || f.following.name || "Unknown Company"),
+        companyName: isInvestor
+          ? (f.following.name || f.following.investor?.firmName || "Investor")
+          : (f.following.company?.companyName || f.following.name || "Unknown Company"),
+        logoUrl: isInvestor
+          ? (f.following.image || null)
+          : (f.following.company?.logoUrl || f.following.image || null),
+        type: isInvestor
+          ? (f.following.investor?.firmName
+              ? `${f.following.investor.investorType} · ${f.following.investor.firmName}`
+              : (f.following.investor?.investorType || "Investor"))
+          : (f.following.company?.type || "Business"),
+        company: f.following.company,
+        investor: f.following.investor,
+        userId: f.following.id,
+        isInvestor,
+      };
+    });
 
     return NextResponse.json({
       success: true,

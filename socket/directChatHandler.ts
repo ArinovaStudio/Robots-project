@@ -44,7 +44,7 @@ export default function directChatHandler(io: Server, socket: Socket) {
           content: data.content
         },
         include: {
-          sender: { select: { id: true, name: true, company: { select: { logoUrl: true, companyName: true } } } }
+          sender: { select: { id: true, name: true, image: true, accountType: true, company: { select: { logoUrl: true, companyName: true } }, investor: { select: { firmName: true, investorType: true } } } }
         }
       });
 
@@ -85,7 +85,7 @@ export default function directChatHandler(io: Server, socket: Socket) {
         where: { id: data.messageId },
         data: { content: "", isDeleted: true },
         include: {
-          sender: { select: { id: true, name: true, company: { select: { logoUrl: true } } } }
+          sender: { select: { id: true, name: true, image: true, accountType: true, company: { select: { logoUrl: true, companyName: true } }, investor: { select: { firmName: true, investorType: true } } } }
         }
       });
 
@@ -110,7 +110,7 @@ export default function directChatHandler(io: Server, socket: Socket) {
         where: { id: data.messageId },
         data: { content: data.content, isEdited: true },
         include: {
-          sender: { select: { id: true, name: true, company: { select: { logoUrl: true } } } }
+          sender: { select: { id: true, name: true, image: true, accountType: true, company: { select: { logoUrl: true, companyName: true } }, investor: { select: { firmName: true, investorType: true } } } }
         }
       });
 

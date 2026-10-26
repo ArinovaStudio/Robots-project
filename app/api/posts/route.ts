@@ -14,7 +14,27 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const content = formData.get("content")?.toString().trim() || null;
     const eventDataString = formData.get("eventData")?.toString();
-    const eventData = eventDataString ? JSON.parse(eventDataString) : null;
+    let eventData: any = null;
+    let eventDate: Date | null = null;
+
+    if (eventDataString) {
+      try {
+        eventData = JSON.parse(eventDataString);
+      } catch {
+        return NextResponse.json({ success: false, message: "Invalid event data format" }, { status: 400 });
+      }
+
+      if (!eventData || typeof eventData !== "object" || !eventData.title?.trim() || !eventData.date) {
+        return NextResponse.json({ success: false, message: "Event title and date are required" }, { status: 400 });
+      }
+
+      const timeStr = eventData.time ? eventData.time.trim() : "00:00";
+      eventDate = new Date(`${eventData.date}T${timeStr}`);
+      if (isNaN(eventDate.getTime())) {
+        return NextResponse.json({ success: false, message: "Invalid event date or time" }, { status: 400 });
+      }
+    }
+
     const files = formData.getAll("media") as File[];
 
     if (!content && files.length === 0 && !eventData) {
@@ -63,11 +83,11 @@ export async function POST(req: NextRequest) {
             type: m.type,
           })),
         },
-        ...(eventData && {
+        ...(eventData && eventDate && {
           event: {
             create: {
-              title: eventData.title,
-              date: new Date(`${eventData.date}T${eventData.time}`),
+              title: eventData.title.trim(),
+              date: eventDate,
               location: eventData.location || null,
               link: eventData.link || null,
             }
