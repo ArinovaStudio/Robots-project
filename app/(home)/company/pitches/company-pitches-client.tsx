@@ -27,6 +27,8 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
 import AddPitchModal from "@/components/modals/add-pitch-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import { formatTargetAmount } from "@/lib/utils";
+
 
 interface PitchData {
   id: string;
@@ -299,7 +301,7 @@ export default function CompanyPitchesClient() {
                         {pitch.targetAmount && (
                           <div className="flex sm:flex-col items-baseline sm:items-end gap-1.5 sm:gap-0">
                             <span className="text-[10px] uppercase font-bold text-gray-400">Target Raise</span>
-                            <span className="text-base font-extrabold text-gray-900">{pitch.targetAmount}</span>
+                            <span className="text-base font-extrabold text-gray-900">{formatTargetAmount(pitch.targetAmount)}</span>
                           </div>
                         )}
                         {pitch.equityOffered && (

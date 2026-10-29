@@ -80,6 +80,12 @@ export default function MenuCard() {
       href: "/investors/portal?tab=performers",
     },
     {
+      icon: Landmark,
+      label: "My Pitches",
+      badge: "Pitches",
+      href: "/investors/my-pitches",
+    },
+    {
       icon: Building2,
       label: "Directory",
       href: "/directory",

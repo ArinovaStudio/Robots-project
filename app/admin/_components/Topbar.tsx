@@ -162,6 +162,12 @@ export default function Topbar({ setMobileOpen }: Props) {
                 Pending reports <span className="font-semibold">{alerts ? pendingReports : "—"}</span>
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/admin/notifications" className="flex w-full justify-center text-xs font-semibold text-blue-600 hover:text-blue-700">
+                View All Notifications →
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

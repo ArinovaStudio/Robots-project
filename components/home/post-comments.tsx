@@ -72,7 +72,7 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
       <div className="flex gap-3 mb-6">
         {currentUser?.image || currentUser?.company?.logoUrl ? (
           <img 
-            src={currentUser.company.logoUrl || currentUser.image} 
+            src={currentUser?.company?.logoUrl || currentUser?.image} 
             alt={currentUser?.company?.companyName || currentUser?.name || "User"} 
             className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
           />

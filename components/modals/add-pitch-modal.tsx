@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, Sparkles, DollarSign, Layers, Building2, Link as LinkIcon, FileText, CheckCircle2 } from "lucide-react";
+import { X, Loader2, Sparkles, IndianRupee, Layers, Building2, Link as LinkIcon, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatTargetAmount } from "@/lib/utils";
+
 
 interface AddPitchModalProps {
   onClose: () => void;
@@ -54,7 +56,7 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
           summary: summary.trim(),
           sector,
           stage,
-          targetAmount: targetAmount.trim() || undefined,
+          targetAmount: targetAmount.trim() ? formatTargetAmount(targetAmount.trim()) : undefined,
           equityOffered: equityOffered.trim() || undefined,
           highlights,
           pitchDeckUrl: pitchDeckUrl.trim() || undefined,
@@ -185,12 +187,13 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Target Raise Amount</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   value={targetAmount}
                   onChange={(e) => setTargetAmount(e.target.value)}
-                  placeholder="e.g. $500,000"
+                  onBlur={() => setTargetAmount((prev) => formatTargetAmount(prev))}
+                  placeholder="e.g. ₹500k, 100k, or 1M"
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

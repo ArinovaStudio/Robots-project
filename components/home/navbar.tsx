@@ -1,4 +1,4 @@
-import { Network, MessageSquare, Search, Home, Bell, User, Loader2, Settings, LogOut } from "lucide-react";
+import { Network, MessageSquare, Search, Home, Bell, User, Loader2, Settings, LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -242,6 +242,14 @@ export default function Navbar() {
                     Settings
                   </Link>
                 </DropdownMenuItem>
+                {user?.role === "ADMIN" && (
+                  <DropdownMenuItem asChild className="cursor-pointer gap-2 font-semibold text-blue-600 focus:bg-blue-50 focus:text-blue-700">
+                    <Link href="/admin">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      View Admin Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { formatTargetAmount } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -64,6 +65,7 @@ export async function GET() {
 
         return {
           ...pitch,
+          targetAmount: pitch.targetAmount ? formatTargetAmount(pitch.targetAmount) : null,
           highlights: Array.isArray(pitch.highlights) ? pitch.highlights : [],
           views,
           offers,
@@ -126,7 +128,7 @@ export async function POST(req: NextRequest) {
       summary.trim(),
       sector.trim(),
       stage,
-      targetAmount ? targetAmount.trim() : null,
+      targetAmount ? formatTargetAmount(targetAmount) : null,
       equityOffered ? equityOffered.trim() : null,
       Array.isArray(highlights) ? highlights : [],
       pitchDeckUrl ? pitchDeckUrl.trim() : null,

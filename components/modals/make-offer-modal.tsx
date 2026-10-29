@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, DollarSign, FileText } from "lucide-react";
+import { X, Loader2, IndianRupee, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { formatTargetAmount } from "@/lib/utils";
 
 interface MakeOfferModalProps {
   pitchId: string;
@@ -79,13 +80,14 @@ export default function MakeOfferModal({
               Offer Amount *
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. $100,000 or $250k"
+                onBlur={() => setAmount((prev) => (prev ? formatTargetAmount(prev) : ""))}
+                placeholder="e.g. ₹100,000 or ₹250k"
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

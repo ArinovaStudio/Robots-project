@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin, MessageSquare, Clock, X, Loader2 } from "lucide-react";
+import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin, MessageSquare, Clock, X, Loader2, Landmark } from "lucide-react";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
 import { toast } from "sonner";
@@ -34,6 +34,11 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [connectTarget, setConnectTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancellingUserId, setCancellingUserId] = useState<string | null>(null);
+  const [confirmCancelTarget, setConfirmCancelTarget] = useState<{
+    userId: string;
+    connectionId?: string | null;
+    name: string;
+  } | null>(null);
 
   const handleCancelConnection = async (targetUserId: string, connectionId?: string | null) => {
     setCancellingUserId(targetUserId);
@@ -196,32 +201,32 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                     +{company.stats.recentViews} views this wk
                   </span>
                   {company.connectionStatus === "ACCEPTED" ? (
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 size={11} /> Connected
-                      </span>
-                      <Link
-                        href={`/messages/${company.userId}`}
-                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-blue-700 transition"
-                      >
-                        <MessageSquare size={11} /> Message
-                      </Link>
-                    </div>
+                    <Link
+                      href={`/messages/${company.userId}`}
+                      className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700 transition"
+                    >
+                      <MessageSquare size={11} /> Message
+                    </Link>
                   ) : company.connectionStatus === "PENDING" ? (
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
-                        <Clock size={11} /> Pending
-                      </span>
-                      <button
-                        onClick={() => handleCancelConnection(company.userId, company.connectionId)}
-                        disabled={cancellingUserId === company.userId}
-                        className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 border border-red-200 hover:bg-red-100 transition disabled:opacity-50"
-                        title="Cancel connection request"
-                      >
-                        {cancellingUserId === company.userId ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-                        Cancel
-                      </button>
-                    </div>
+                    <button
+                      onClick={() =>
+                        setConfirmCancelTarget({
+                          userId: company.userId,
+                          connectionId: company.connectionId,
+                          name: company.companyName,
+                        })
+                      }
+                      disabled={cancellingUserId === company.userId}
+                      className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
+                      title="Connection request is pending. Click to cancel request."
+                    >
+                      {cancellingUserId === company.userId ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <Clock size={11} />
+                      )}
+                      Pending
+                    </button>
                   ) : (
                     <button
                       onClick={() => setConnectTarget({ id: company.userId, name: company.companyName })}
@@ -233,6 +238,61 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Action button below Top Performers on main explore */}
+          <div className="mt-4 pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <span className="text-xs text-gray-500 font-medium">
+              Want to see and manage your submitted pitches and investment offers?
+            </span>
+            <Link
+              href="/investors/my-pitches"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200/80 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-2xs shrink-0"
+            >
+              <Landmark size={13} />
+              My Pitches
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Connection Request Confirmation Modal */}
+      {confirmCancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-amber-100 p-2.5 text-amber-600">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Cancel Request?</h3>
+                <p className="text-xs text-gray-500">Connection is currently pending</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Do you want to cancel your connection request to <strong className="text-gray-900">{confirmCancelTarget.name}</strong>?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmCancelTarget(null)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Keep Pending
+              </button>
+              <button
+                type="button"
+                disabled={cancellingUserId === confirmCancelTarget.userId}
+                onClick={async () => {
+                  const target = confirmCancelTarget;
+                  setConfirmCancelTarget(null);
+                  await handleCancelConnection(target.userId, target.connectionId);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition shadow-xs disabled:opacity-50"
+              >
+                Yes, Cancel Request
+              </button>
+            </div>
           </div>
         </div>
       )}

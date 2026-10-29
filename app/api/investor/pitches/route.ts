@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { formatTargetAmount } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +22,9 @@ export async function GET(req: NextRequest) {
              p."targetAmount", p."equityOffered", p.highlights, p."pitchDeckUrl", p."websiteUrl",
              p.status, p."createdAt",
              cp."companyName", cp."logoUrl", cp."type" as "companyType", cp.location, cp.size,
-             u.name as "founderName", u.image as "founderImage", u."verificationStatus"
+             u.name as "founderName", u.image as "founderImage", u."verificationStatus",
+             (SELECT count(*)::int FROM "CompanyPitchRating" r WHERE r."pitchId" = p.id) as "ratingCount",
+             (SELECT COALESCE(avg(r.rating), 0)::float FROM "CompanyPitchRating" r WHERE r."pitchId" = p.id) as "averageRating"
       FROM "CompanyPitch" p
       INNER JOIN "User" u ON p."userId" = u.id
       LEFT JOIN "CompanyProfile" cp ON p."userId" = cp."userId"
@@ -105,7 +108,7 @@ export async function GET(req: NextRequest) {
         summary: p.summary,
         sector: p.sector,
         stage: p.stage,
-        targetAmount: p.targetAmount,
+        targetAmount: p.targetAmount ? formatTargetAmount(p.targetAmount) : null,
         equityOffered: p.equityOffered,
         highlights: Array.isArray(p.highlights) ? p.highlights : [],
         pitchDeckUrl: p.pitchDeckUrl,
@@ -126,6 +129,8 @@ export async function GET(req: NextRequest) {
         userRating: ratingInfo?.rating || null,
         userFeedback: ratingInfo?.feedback || null,
         isRated: !!ratingInfo,
+        averageRating: Number(p.averageRating || 0),
+        ratingCount: Number(p.ratingCount || 0),
       };
     });
 
@@ -183,7 +188,7 @@ export async function POST(req: NextRequest) {
       summary.trim(),
       sector.trim(),
       stage,
-      targetAmount || null,
+      targetAmount ? formatTargetAmount(targetAmount) : null,
       equityOffered || null,
       Array.isArray(highlights) ? highlights : [],
       pitchDeckUrl || null,

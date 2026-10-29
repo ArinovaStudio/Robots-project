@@ -3,6 +3,7 @@ import {
   Users,
   AlertCircle,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 
 export const navItems = [
@@ -13,6 +14,7 @@ export const navItems = [
       { label: "Verification Requests", href: "/admin/verifications", icon: ShieldCheck },
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Reports", href: "/admin/reports", icon: AlertCircle },
+      { label: "Notifications", href: "/admin/notifications", icon: Bell },
     ],
   },
 ];

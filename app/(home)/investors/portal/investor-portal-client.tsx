@@ -36,6 +36,7 @@ import MakeOfferModal from "@/components/modals/make-offer-modal";
 import RatePitchModal from "@/components/modals/rate-pitch-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import { formatTargetAmount } from "@/lib/utils";
 
 interface PitchItem {
   id: string;
@@ -67,6 +68,8 @@ interface PitchItem {
   userRating?: number | null;
   userFeedback?: string | null;
   isRated?: boolean;
+  averageRating?: number;
+  ratingCount?: number;
 }
 
 interface PreferenceCompany {
@@ -125,6 +128,11 @@ export default function InvestorPortalClient() {
     pitchTitle: string;
     currentRating?: number | null;
     currentFeedback?: string | null;
+  } | null>(null);
+  const [confirmCancelTarget, setConfirmCancelTarget] = useState<{
+    userId: string;
+    connectionId?: string | null;
+    name: string;
   } | null>(null);
 
   const handleCancelConnection = async (targetUserId: string, connectionId?: string | null) => {
@@ -486,6 +494,16 @@ export default function InvestorPortalClient() {
                           </Link>
 
                           <div className="flex flex-col items-end gap-1 shrink-0">
+                            {/* Average rating shown above early idea or type */}
+                            <div
+                              className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200/80 shadow-2xs"
+                              title={`Average Rating: ${Number(pitch.averageRating || 0).toFixed(1)} / 5 (${pitch.ratingCount || 0} reviews)`}
+                            >
+                              <Star size={11} className="fill-amber-500 text-amber-500 shrink-0" />
+                              <span>{Number(pitch.averageRating || 0) > 0 ? Number(pitch.averageRating).toFixed(1) : "0.0"}</span>
+                              <span className="text-[9px] text-amber-600 font-semibold">({pitch.ratingCount || 0})</span>
+                            </div>
+
                             <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${typeColor}`}>
                               {typeLabel}
                             </span>
@@ -532,7 +550,7 @@ export default function InvestorPortalClient() {
                           {pitch.targetAmount ? (
                             <div>
                               <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Target Raise</span>
-                              <p className="text-sm font-extrabold text-gray-900">{pitch.targetAmount}</p>
+                              <p className="text-sm font-extrabold text-gray-900">{formatTargetAmount(pitch.targetAmount)}</p>
                             </div>
                           ) : (
                             <div>
@@ -551,34 +569,34 @@ export default function InvestorPortalClient() {
 
                         <div className="flex flex-wrap items-center gap-2">
                           {pitch.connectionStatus === "ACCEPTED" ? (
-                            <>
-                              <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
-                                <CheckCircle2 size={13} /> Connected
-                              </span>
-                              <Link
-                                href={`/messages/${pitch.userId}`}
-                                onClick={() => recordPitchView(pitch.id)}
-                                className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
-                              >
-                                <MessageSquare size={13} />
-                                Message Founder
-                              </Link>
-                            </>
+                            <Link
+                              href={`/messages/${pitch.userId}`}
+                              onClick={() => recordPitchView(pitch.id)}
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                            >
+                              <MessageSquare size={13} />
+                              Message
+                            </Link>
                           ) : pitch.connectionStatus === "PENDING" ? (
-                            <div className="flex-1 min-w-[130px] flex items-center gap-1.5">
-                              <span className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200">
-                                <Clock size={13} /> Pending
-                              </span>
-                              <button
-                                onClick={() => handleCancelConnection(pitch.userId, pitch.connectionId)}
-                                disabled={cancellingUserId === pitch.userId}
-                                className="flex items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 border border-red-200 hover:bg-red-100 transition shadow-xs disabled:opacity-50"
-                                title="Cancel Connection Request"
-                              >
-                                {cancellingUserId === pitch.userId ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
-                                Cancel
-                              </button>
-                            </div>
+                            <button
+                              onClick={() =>
+                                setConfirmCancelTarget({
+                                  userId: pitch.userId,
+                                  connectionId: pitch.connectionId,
+                                  name: pitch.company.companyName,
+                                })
+                              }
+                              disabled={cancellingUserId === pitch.userId}
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                              title="Connection request is pending. Click to cancel request."
+                            >
+                              {cancellingUserId === pitch.userId ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Clock size={13} />
+                              )}
+                              Pending
+                            </button>
                           ) : (
                             <button
                               onClick={() => {
@@ -608,24 +626,7 @@ export default function InvestorPortalClient() {
                             Offer
                           </button>
 
-                          {pitch.isRated ? (
-                            <button
-                              onClick={() => {
-                                recordPitchView(pitch.id);
-                                setRateTarget({
-                                  pitchId: pitch.id,
-                                  pitchTitle: pitch.title,
-                                  currentRating: pitch.userRating,
-                                  currentFeedback: pitch.userFeedback,
-                                });
-                              }}
-                              className="inline-flex items-center gap-1 rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 border border-amber-300 hover:bg-amber-200 transition shadow-xs"
-                              title={`Rated ${pitch.userRating}/5 stars. Click to update.`}
-                            >
-                              <Star size={13} className="fill-amber-500 text-amber-600" />
-                              {pitch.userRating ? `Rated (${pitch.userRating}★)` : "Rated"}
-                            </button>
-                          ) : (
+                          {!pitch.isRated && (
                             <button
                               onClick={() => {
                                 recordPitchView(pitch.id);
@@ -781,32 +782,32 @@ export default function InvestorPortalClient() {
 
                       <div className="flex items-center gap-2">
                         {company.connectionStatus === "ACCEPTED" ? (
-                          <>
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
-                              <CheckCircle2 size={12} /> Connected
-                            </span>
-                            <Link
-                              href={`/messages/${company.userId}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
-                            >
-                              <MessageSquare size={12} /> Message
-                            </Link>
-                          </>
+                          <Link
+                            href={`/messages/${company.userId}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                          >
+                            <MessageSquare size={12} /> Message
+                          </Link>
                         ) : company.connectionStatus === "PENDING" ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200">
-                              <Clock size={12} /> Pending
-                            </span>
-                            <button
-                              onClick={() => handleCancelConnection(company.userId, company.connectionId)}
-                              disabled={cancellingUserId === company.userId}
-                              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-bold text-red-600 border border-red-200 hover:bg-red-100 transition disabled:opacity-50"
-                              title="Cancel Connection Request"
-                            >
-                              {cancellingUserId === company.userId ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                              Cancel
-                            </button>
-                          </div>
+                          <button
+                            onClick={() =>
+                              setConfirmCancelTarget({
+                                userId: company.userId,
+                                connectionId: company.connectionId,
+                                name: company.companyName,
+                              })
+                            }
+                            disabled={cancellingUserId === company.userId}
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                            title="Connection request is pending. Click to cancel request."
+                          >
+                            {cancellingUserId === company.userId ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Clock size={12} />
+                            )}
+                            Pending
+                          </button>
                         ) : (
                           <button
                             onClick={() => setSelectedConnectCompany({ id: company.userId, name: company.companyName })}
@@ -871,6 +872,47 @@ export default function InvestorPortalClient() {
             fetchPitches();
           }}
         />
+      )}
+
+      {/* Cancel Connection Request Confirmation Modal */}
+      {confirmCancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-amber-100 p-2.5 text-amber-600">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Cancel Request?</h3>
+                <p className="text-xs text-gray-500">Connection is currently pending</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Do you want to cancel your connection request to <strong className="text-gray-900">{confirmCancelTarget.name}</strong>?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmCancelTarget(null)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Keep Pending
+              </button>
+              <button
+                type="button"
+                disabled={cancellingUserId === confirmCancelTarget.userId}
+                onClick={async () => {
+                  const target = confirmCancelTarget;
+                  setConfirmCancelTarget(null);
+                  await handleCancelConnection(target.userId, target.connectionId);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition shadow-xs disabled:opacity-50"
+              >
+                Yes, Cancel Request
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -66,3 +66,51 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ offerId: string }> }
+) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const { offerId } = await params;
+    const offers = await prisma.$queryRaw<any[]>`
+      SELECT o.id, o."investorId", o.status
+      FROM "CompanyPitchOffer" o
+      WHERE o.id = ${offerId}
+      LIMIT 1
+    `;
+
+    if (!offers || offers.length === 0) {
+      return NextResponse.json({ success: false, message: "Offer not found." }, { status: 404 });
+    }
+
+    const offer = offers[0];
+    if (offer.investorId !== user.id) {
+      return NextResponse.json({ success: false, message: "You can only cancel your own offers." }, { status: 403 });
+    }
+
+    if (offer.status !== "PENDING") {
+      return NextResponse.json({ success: false, message: "Only pending offers can be cancelled." }, { status: 400 });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM "CompanyPitchOffer" WHERE id = $1 AND "investorId" = $2`,
+      offerId,
+      user.id
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Investment offer cancelled successfully."
+    });
+  } catch (error) {
+    console.error("Failed to cancel offer:", error);
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
