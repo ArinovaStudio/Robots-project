@@ -195,7 +195,7 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
             <button onClick={onClose} disabled={loading} className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-full transition">
               Cancel
             </button>
-            <button onClick={handleSubmit} disabled={loading} className="flex justify-center items-center gap-2 px-8 py-2.5 bg-[#8b9dfc] hover:bg-[#7286fa] text-white text-sm font-bold rounded-full transition disabled:opacity-50 shadow-sm">
+            <button onClick={handleSubmit} disabled={loading} className="flex justify-center items-center gap-2 px-8 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white text-sm font-bold rounded-full transition disabled:opacity-50 shadow-xs">
               {loading && <Loader2 size={16} className="animate-spin" />} Save
             </button>
           </div>

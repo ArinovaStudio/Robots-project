@@ -84,7 +84,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="mt-8 bg-[#0a0a0a] text-white rounded-2xl overflow-hidden">
+    <footer className="mt-8 bg-[#1E3A5F] text-white rounded-2xl overflow-hidden border border-[#1E3A5F]">
 
       {/* ── Top separator line ── */}
       <motion.div
@@ -105,7 +105,7 @@ export default function Footer() {
               {/* Logo wordmark */}
               <Link href="/feed" className="inline-block">
                 <span className="text-xl font-bold tracking-tight text-white">
-                  Connecto<span className="text-indigo-400">.</span>
+                  Connecto<span className="text-blue-400">.</span>
                 </span>
               </Link>
 
@@ -119,7 +119,7 @@ export default function Footer() {
                   Stay in the loop
                 </p>
                 {subscribed ? (
-                  <p className="text-sm font-medium text-indigo-400">
+                  <p className="text-sm font-medium text-blue-300">
                     ✓ You&apos;re subscribed!
                   </p>
                 ) : (
@@ -129,11 +129,11 @@ export default function Footer() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your@email.com"
-                      className="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                      className="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all"
                     />
                     <button
                       type="submit"
-                      className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+                      className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
                     >
                       Subscribe
                     </button>

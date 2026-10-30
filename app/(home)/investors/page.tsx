@@ -17,20 +17,13 @@ export const metadata: Metadata = {
 export default function InvestorsPage() {
   return (
     <section className="mx-auto max-w-4xl pt-6 pb-20">
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 rounded-2xl p-10 text-center relative overflow-hidden shadow-2xl border border-slate-800">
-        
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[80px]"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[80px]"></div>
-        </div>
-
+      <div className="bg-[#1E3A5F] rounded-2xl p-10 text-center relative overflow-hidden border border-[#1E3A5F]">
         <div className="relative z-10 flex flex-col items-center">
-          <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/20 mb-6">
-            <Briefcase className="w-12 h-12 text-blue-300" />
+          <div className="bg-white/10 p-4 rounded-2xl border border-white/20 mb-6">
+            <Briefcase className="w-12 h-12 text-blue-200" />
           </div>
 
-          <span className="rounded-full bg-blue-500/20 px-3.5 py-1 text-xs font-semibold text-blue-300 border border-blue-400/30 mb-4">
+          <span className="rounded-full bg-white/10 px-3.5 py-1 text-xs font-semibold text-blue-200 border border-white/20 mb-4">
             Investor Matchmaking & Discovery
           </span>
 
@@ -45,13 +38,13 @@ export default function InvestorsPage() {
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/investors/portal"
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3.5 rounded-full transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-2"
+              className="bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-8 py-3.5 rounded-full transition-all flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" /> Open Investor Portal <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/signup/investor"
-              className="bg-white/10 hover:bg-white/15 text-white font-medium px-7 py-3.5 rounded-full border border-white/20 transition-all"
+              className="bg-white/10 hover:bg-white/20 text-white font-medium px-7 py-3.5 rounded-full border border-white/20 transition-all"
             >
               Register as Investor
             </Link>

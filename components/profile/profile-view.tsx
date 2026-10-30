@@ -194,7 +194,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       <div className="mx-auto max-w-5xl space-y-4 pb-20">
         <ScrollReveal direction="down">
           <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <div className="h-32 bg-gradient-to-r from-indigo-800 via-blue-700 to-sky-500 sm:h-48" />
+            <div className="h-32 bg-[#1E3A5F] sm:h-48" />
             <div className="relative flex flex-col items-center gap-4 p-6 pt-0 sm:flex-row sm:items-start sm:gap-6 sm:p-8 sm:pt-0">
               <div className="-mt-12 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-50 text-4xl font-bold text-blue-700 shadow-sm sm:-mt-16 sm:h-32 sm:w-32">
                 {profile.image ? (
@@ -623,9 +623,18 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 />
               )}
 
-              {showEditModal && profile?.company && (
+              {showEditModal && (profile?.company || profile?.investor) && (
                 <EditProfileModal
-                  profile={profile.company}
+                  profile={
+                    profile.company
+                      ? { ...profile.company, accountType: "BUSINESS" }
+                      : {
+                          ...profile.investor,
+                          name: profile.name,
+                          logoUrl: profile.image,
+                          accountType: "INVESTOR",
+                        }
+                  }
                   onClose={() => setShowEditModal(false)}
                   onSuccess={() => {
                     setShowEditModal(false);

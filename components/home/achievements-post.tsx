@@ -53,9 +53,9 @@ export default function AchievementPost() {
         {/* Actions */}
         <div className="flex justify-between items-center pt-2">
           <div className="flex gap-1 w-full justify-between sm:justify-start sm:gap-2">
-            <Action icon={<ImageIcon className="w-5 h-5 text-blue-500" />} label="Media" onClick={() => openModal("IMAGE")} />
-            <Action icon={<CalendarDays className="w-5 h-5 text-orange-500" />} label="Event" onClick={() => openModal("EVENT")} />
-            <Action icon={<FileText className="w-5 h-5 text-red-500" />} label="Write article" onClick={() => router.push("/post/article")} />
+            <Action icon={<ImageIcon className="w-5 h-5 text-[#2563EB]" />} label="Media" onClick={() => openModal("IMAGE")} />
+            <Action icon={<CalendarDays className="w-5 h-5 text-[#2563EB]" />} label="Event" onClick={() => openModal("EVENT")} />
+            <Action icon={<FileText className="w-5 h-5 text-[#2563EB]" />} label="Write article" onClick={() => router.push("/post/article")} />
           </div>
         </div>
       </div>

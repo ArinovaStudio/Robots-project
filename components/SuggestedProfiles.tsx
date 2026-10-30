@@ -52,7 +52,7 @@ export default function SuggestedProfiles() {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
       <h3 className="text-base font-semibold text-gray-900 mb-4">Add to your feed</h3>
 
       <div className="space-y-4">
@@ -112,9 +112,9 @@ export default function SuggestedProfiles() {
                 
                 <button
                   onClick={() => setSelectedCompany(company)}
-                  className="flex items-center gap-1 px-4 py-1.5 rounded-full border border-gray-500 text-gray-600 font-medium text-sm hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 px-3.5 py-1.5 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-xs transition"
                 >
-                  <Plus size={16} /> Connect
+                  <Plus size={14} /> Connect
                 </button>
               </div>
             </div>

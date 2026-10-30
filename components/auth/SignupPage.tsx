@@ -156,7 +156,7 @@ export default function SignupPage({
                   </div>
                 </fieldset>
               ) : (
-                <div className="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 p-4 shadow-sm">
+                <div className="mb-6 rounded-2xl border border-[#E5E7EB] bg-[#EFF6FF] p-4 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-blue-700">

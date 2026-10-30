@@ -37,6 +37,7 @@ import RatePitchModal from "@/components/modals/rate-pitch-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
+import ReadMoreText from "@/components/ui/read-more-text";
 
 interface PitchItem {
   id: string;
@@ -250,13 +251,10 @@ export default function InvestorPortalClient() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-24">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 p-8 text-white shadow-xl">
-        <div className="absolute right-0 top-0 h-96 w-96 translate-x-1/3 -translate-y-1/3 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-64 w-64 translate-y-1/2 rounded-full bg-indigo-500/15 blur-2xl" />
-
+      <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-8 text-white border border-[#1E3A5F]">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-3 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-3">
               <Sparkles className="w-3.5 h-3.5 text-blue-300" />
               <span>Investor Deal Flow & Pitches</span>
             </div>
@@ -276,7 +274,7 @@ export default function InvestorPortalClient() {
                   </span>
                 ))}
                 {preferences.investmentRange && (
-                  <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 font-semibold text-emerald-300 border border-emerald-500/30">
+                  <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-semibold text-blue-200 border border-white/20">
                     Range: {preferences.investmentRange}
                   </span>
                 )}
@@ -326,7 +324,7 @@ export default function InvestorPortalClient() {
       {activeTab === "pitches" && (
         <section className="space-y-6">
           {/* Filter Bar */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               {/* Type Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
@@ -336,7 +334,7 @@ export default function InvestorPortalClient() {
                     onClick={() => setTypeFilter(t)}
                     className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition whitespace-nowrap ${
                       typeFilter === t
-                        ? "bg-blue-600 text-white shadow-xs"
+                        ? "bg-blue-600 text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
@@ -404,7 +402,7 @@ export default function InvestorPortalClient() {
             <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+                  <div key={i} className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
                     <div className="flex gap-4 items-center">
                       <Skeleton circle width={48} height={48} />
                       <div className="flex-1">
@@ -442,10 +440,10 @@ export default function InvestorPortalClient() {
               {filteredPitches.map((pitch) => {
                 const typeColor =
                   pitch.type === "PITCH"
-                    ? "bg-purple-100 text-purple-700 border-purple-200"
+                    ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
                     : pitch.type === "PRODUCT"
-                    ? "bg-blue-100 text-blue-700 border-blue-200"
-                    : "bg-amber-100 text-amber-800 border-amber-200";
+                    ? "bg-slate-100 text-slate-700 border-slate-200"
+                    : "bg-neutral-100 text-neutral-700 border-neutral-200";
 
                 const typeLabel =
                   pitch.type === "PITCH"
@@ -456,12 +454,12 @@ export default function InvestorPortalClient() {
 
                 return (
                   <ScrollReveal key={pitch.id} direction="up" delay={0.05}>
-                    <div className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition duration-200">
+                    <div className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-6 hover:border-gray-300 transition duration-150 h-full">
                       <div>
                         {/* Header: Company & Badges */}
                         <div className="flex items-start justify-between gap-3">
                           <Link href={`/profile/${pitch.userId}`} className="flex items-center gap-3 group min-w-0">
-                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gray-100 border border-gray-200">
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gray-100 border border-[#E5E7EB]">
                               {pitch.company.logoUrl ? (
                                 <Image
                                   src={pitch.company.logoUrl}
@@ -477,12 +475,12 @@ export default function InvestorPortalClient() {
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <h3 className="font-bold text-gray-900 text-sm truncate group-hover:text-blue-600 group-hover:underline">
+                                <h3 className="font-bold text-[#172033] text-sm truncate group-hover:text-[#2563EB] group-hover:underline">
                                   {pitch.company.companyName}
                                 </h3>
                                 <VerificationBadge status={pitch.company.isVerified ? "VERIFIED" : "UNVERIFIED"} size="sm" />
                               </div>
-                              <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                              <p className="text-xs text-[#64748B] truncate flex items-center gap-1 mt-0.5">
                                 {pitch.company.location && (
                                   <>
                                     <MapPin size={11} /> {pitch.company.location} ·{" "}
@@ -496,12 +494,12 @@ export default function InvestorPortalClient() {
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             {/* Average rating shown above early idea or type */}
                             <div
-                              className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200/80 shadow-2xs"
+                              className="flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200"
                               title={`Average Rating: ${Number(pitch.averageRating || 0).toFixed(1)} / 5 (${pitch.ratingCount || 0} reviews)`}
                             >
-                              <Star size={11} className="fill-amber-500 text-amber-500 shrink-0" />
+                              <Star size={11} className="fill-[#2563EB] text-[#2563EB] shrink-0" />
                               <span>{Number(pitch.averageRating || 0) > 0 ? Number(pitch.averageRating).toFixed(1) : "0.0"}</span>
-                              <span className="text-[9px] text-amber-600 font-semibold">({pitch.ratingCount || 0})</span>
+                              <span className="text-[9px] text-[#64748B] font-semibold">({pitch.ratingCount || 0})</span>
                             </div>
 
                             <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${typeColor}`}>
@@ -515,17 +513,21 @@ export default function InvestorPortalClient() {
 
                         {/* Title & Tagline */}
                         <div className="mt-4">
-                          <h4 className="text-base font-bold text-gray-900 leading-snug">
+                          <h4 className="text-base font-bold text-[#172033] leading-snug">
                             {pitch.title}
                           </h4>
                           {pitch.tagline && (
-                            <p className="mt-1 text-xs font-medium text-blue-700">
+                            <p className="mt-1 text-xs font-medium text-[#2563EB]">
                               {pitch.tagline}
                             </p>
                           )}
-                          <p className="mt-2 text-xs text-gray-600 leading-relaxed line-clamp-3">
-                            {pitch.summary}
-                          </p>
+                          <ReadMoreText
+                            text={pitch.summary}
+                            charLimit={150}
+                            title={pitch.title}
+                            subtitle={`${pitch.company.companyName} · ${pitch.sector}`}
+                            className="mt-2 text-xs text-[#64748B] leading-relaxed"
+                          />
                         </div>
 
                         {/* Highlights */}
@@ -536,7 +538,7 @@ export default function InvestorPortalClient() {
                                 key={idx}
                                 className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 border border-slate-200/60"
                               >
-                                <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                <CheckCircle2 size={12} className="text-[#2563EB] shrink-0" />
                                 {hl}
                               </span>
                             ))}
@@ -545,7 +547,7 @@ export default function InvestorPortalClient() {
                       </div>
 
                       {/* Footer: Ask / Terms + Actions */}
-                      <div className="mt-5 border-t border-gray-100 pt-4">
+                      <div className="mt-5 border-t border-[#E5E7EB] pt-4">
                         <div className="flex items-center justify-between mb-3.5">
                           {pitch.targetAmount ? (
                             <div>
@@ -572,7 +574,7 @@ export default function InvestorPortalClient() {
                             <Link
                               href={`/messages/${pitch.userId}`}
                               onClick={() => recordPitchView(pitch.id)}
-                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"
                             >
                               <MessageSquare size={13} />
                               Message
@@ -587,7 +589,7 @@ export default function InvestorPortalClient() {
                                 })
                               }
                               disabled={cancellingUserId === pitch.userId}
-                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
                               title="Connection request is pending. Click to cancel request."
                             >
                               {cancellingUserId === pitch.userId ? (
@@ -603,7 +605,7 @@ export default function InvestorPortalClient() {
                                 recordPitchView(pitch.id);
                                 setSelectedConnectCompany({ id: pitch.userId, name: pitch.company.companyName });
                               }}
-                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"
                             >
                               <Send size={13} />
                               Connect
@@ -619,7 +621,7 @@ export default function InvestorPortalClient() {
                                 companyName: pitch.company.companyName,
                               });
                             }}
-                            className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition shadow-xs"
+                            className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
                             title="Make Investment Offer"
                           >
                             <DollarSign size={13} />
@@ -635,7 +637,7 @@ export default function InvestorPortalClient() {
                                   pitchTitle: pitch.title,
                                 });
                               }}
-                              className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 transition shadow-xs"
+                              className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 transition"
                               title="Rate Idea (1-5 Stars)"
                             >
                               <Star size={13} />
@@ -665,19 +667,19 @@ export default function InvestorPortalClient() {
       {/* TAB 2: COMPANIES DOING GOOD IN SELECTED PREFERENCES */}
       {activeTab === "performers" && (
         <section className="space-y-6">
-          <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="rounded-2xl border border-[#E5E7EB] bg-[#EFF6FF] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-lg font-bold text-[#172033] flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#2563EB]" />
                 Top Performing Companies in Your Preferences
               </h2>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-[#64748B] mt-1">
                 Ranked by real network traction: weekly profile views, follower growth, verified status, and alignment with your preferred sectors ({preferences?.sectors?.join(", ") || "All"}).
               </p>
             </div>
-            <div className="rounded-xl bg-white px-4 py-2 border border-indigo-100 shadow-xs shrink-0 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Traction Ranking</span>
-              <p className="text-xs font-extrabold text-indigo-950 mt-0.5">Top 1% Network Leaders</p>
+            <div className="rounded-xl bg-white px-4 py-2 border border-[#E5E7EB] shrink-0 text-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB]">Traction Ranking</span>
+              <p className="text-xs font-extrabold text-[#172033] mt-0.5">Top 1% Network Leaders</p>
             </div>
           </div>
 
@@ -685,7 +687,7 @@ export default function InvestorPortalClient() {
             <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
+                  <div key={i} className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
                     <div className="flex gap-3">
                       <Skeleton circle width={48} height={48} />
                       <div className="flex-1">
@@ -708,12 +710,12 @@ export default function InvestorPortalClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {performers.map((company, index) => (
                 <ScrollReveal key={company.id} direction="up" delay={0.05 * index}>
-                  <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between">
+                  <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 hover:border-gray-300 transition duration-150 flex flex-col justify-between h-full">
                     <div>
                       {/* Top Bar with Score */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <Link href={`/profile/${company.userId}`} className="flex items-center gap-3 group min-w-0">
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gray-100 border border-gray-200">
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gray-100 border border-[#E5E7EB]">
                             {company.logoUrl ? (
                               <Image src={company.logoUrl} alt={company.companyName} fill className="object-cover" />
                             ) : (
@@ -724,33 +726,37 @@ export default function InvestorPortalClient() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <h3 className="font-bold text-gray-900 text-sm truncate group-hover:text-blue-600 group-hover:underline">
+                              <h3 className="font-bold text-[#172033] text-sm truncate group-hover:text-[#2563EB] group-hover:underline">
                                 {company.companyName}
                               </h3>
                               <VerificationBadge status={company.isVerified ? "VERIFIED" : "UNVERIFIED"} size="sm" />
                             </div>
-                            <p className="text-xs text-gray-500 truncate">{company.type} · {company.location || "Global"}</p>
+                            <p className="text-xs text-[#64748B] truncate">{company.type} · {company.location || "Global"}</p>
                           </div>
                         </Link>
 
                         <div className="flex flex-col items-end shrink-0">
-                          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-extrabold text-emerald-700 border border-emerald-200">
+                          <span className="rounded-full bg-[#EFF6FF] px-2.5 py-0.5 text-xs font-bold text-[#2563EB] border border-blue-200">
                             {company.matchPercentage}% Match
                           </span>
                         </div>
                       </div>
 
                       {/* Description */}
-                      <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
-                        {company.description}
-                      </p>
+                      <ReadMoreText
+                        text={company.description}
+                        charLimit={120}
+                        title={company.companyName}
+                        subtitle={`${company.type} · ${company.location || "Global"}`}
+                        className="text-xs text-[#64748B] leading-relaxed"
+                      />
 
                       {/* Performance Badges */}
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {company.badges.map((badge, bIdx) => (
                           <span
                             key={bIdx}
-                            className="rounded-md bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200/50"
+                            className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200"
                           >
                             {badge}
                           </span>
@@ -758,24 +764,24 @@ export default function InvestorPortalClient() {
                       </div>
 
                       {/* Traction Metrics */}
-                      <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-gray-50/80 p-2.5 text-center">
+                      <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#F8F4E8] border border-[#E5E7EB] p-2.5 text-center">
                         <div>
-                          <span className="block text-xs font-bold text-gray-900">{company.stats.followers}</span>
-                          <span className="text-[10px] text-gray-500">Followers</span>
+                          <span className="block text-xs font-bold text-[#172033]">{company.stats.followers}</span>
+                          <span className="text-[10px] text-[#64748B]">Followers</span>
                         </div>
                         <div>
-                          <span className="block text-xs font-bold text-gray-900">{company.stats.connections}</span>
-                          <span className="text-[10px] text-gray-500">Connections</span>
+                          <span className="block text-xs font-bold text-[#172033]">{company.stats.connections}</span>
+                          <span className="text-[10px] text-[#64748B]">Connections</span>
                         </div>
                         <div>
-                          <span className="block text-xs font-bold text-indigo-700">+{company.stats.recentViews}</span>
-                          <span className="text-[10px] text-gray-500">Views this week</span>
+                          <span className="block text-xs font-bold text-[#2563EB]">+{company.stats.recentViews}</span>
+                          <span className="text-[10px] text-[#64748B]">Views this week</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <div className="mt-auto pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-3">
                       <span className="text-[11px] font-semibold text-gray-500">
                         {company.dealIn?.length ? `Deals in: ${company.dealIn.slice(0, 2).join(", ")}` : "High Compatibility"}
                       </span>
@@ -784,7 +790,7 @@ export default function InvestorPortalClient() {
                         {company.connectionStatus === "ACCEPTED" ? (
                           <Link
                             href={`/messages/${company.userId}`}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs"
+                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
                           >
                             <MessageSquare size={12} /> Message
                           </Link>
@@ -798,7 +804,7 @@ export default function InvestorPortalClient() {
                               })
                             }
                             disabled={cancellingUserId === company.userId}
-                            className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
                             title="Connection request is pending. Click to cancel request."
                           >
                             {cancellingUserId === company.userId ? (
@@ -906,7 +912,7 @@ export default function InvestorPortalClient() {
                   setConfirmCancelTarget(null);
                   await handleCancelConnection(target.userId, target.connectionId);
                 }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition shadow-xs disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
               >
                 Yes, Cancel Request
               </button>

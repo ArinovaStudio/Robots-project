@@ -88,14 +88,14 @@ export default function RatePitchModal({
                     size={28}
                     className={`${
                       (hoverRating || rating) >= star
-                        ? "text-amber-500 fill-amber-500"
+                        ? "text-[#2563EB] fill-[#2563EB]"
                         : "text-gray-300"
                     } transition-colors`}
                   />
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-sm font-extrabold text-amber-600">{rating} out of 5 stars</p>
+            <p className="mt-1 text-sm font-extrabold text-[#2563EB]">{rating} out of 5 stars</p>
           </div>
 
           <div>

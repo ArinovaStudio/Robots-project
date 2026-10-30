@@ -45,35 +45,35 @@ export default function MarketplaceClient() {
   if (isInvestor) {
     return (
       <section className="mx-auto max-w-4xl space-y-6 pb-20 pt-4">
-        <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50/40 p-8 shadow-sm">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-[#F8F4E8] p-8 shadow-xs">
           <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-amber-100 p-3 text-amber-700 shrink-0">
+            <div className="rounded-xl bg-[#EFF6FF] border border-blue-200 p-3 text-[#2563EB] shrink-0">
               <ShieldAlert className="w-8 h-8" />
             </div>
             <div className="flex-1">
-              <span className="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-800 uppercase tracking-wider">
+              <span className="rounded-full bg-[#EFF6FF] border border-blue-200 px-3 py-0.5 text-xs font-bold text-[#2563EB] uppercase tracking-wider">
                 Investor Account Notice
               </span>
-              <h1 className="mt-2 text-2xl font-bold text-gray-900">
+              <h1 className="mt-2 text-2xl font-bold text-[#172033]">
                 Service Exchange Unavailable for Investors
               </h1>
-              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              <p className="mt-2 text-sm text-[#64748B] leading-relaxed">
                 As an investor on Connecto, you cannot exchange services. B2B service swapping and vendor matching are reserved strictly for registered business accounts.
               </p>
-              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                Instead, you have full access to our dedicated <strong className="text-gray-900">Investor Portal</strong>, where you can explore curated startup ideas, live products, active pitch decks, and connect with companies doing good in your selected preferences.
+              <p className="mt-2 text-sm text-[#64748B] leading-relaxed">
+                Instead, you have full access to our dedicated <strong className="text-[#172033]">Investor Portal</strong>, where you can explore curated startup ideas, live products, active pitch decks, and connect with companies doing good in your selected preferences.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/investors/portal"
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 transition"
                 >
                   <Sparkles className="w-4 h-4" /> Open Investor Portal <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/investors/portal?tab=performers"
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-5 py-2.5 text-sm font-semibold text-[#172033] hover:bg-gray-50 transition"
                 >
                   View Companies Matching Your Preferences
                 </Link>
@@ -88,7 +88,7 @@ export default function MarketplaceClient() {
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-xl p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-[#1E3A5F] rounded-2xl p-8 text-white shadow-xs border border-[#1E3A5F] relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <Target className="w-48 h-48" />
         </div>

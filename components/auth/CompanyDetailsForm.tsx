@@ -160,7 +160,7 @@ export default function CompanyDetailsForm() {
         <label className="text-sm font-medium text-slate-700">Services You Deal In <span className="text-red-500">*</span></label>
         <div className="flex flex-wrap gap-2 mb-2">
           {dealIn.map((item) => (
-            <span key={item} className="flex items-center gap-1 bg-[#3F6FFF]/10 text-[#3F6FFF] px-3 py-1 rounded-full text-xs font-semibold">
+            <span key={item} className="flex items-center gap-1 bg-[#EFF6FF] text-[#2563EB] border border-blue-200 px-3 py-1 rounded-full text-xs font-semibold">
               {item}
               <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(item, "dealIn")} />
             </span>

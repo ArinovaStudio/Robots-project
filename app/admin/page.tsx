@@ -258,8 +258,8 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl bg-[#eef2ff] p-3">
-                        <Icon className="h-6 w-6 text-[#4338ca]" />
+                      <div className="rounded-2xl bg-[#EFF6FF] p-3">
+                        <Icon className="h-6 w-6 text-[#2563EB]" />
                       </div>
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export default function AdminDashboard() {
               <div className="rounded-3xl bg-white p-5 shadow-sm">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-[#050a30]">
+                    <h2 className="text-lg font-bold text-[#172033]">
                       Payment Revenue
                     </h2>
 
@@ -454,7 +454,7 @@ export default function AdminDashboard() {
                       <Bar
                         dataKey="revenue"
                         radius={[12, 12, 0, 0]}
-                        fill="#4338ca"
+                        fill="#2563eb"
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
               <div className="rounded-3xl bg-white p-5 shadow-sm lg:col-span-2">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-[#050a30]">
+                    <h2 className="text-lg font-bold text-[#172033]">
                       Recent Activity
                     </h2>
 
@@ -505,12 +505,12 @@ export default function AdminDashboard() {
                           key={index}
                           className="flex items-center gap-4 rounded-2xl border p-4"
                         >
-                          <div className="rounded-2xl bg-[#eef2ff] p-3">
-                            <Icon className="h-5 w-5 text-[#4338ca]" />
+                          <div className="rounded-2xl bg-[#EFF6FF] p-3">
+                            <Icon className="h-5 w-5 text-[#2563EB]" />
                           </div>
 
                           <div className="flex-1">
-                            <h3 className="font-medium text-[#050a30]">
+                            <h3 className="font-medium text-[#172033]">
                               {item.title}
                             </h3>
 

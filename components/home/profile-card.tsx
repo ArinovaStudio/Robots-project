@@ -12,12 +12,12 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
 
   return (
     <>
-      <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden relative">
+      <div className="rounded-xl bg-white border border-gray-200 overflow-hidden relative">
         {/* Cover Image */}
         {profile.bannerUrl ? (
           <img src={profile.bannerUrl} alt="Cover" className="h-16 w-full object-cover" />
         ) : (
-          <div className="h-16 w-full bg-gradient-to-r from-blue-600 to-blue-400"></div>
+          <div className="h-16 w-full bg-[#1E3A5F]"></div>
         )}
 
         <div className="px-4 pb-4 flex flex-col items-center text-center -mt-8 relative">
@@ -26,7 +26,7 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
             <div
               className="
                 flex h-16 w-16 items-center justify-center overflow-hidden
-                rounded-full bg-white border-2 border-white shadow-sm
+                rounded-full bg-white border-2 border-white
                 text-2xl font-bold text-blue-600
               "
             >

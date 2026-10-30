@@ -4,7 +4,6 @@ import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 
 import { createServer } from "http";
-import { parse } from "url";
 import next from "next";
 import { Server } from "socket.io";
 import registerDirectChatHandlers from "./socket/directChatHandler";
@@ -21,8 +20,7 @@ const onlineUsers = new Map<string, Set<string>>();
 app.prepare().then(() => {
 
   const httpServer = createServer((req, res) => {
-    const parsedUrl = parse(req.url!, true);
-    handle(req, res, parsedUrl); 
+    handle(req, res); 
   });
 
   const io = new Server(httpServer, {

@@ -7,6 +7,7 @@ import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
 import { toast } from "sonner";
+import ReadMoreText from "@/components/ui/read-more-text";
 
 interface Performer {
   id: string;
@@ -100,13 +101,11 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
   return (
     <div className="space-y-4">
       {/* Top Banner: Deal Flow & Dynamic Counts */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 p-5 text-white shadow-md">
-        <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-blue-500/10 blur-2xl pointer-events-none" />
-
+      <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-5 text-white border border-[#1E3A5F]">
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-bold text-blue-300 border border-blue-400/30">
+              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-bold text-white border border-white/20">
                 Investor Dashboard
               </span>
               {preferences?.sectors?.length ? (
@@ -124,17 +123,17 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="rounded-xl bg-white/10 px-3.5 py-2 text-center border border-white/10 backdrop-blur-xs">
+            <div className="rounded-xl bg-white/10 px-3.5 py-2 text-center border border-white/10">
               <span className="block text-base font-extrabold text-white">{stats?.connectedCompanies ?? 0}</span>
               <span className="text-[10px] text-blue-200 font-semibold block">connected companies</span>
             </div>
-            <div className="rounded-xl bg-emerald-500/20 px-3.5 py-2 text-center border border-emerald-400/30 backdrop-blur-xs">
-              <span className="block text-base font-extrabold text-emerald-300">{stats?.investedIn ?? 0}</span>
-              <span className="text-[10px] text-emerald-200 font-semibold block">invested in</span>
+            <div className="rounded-xl bg-white/10 px-3.5 py-2 text-center border border-white/10">
+              <span className="block text-base font-extrabold text-white">{stats?.investedIn ?? 0}</span>
+              <span className="text-[10px] text-blue-200 font-semibold block">invested in</span>
             </div>
             <Link
               href="/investors/portal"
-              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
+              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition"
             >
               <Sparkles size={14} /> View Pitches
             </Link>
@@ -144,17 +143,17 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
 
       {/* Companies Doing Good in Your Preferences Widget */}
       {performers.length > 0 && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-indigo-600" />
-              <h3 className="text-sm font-bold text-gray-900">
+              <TrendingUp className="w-4 h-4 text-[#2563EB]" />
+              <h3 className="text-sm font-bold text-[#172033]">
                 Companies Doing Good in Your Preferences
               </h3>
             </div>
             <Link
               href="/investors/portal?tab=performers"
-              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-[#2563EB] hover:underline flex items-center gap-1"
             >
               See all ranked companies <ArrowRight size={13} />
             </Link>
@@ -164,12 +163,12 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
             {performers.map((company) => (
               <div
                 key={company.id}
-                className="flex flex-col justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 hover:border-gray-200 hover:bg-white transition duration-150"
+                className="flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-4 hover:border-gray-300 transition duration-150 h-full"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <Link href={`/profile/${company.userId}`} className="flex items-center gap-2.5 min-w-0">
-                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-200">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 border border-[#E5E7EB]">
                         {company.logoUrl ? (
                           <Image src={company.logoUrl} alt={company.companyName} fill className="object-cover" />
                         ) : (
@@ -179,31 +178,35 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-xs text-gray-900 truncate hover:text-blue-600 hover:underline">
+                        <h4 className="font-bold text-xs text-[#172033] truncate hover:text-[#2563EB] hover:underline">
                           {company.companyName}
                         </h4>
-                        <p className="text-[11px] text-gray-500 truncate">{company.type}</p>
+                        <p className="text-[11px] text-[#64748B] truncate">{company.type}</p>
                       </div>
                     </Link>
 
-                    <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 shrink-0">
+                    <span className="rounded-md bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#2563EB] border border-blue-200 shrink-0">
                       {company.matchPercentage}%
                     </span>
                   </div>
 
-                  <p className="mt-2 text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
-                    {company.description}
-                  </p>
+                  <ReadMoreText
+                    text={company.description}
+                    charLimit={90}
+                    title={company.companyName}
+                    subtitle={`${company.type} · ${company.location || "Global"}`}
+                    className="mt-2 text-[11px] text-[#64748B] leading-relaxed"
+                  />
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-[10px] text-indigo-700 font-semibold">
+                <div className="mt-3 pt-2.5 border-t border-[#E5E7EB] flex items-center justify-between">
+                  <span className="text-[10px] text-[#2563EB] font-semibold">
                     +{company.stats.recentViews} views this wk
                   </span>
                   {company.connectionStatus === "ACCEPTED" ? (
                     <Link
                       href={`/messages/${company.userId}`}
-                      className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700 transition"
+                      className="inline-flex items-center gap-1 rounded-md bg-[#2563EB] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700 transition"
                     >
                       <MessageSquare size={11} /> Message
                     </Link>
@@ -217,7 +220,7 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                         })
                       }
                       disabled={cancellingUserId === company.userId}
-                      className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-md bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-bold text-[#2563EB] border border-blue-200 hover:bg-blue-100 transition disabled:opacity-50 cursor-pointer"
                       title="Connection request is pending. Click to cancel request."
                     >
                       {cancellingUserId === company.userId ? (
@@ -230,7 +233,7 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                   ) : (
                     <button
                       onClick={() => setConnectTarget({ id: company.userId, name: company.companyName })}
-                      className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 transition"
+                      className="rounded-lg bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 transition"
                     >
                       Connect
                     </button>
@@ -241,13 +244,13 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
           </div>
 
           {/* Action button below Top Performers on main explore */}
-          <div className="mt-4 pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <span className="text-xs text-gray-500 font-medium">
+          <div className="mt-4 pt-3.5 border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <span className="text-xs text-[#64748B] font-medium">
               Want to see and manage your submitted pitches and investment offers?
             </span>
             <Link
               href="/investors/my-pitches"
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200/80 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-2xs shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-[#E5E7EB] px-3.5 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-gray-50 transition shrink-0"
             >
               <Landmark size={13} />
               My Pitches
@@ -288,7 +291,7 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                   setConfirmCancelTarget(null);
                   await handleCancelConnection(target.userId, target.connectionId);
                 }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition shadow-xs disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
               >
                 Yes, Cancel Request
               </button>

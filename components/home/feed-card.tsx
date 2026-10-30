@@ -12,6 +12,7 @@ import MediaSlider from "./media-slider";
 import Link from "next/link";
 import Image from "next/image";
 import VerificationBadge from "@/components/ui/VerificationBadge";
+import ReadMoreText from "@/components/ui/read-more-text";
 
 export default function FeedCard({ post, currentUser, onUnsave }: { post: any, currentUser: any, onUnsave?: () => void }) {
   const [isDeleted, setIsDeleted] = useState(false);
@@ -176,58 +177,63 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         </div>
 
         {/* Content */}
-        <div className="mt-3 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-          {currentPost.content}
+        <div className="mt-3 text-sm leading-relaxed text-[#172033]">
+          <ReadMoreText
+            text={currentPost.content}
+            charLimit={260}
+            title={`Post by ${authorName}`}
+            className="text-sm leading-relaxed text-[#172033] whitespace-pre-wrap"
+          />
         </div>
 
         {/* Event Card */}
         {currentPost.event && (
-          <div className="mt-4 rounded-xl border border-orange-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition">
-            <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 flex items-center justify-between">
+          <div className="mt-4 rounded-xl border border-[#E5E7EB] overflow-hidden bg-white">
+            <div className="bg-[#1E3A5F] p-4 flex items-center justify-between text-white">
               <div>
-                <span className="inline-block px-2 py-1 bg-white/20 text-white text-xs font-semibold rounded-full mb-2 backdrop-blur-sm">
+                <span className="inline-block px-2.5 py-0.5 bg-white/20 text-white text-[11px] font-semibold rounded-full mb-1.5">
                   Upcoming Event
                 </span>
-                <h3 className="text-lg font-bold text-white line-clamp-2">{currentPost.event.title}</h3>
+                <h3 className="text-base font-bold text-white line-clamp-2">{currentPost.event.title}</h3>
               </div>
-              <div className="flex flex-col items-center justify-center bg-white rounded-lg p-2 min-w-16 shadow-inner shrink-0 ml-4">
-                <span className="text-xs font-bold text-orange-600 uppercase">
+              <div className="flex flex-col items-center justify-center bg-white rounded-lg p-2 min-w-16 shrink-0 ml-4">
+                <span className="text-[11px] font-bold text-[#2563EB] uppercase">
                   {new Date(currentPost.event.date).toLocaleString('default', { month: 'short' })}
                 </span>
-                <span className="text-xl font-black text-gray-900 leading-none">
+                <span className="text-lg font-black text-[#172033] leading-none">
                   {new Date(currentPost.event.date).getDate()}
                 </span>
               </div>
             </div>
             
-            <div className="p-4 bg-orange-50/50">
+            <div className="p-4 bg-[#F8F4E8]">
               <div className="flex flex-col gap-2">
-                <div className="flex items-start gap-2 text-gray-700">
-                  <CalendarDays className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
+                <div className="flex items-start gap-2 text-[#172033]">
+                  <CalendarDays className="w-4 h-4 mt-0.5 shrink-0 text-[#2563EB]" />
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-[#172033]">
                       {new Date(currentPost.event.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
-                    <p className="text-gray-500">
+                    <p className="text-xs text-[#64748B]">
                       {new Date(currentPost.event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
                 
                 {currentPost.event.location && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                    <MapPin className="w-4 h-4 shrink-0 text-orange-500" />
+                  <div className="flex items-center gap-2 text-xs text-[#64748B] mt-1">
+                    <MapPin className="w-4 h-4 shrink-0 text-[#2563EB]" />
                     <span className="truncate">{currentPost.event.location}</span>
                   </div>
                 )}
                 
                 {currentPost.event.link && (
-                  <div className="mt-3 pt-3 border-t border-orange-100 flex justify-end">
+                  <div className="mt-3 pt-3 border-t border-[#E5E7EB] flex justify-end">
                     <a 
                       href={currentPost.event.link}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-sm font-semibold rounded-full transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-gray-50 text-[#2563EB] border border-[#E5E7EB] text-xs font-semibold rounded-full transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       Event Link

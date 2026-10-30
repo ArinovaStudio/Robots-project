@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import AddPitchModal from "@/components/modals/add-pitch-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
+import ReadMoreText from "@/components/ui/read-more-text";
 
 interface CreatedPitch {
   id: string;
@@ -160,13 +161,10 @@ export default function InvestorPitchesClient() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-24">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 p-8 text-white shadow-xl">
-        <div className="absolute right-0 top-0 h-96 w-96 translate-x-1/3 -translate-y-1/3 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-64 w-64 translate-y-1/2 rounded-full bg-indigo-500/15 blur-2xl" />
-
+      <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-8 text-white border border-[#1E3A5F]">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-3 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-3">
               <Landmark className="w-3.5 h-3.5 text-blue-300" />
               <span>Investor Deal Pipeline</span>
             </div>
@@ -181,14 +179,14 @@ export default function InvestorPitchesClient() {
           <div className="flex flex-wrap sm:flex-nowrap md:flex-col gap-2.5 shrink-0">
             <button
               onClick={() => setShowAddPitchModal(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-md hover:from-blue-600 hover:to-indigo-700 transition"
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-sm font-bold text-white transition"
             >
               <PlusCircle className="w-4 h-4" />
               Publish Pitch / Idea
             </button>
             <Link
               href="/investors/portal"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition backdrop-blur-xs"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition"
             >
               <Compass className="w-3.5 h-3.5" />
               Explore Investor Portal
@@ -236,29 +234,29 @@ export default function InvestorPitchesClient() {
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Pitches Created</span>
-          <p className="mt-1 text-2xl font-black text-gray-900">{stats.createdCount}</p>
-          <span className="text-[11px] text-gray-500">Published to portal</span>
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Pitches Created</span>
+          <p className="mt-1 text-2xl font-black text-[#172033]">{stats.createdCount}</p>
+          <span className="text-[11px] text-[#64748B]">Published to portal</span>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Offers Submitted</span>
-          <p className="mt-1 text-2xl font-black text-blue-600">{stats.offersCount}</p>
-          <span className="text-[11px] text-gray-500">Startup investment offers</span>
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Offers Submitted</span>
+          <p className="mt-1 text-2xl font-black text-[#2563EB]">{stats.offersCount}</p>
+          <span className="text-[11px] text-[#64748B]">Startup investment offers</span>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Capital Offered</span>
-          <p className="mt-1 text-2xl font-black text-emerald-600">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Capital Offered</span>
+          <p className="mt-1 text-2xl font-black text-[#172033]">
             {stats.totalOfferedAmount > 0
               ? formatTargetAmount(stats.totalOfferedAmount)
               : "₹0"}
           </p>
-          <span className="text-[11px] text-gray-500">Across pending & accepted</span>
+          <span className="text-[11px] text-[#64748B]">Across pending & accepted</span>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Deals Evaluated</span>
-          <p className="mt-1 text-2xl font-black text-amber-600">{stats.ratingsCount}</p>
-          <span className="text-[11px] text-gray-500">Reviews & ratings provided</span>
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Deals Evaluated</span>
+          <p className="mt-1 text-2xl font-black text-[#2563EB]">{stats.ratingsCount}</p>
+          <span className="text-[11px] text-[#64748B]">Reviews & ratings provided</span>
         </div>
       </div>
 
@@ -296,10 +294,10 @@ export default function InvestorPitchesClient() {
               {createdPitches.map((pitch) => {
                 const typeColor =
                   pitch.type === "PITCH"
-                    ? "bg-purple-100 text-purple-700 border-purple-200"
+                    ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
                     : pitch.type === "PRODUCT"
-                    ? "bg-blue-100 text-blue-700 border-blue-200"
-                    : "bg-amber-100 text-amber-800 border-amber-200";
+                    ? "bg-slate-100 text-slate-700 border-slate-200"
+                    : "bg-neutral-100 text-neutral-700 border-neutral-200";
 
                 const typeLabel =
                   pitch.type === "PITCH"
@@ -310,23 +308,23 @@ export default function InvestorPitchesClient() {
 
                 return (
                   <ScrollReveal key={pitch.id} direction="up" delay={0.05}>
-                    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 hover:border-gray-300 transition flex flex-col justify-between h-full">
                       <div>
                         {/* Header */}
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <span className="text-xs font-medium text-gray-400">{pitch.sector}</span>
-                            <h3 className="text-base font-bold text-gray-900 mt-0.5">{pitch.title}</h3>
+                            <span className="text-xs font-medium text-[#64748B]">{pitch.sector}</span>
+                            <h3 className="text-base font-bold text-[#172033] mt-0.5">{pitch.title}</h3>
                             {pitch.tagline && (
-                              <p className="text-xs font-medium text-blue-700 mt-0.5">{pitch.tagline}</p>
+                              <p className="text-xs font-medium text-[#2563EB] mt-0.5">{pitch.tagline}</p>
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             {/* Average rating */}
-                            <div className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200/80">
-                              <Star size={11} className="fill-amber-500 text-amber-500 shrink-0" />
+                            <div className="flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+                              <Star size={11} className="fill-[#2563EB] text-[#2563EB] shrink-0" />
                               <span>{Number(pitch.averageRating || 0) > 0 ? Number(pitch.averageRating).toFixed(1) : "0.0"}</span>
-                              <span className="text-[9px] text-amber-600 font-semibold">({pitch.ratingCount || 0})</span>
+                              <span className="text-[9px] text-[#64748B] font-semibold">({pitch.ratingCount || 0})</span>
                             </div>
                             <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${typeColor}`}>
                               {typeLabel}
@@ -337,10 +335,16 @@ export default function InvestorPitchesClient() {
                           </div>
                         </div>
 
-                        {/* Summary */}
-                        <p className="mt-3 text-xs text-gray-600 line-clamp-3 leading-relaxed">
-                          {pitch.summary}
-                        </p>
+                        {/* Summary with ReadMoreText */}
+                        <div className="mt-3">
+                          <ReadMoreText
+                            text={pitch.summary}
+                            charLimit={150}
+                            title={pitch.title}
+                            subtitle={`${pitch.stage} · ${pitch.sector}`}
+                            className="text-xs text-[#64748B] leading-relaxed"
+                          />
+                        </div>
 
                         {/* Highlights */}
                         {pitch.highlights?.length > 0 && (
@@ -350,7 +354,7 @@ export default function InvestorPitchesClient() {
                                 key={idx}
                                 className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 border border-slate-200/60"
                               >
-                                <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                <CheckCircle2 size={12} className="text-[#2563EB] shrink-0" />
                                 {hl}
                               </span>
                             ))}
@@ -359,7 +363,7 @@ export default function InvestorPitchesClient() {
                       </div>
 
                       {/* Footer: Ask / Stats */}
-                      <div className="mt-5 border-t border-gray-100 pt-4">
+                      <div className="mt-5 border-t border-[#E5E7EB] pt-4">
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <span className="text-[10px] uppercase font-bold text-gray-400">Target Raise</span>
@@ -376,20 +380,20 @@ export default function InvestorPitchesClient() {
                         </div>
 
                         {/* Traction Metrics */}
-                        <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-2 text-center text-xs">
+                        <div className="grid grid-cols-3 gap-2 rounded-xl bg-[#F8F4E8] border border-[#E5E7EB] p-2 text-center text-xs">
                           <div>
-                            <span className="block font-bold text-gray-900">{pitch.viewCount}</span>
-                            <span className="text-[10px] text-gray-500">Views</span>
+                            <span className="block font-bold text-[#172033]">{pitch.viewCount}</span>
+                            <span className="text-[10px] text-[#64748B]">Views</span>
                           </div>
                           <div>
-                            <span className="block font-bold text-emerald-700">{pitch.offerCount}</span>
-                            <span className="text-[10px] text-gray-500">Offers</span>
+                            <span className="block font-bold text-[#2563EB]">{pitch.offerCount}</span>
+                            <span className="text-[10px] text-[#64748B]">Offers</span>
                           </div>
                           <div>
-                            <span className="block font-bold text-amber-700">
+                            <span className="block font-bold text-[#2563EB]">
                               {Number(pitch.averageRating || 0) > 0 ? Number(pitch.averageRating).toFixed(1) : "0.0"}★
                             </span>
-                            <span className="text-[10px] text-gray-500">Rating</span>
+                            <span className="text-[10px] text-[#64748B]">Rating</span>
                           </div>
                         </div>
                       </div>
@@ -442,7 +446,7 @@ export default function InvestorPitchesClient() {
 
                 return (
                   <ScrollReveal key={offer.id} direction="up" delay={0.03}>
-                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5 hover:border-gray-300 transition">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
@@ -469,7 +473,7 @@ export default function InvestorPitchesClient() {
                               type="button"
                               onClick={() => setConfirmCancelOfferTarget(offer)}
                               disabled={cancellingOfferId === offer.id}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition cursor-pointer shadow-xs disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition cursor-pointer disabled:opacity-50"
                               title="Click to cancel pending investment offer"
                             >
                               {cancellingOfferId === offer.id ? (
@@ -542,7 +546,7 @@ export default function InvestorPitchesClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {ratings.map((rating) => (
                 <ScrollReveal key={rating.id} direction="up" delay={0.03}>
-                  <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs flex flex-col justify-between">
+                  <div className="rounded-2xl border border-gray-200 bg-white p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -550,8 +554,8 @@ export default function InvestorPitchesClient() {
                           <h4 className="text-sm font-bold text-gray-900 mt-0.5">{rating.pitchTitle}</h4>
                           <span className="text-[11px] text-gray-500">{rating.sector} · {rating.stage}</span>
                         </div>
-                        <div className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-200">
-                          <Star size={13} className="fill-amber-500 text-amber-500" />
+                        <div className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700 border border-slate-200">
+                          <Star size={13} className="fill-[#2563EB] text-[#2563EB]" />
                           <span>{rating.rating} / 5</span>
                         </div>
                       </div>
@@ -625,7 +629,7 @@ export default function InvestorPitchesClient() {
                   setConfirmCancelOfferTarget(null);
                   await handleCancelOffer(target);
                 }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition shadow-xs disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
               >
                 Yes, Cancel Offer
               </button>

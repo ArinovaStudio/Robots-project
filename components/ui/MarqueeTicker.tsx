@@ -27,14 +27,14 @@ export default function MarqueeTicker({
 
   return (
     <div
-      className={`relative overflow-hidden border-y border-white/[0.08] bg-[#0a0a0a] py-3 ${className}`}
+      className={`relative overflow-hidden border-y border-white/[0.08] bg-[#1E3A5F] py-3 ${className}`}
     >
       {/* Left fade mask */}
       <div
         className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24"
         style={{
           background:
-            "linear-gradient(to right, #0a0a0a 0%, transparent 100%)",
+            "linear-gradient(to right, #1E3A5F 0%, transparent 100%)",
         }}
       />
       {/* Right fade mask */}
@@ -42,7 +42,7 @@ export default function MarqueeTicker({
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24"
         style={{
           background:
-            "linear-gradient(to left, #0a0a0a 0%, transparent 100%)",
+            "linear-gradient(to left, #1E3A5F 0%, transparent 100%)",
         }}
       />
 

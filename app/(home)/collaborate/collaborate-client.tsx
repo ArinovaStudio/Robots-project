@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
-import ConnectionRequests from "@/components/home/connection-requests";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { Users, Briefcase } from "lucide-react";
 
+type CompanyLike = {
+  id: string | number;
+  [key: string]: unknown;
+};
+
 export default function CollaborateClient() {
   const [activeTab, setActiveTab] = useState<"suggested" | "similar">("suggested");
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<CompanyLike[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMatches = async (type: "suggested" | "similar") => {
@@ -27,17 +31,13 @@ export default function CollaborateClient() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMatches(activeTab);
   }, [activeTab]);
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       <h1 className="sr-only">Business Collaboration & Matching</h1>
-      
-      {/* Connection Requests */}
-      <div className="-mt-4">
-        <ConnectionRequests />
-      </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-lg border border-gray-200 p-1 shadow-sm flex items-center">
@@ -85,7 +85,7 @@ export default function CollaborateClient() {
           </SkeletonTheme>
         ) : companies.length === 0 ? (
            <div className="text-center py-20 text-gray-500 bg-white rounded-lg border border-gray-200 shadow-sm">
-             No {activeTab === "suggested" ? "suggested partners" : "similar businesses"} found. Try updating your profile's needs and offerings.
+             No {activeTab === "suggested" ? "suggested partners" : "similar businesses"} found. Try updating your profile&apos;s needs and offerings.
            </div>
         ) : (
           <div className="grid gap-0">

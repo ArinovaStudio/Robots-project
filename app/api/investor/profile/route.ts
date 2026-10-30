@@ -239,3 +239,161 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function GET() {
+  try {
+    const { user, error } = await getUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const investor = await prisma.investorProfile.findUnique({
+      where: { userId: user.id },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            image: true,
+            verificationStatus: true,
+          }
+        }
+      }
+    });
+
+    if (!investor) {
+      return NextResponse.json({ success: false, message: "Investor profile not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...investor,
+        name: investor.user.name,
+        image: investor.user.image,
+      }
+    }, { status: 200 });
+  } catch (err: any) {
+    console.error("Failed to fetch investor profile:", err);
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { user, error } = await getUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    let parsedProfile: any;
+    let photo: File | null = null;
+
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      parsedProfile = await request.json();
+    } else if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await request.formData();
+      const rawProfile = formData.get("profile");
+      if (typeof rawProfile === "string") {
+        try {
+          parsedProfile = JSON.parse(rawProfile);
+        } catch {
+          return NextResponse.json({ success: false, message: "Investor profile data is invalid." }, { status: 400 });
+        }
+      } else {
+        const sectors = formData.getAll("sectors").length > 0
+          ? formData.getAll("sectors").map(String)
+          : (formData.get("sectors") ? String(formData.get("sectors")).split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+        
+        const stages = formData.getAll("stages").length > 0
+          ? formData.getAll("stages").map(String)
+          : (formData.get("stages") ? String(formData.get("stages")).split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+
+        parsedProfile = {
+          name: formData.get("name"),
+          investorType: formData.get("investorType"),
+          firmName: formData.get("firmName") || "",
+          sectors,
+          stages,
+          investmentRange: formData.get("investmentRange"),
+          location: formData.get("location") || "",
+          website: formData.get("website") || "",
+          linkedInUrl: formData.get("linkedInUrl") || "",
+          investmentThesis: formData.get("investmentThesis") || "",
+          phone: formData.get("phone") || "",
+        };
+      }
+      const rawPhoto = formData.get("profilePhoto") || formData.get("photo") || formData.get("image");
+      if (rawPhoto instanceof File && rawPhoto.size > 0) {
+        photo = rawPhoto;
+      }
+    } else {
+      parsedProfile = await request.json();
+    }
+
+    const validation = profileSchema.safeParse(parsedProfile);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, message: validation.error.issues[0]?.message || "Invalid profile data." },
+        { status: 400 },
+      );
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { investor: true },
+    });
+    if (!existingUser || !existingUser.investor) {
+      return NextResponse.json({ success: false, message: "Investor profile not found." }, { status: 404 });
+    }
+
+    const profile = validation.data;
+    let image = existingUser.image;
+    if (photo instanceof File && photo.size > 0) {
+      if (photo.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ success: false, message: "Profile photo must be 5MB or smaller." }, { status: 400 });
+      }
+      image = await uploadImage(photo, "investor-profiles");
+    }
+
+    const locationsArray = profile.locations && profile.locations.length > 0
+      ? profile.locations
+      : (profile.location ? [profile.location] : []);
+
+    await prisma.$transaction([
+      prisma.investorProfile.update({
+        where: { userId: user.id },
+        data: {
+          investorType: profile.investorType,
+          firmName: profile.firmName || null,
+          phone: profile.phone || null,
+          country: profile.country || null,
+          city: profile.city || null,
+          linkedInUrl: profile.linkedInUrl || null,
+          typicalInvestmentAmount: profile.typicalInvestmentAmount || profile.investmentRange,
+          currency: profile.currency || "USD",
+          stages: profile.stages,
+          sectors: profile.sectors,
+          investmentRange: profile.investmentRange,
+          location: profile.location || null,
+          website: profile.website || null,
+          locations: locationsArray,
+          investmentThesis: profile.investmentThesis || null,
+        },
+      }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: profile.name,
+          image,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true, message: "Investor profile updated successfully." }, { status: 200 });
+  } catch (err: any) {
+    console.error("Failed to update investor profile:", err);
+    return NextResponse.json({ success: false, message: err?.message || "Failed to update profile." }, { status: 500 });
+  }
+}

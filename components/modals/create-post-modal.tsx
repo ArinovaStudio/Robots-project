@@ -230,10 +230,10 @@ export default function CreatePostModal({
           {/* Footer Actions */}
           <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 bg-gray-50/50">
             <div className="flex items-center gap-1">
-              <ActionButton icon={<ImageIcon className="w-5 h-5" />} tooltip="Add Photo" onClick={() => imageInputRef.current?.click()} disabled={loading} color="text-blue-500" />
-              <ActionButton icon={<Video className="w-5 h-5" />} tooltip="Add Video" onClick={() => videoInputRef.current?.click()} disabled={loading} color="text-green-600" />
-              <ActionButton icon={<CalendarDays className="w-5 h-5" />} tooltip="Create Event" onClick={() => setIsEventModalOpen(true)} disabled={loading || !!eventData} color="text-orange-500" />
-              <ActionButton icon={<FileText className="w-5 h-5" />} tooltip="Add Document" onClick={() => docInputRef.current?.click()} disabled={loading} color="text-red-500" />
+              <ActionButton icon={<ImageIcon className="w-5 h-5" />} tooltip="Add Photo" onClick={() => imageInputRef.current?.click()} disabled={loading} color="text-[#2563EB]" />
+              <ActionButton icon={<Video className="w-5 h-5" />} tooltip="Add Video" onClick={() => videoInputRef.current?.click()} disabled={loading} color="text-[#2563EB]" />
+              <ActionButton icon={<CalendarDays className="w-5 h-5" />} tooltip="Create Event" onClick={() => setIsEventModalOpen(true)} disabled={loading || !!eventData} color="text-[#2563EB]" />
+              <ActionButton icon={<FileText className="w-5 h-5" />} tooltip="Add Document" onClick={() => docInputRef.current?.click()} disabled={loading} color="text-[#2563EB]" />
             </div>
 
             <button

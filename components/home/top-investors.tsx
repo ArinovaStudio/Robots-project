@@ -87,7 +87,7 @@ export default function TopInvestors() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-3.5">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -125,7 +125,7 @@ export default function TopInvestors() {
             </p>
             <Link
               href="/investors/portal"
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-2xs hover:bg-gray-50 transition-colors"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
             >
               Browse Investor Portal →
             </Link>
@@ -138,7 +138,7 @@ export default function TopInvestors() {
             return (
               <div key={investor.id} className="flex gap-3 items-start group">
                 <Link href={`/profile/${investor.id}`} className="shrink-0">
-                  <div className="h-11 w-11 rounded-full relative overflow-hidden bg-gradient-to-br from-indigo-50 to-blue-100 border border-gray-100 cursor-pointer hover:opacity-90 transition-opacity">
+                  <div className="h-11 w-11 rounded-full relative overflow-hidden bg-[#EFF6FF] border border-[#E5E7EB] cursor-pointer hover:opacity-90 transition-opacity">
                     {investor.image ? (
                       <Image
                         alt={investor.name}
@@ -147,7 +147,7 @@ export default function TopInvestors() {
                         className="object-cover"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm font-bold text-indigo-700">
+                      <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[#2563EB]">
                         {investor.name.charAt(0).toUpperCase()}
                       </div>
                     )}

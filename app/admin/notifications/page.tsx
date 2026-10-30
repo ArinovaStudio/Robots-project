@@ -236,7 +236,7 @@ export default function AdminNotificationsPage() {
             onClick={() => setActiveTab("ALL")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition whitespace-nowrap ${
               activeTab === "ALL"
-                ? "bg-[#050a30] text-white shadow-xs"
+                ? "bg-[#1E3A5F] text-white shadow-xs"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >

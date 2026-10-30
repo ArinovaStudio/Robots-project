@@ -182,7 +182,7 @@ export default function Topbar({ setMobileOpen }: Props) {
             <button className="flex items-center gap-3 rounded-2xl p-1 pr-2 transition-colors hover:bg-muted">
               <Avatar className="h-9 w-9 border">
                 {image ? <AvatarImage src={image} alt={name} /> : null}
-                <AvatarFallback className="bg-[#050a30] text-sm font-semibold text-white">
+                <AvatarFallback className="bg-[#1E3A5F] text-sm font-semibold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>

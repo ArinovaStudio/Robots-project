@@ -103,7 +103,7 @@ export default function HeroSection({
     : [title];
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-[#0a0a0a] text-white ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl bg-[#1E3A5F] text-white border border-[#1E3A5F] ${className}`}>
 
       {/* ── Background animated grid bars ── */}
       {/* Outer wrapper: mask fades bars from transparent at top → fully visible ~45% down */}
@@ -127,18 +127,6 @@ export default function HeroSection({
         <VBar delay={0.20} left="50%" />
         <VBar delay={0.28} left="70%" />
         <VBar delay={0.36} left="90%" />
-
-        {/* Radial indigo glow — sits inside mask so it also fades at top */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.6, delay: 0.2 }}
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 65% 55% at 50% 65%, rgba(99,102,241,0.18) 0%, transparent 70%)",
-          }}
-        />
       </div>
 
       {/* Edge border lines — NOT masked, draw across full width */}
@@ -167,7 +155,7 @@ export default function HeroSection({
         {/* Badge pill */}
         {badge && (
           <motion.div variants={badgeVariants} className="mb-6 inline-flex">
-            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/60 backdrop-blur-sm">
+            <span className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90">
               {badge}
             </span>
           </motion.div>
@@ -180,7 +168,7 @@ export default function HeroSection({
               highlight && part.toLowerCase() === highlight.toLowerCase() ? (
                 <span
                   key={i}
-                  className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
+                  className="text-blue-300"
                 >
                   {part}
                 </span>

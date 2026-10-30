@@ -8,9 +8,26 @@ interface CompanyProfileWithVectors extends CompanyProfile {
   similarity?: number;
 }
 
+async function getFallbackCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
+  return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
+    SELECT cp.*
+    FROM "CompanyProfile" cp
+    INNER JOIN "User" u ON cp."userId" = u.id
+    WHERE cp."userId" != ${userId}
+      AND u.status = 'ACTIVE'
+      AND NOT EXISTS (
+        SELECT 1 FROM "Connection" c
+        WHERE (c."senderId" = ${userId} AND c."receiverId" = cp."userId")
+           OR (c."senderId" = cp."userId" AND c."receiverId" = ${userId})
+      )
+    ORDER BY cp."isBoosted" DESC, cp."companyName" ASC
+    LIMIT 40
+  `;
+}
+
 export async function getSimilarCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
   const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
-  if (!userProfile) return [];
+  if (!userProfile || !userProfile.offeringVector) return getFallbackCompanies(userId);
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
     SELECT cp.*, 

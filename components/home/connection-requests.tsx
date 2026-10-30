@@ -69,7 +69,7 @@ export default function ConnectionRequests() {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm mt-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
       <h3 className="text-base font-semibold text-gray-900 mb-4">Pending Requests</h3>
 
       <div>
@@ -122,7 +122,7 @@ export default function ConnectionRequests() {
                     <div className="flex items-center gap-1.5 truncate">
                       <p className="text-xs text-gray-500 truncate">{req.type}</p>
                       {req.isInvestor && (
-                        <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold text-purple-700 border border-purple-200 shrink-0">
+                        <span className="rounded bg-[#EFF6FF] px-1.5 py-0.5 text-[9px] font-bold text-[#2563EB] border border-blue-200 shrink-0">
                           Investor
                         </span>
                       )}

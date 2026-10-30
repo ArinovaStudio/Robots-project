@@ -18,21 +18,21 @@ export default function ErrorScreen({
   const router = useRouter();
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-white via-gray-50 to-[#eef2ff] p-6">
+    <div className="flex h-screen w-full items-center justify-center bg-[#F8F4E8] p-6">
       <div className="max-w-md w-full text-center space-y-6">
         
         {/* Icon */}
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
-          <AlertTriangle className="h-7 w-7 text-red-500" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 border border-red-200">
+          <AlertTriangle className="h-7 w-7 text-red-600" />
         </div>
 
         {/* Text */}
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-[#050a30]">
+          <h1 className="text-2xl font-bold text-[#172033]">
             {title}
           </h1>
 
-          <p className="text-sm text-gray-500 leading-relaxed">
+          <p className="text-sm text-[#64748B] leading-relaxed">
             {message}
           </p>
         </div>
@@ -43,7 +43,7 @@ export default function ErrorScreen({
           {onRetry && (
             <Button
               onClick={onRetry}
-              className="rounded-xl bg-[#050a30] text-white"
+              className="rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white shadow-xs"
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
               Try Again
@@ -52,7 +52,7 @@ export default function ErrorScreen({
 
           <Button
             variant="outline"
-            className="rounded-xl"
+            className="rounded-xl border-[#E5E7EB] bg-white text-[#172033] hover:bg-gray-50"
             onClick={() => router.push("/")}
           >
             <Home className="mr-2 h-4 w-4" />

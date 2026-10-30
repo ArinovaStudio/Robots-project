@@ -10,7 +10,12 @@ export default async function proxy(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json" ||
+    pathname === "/llms.txt" ||
+    pathname.endsWith(".webmanifest") ||
+    pathname.endsWith(".ico")
   ) {
     return NextResponse.next();
   }
@@ -46,7 +51,10 @@ export default async function proxy(req: NextRequest) {
     pathname === "/marketplace" ||
     pathname === "/collaborate" ||
     pathname === "/investors" ||
-    pathname.startsWith("/profile/");
+    pathname.startsWith("/profile/") ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json" ||
+    pathname === "/llms.txt";
 
   if (isPublicPath) {
     return NextResponse.next();
@@ -77,6 +85,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|manifest.json|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf)).*)",
   ],
 };

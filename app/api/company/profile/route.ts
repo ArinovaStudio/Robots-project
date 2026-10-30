@@ -70,15 +70,26 @@ export async function GET() {
   }
 }
 
+const optionalWebsite = z.preprocess((val) => {
+  if (val === null || val === undefined) return "";
+  if (typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+}, z.string().url("Please enter a valid website URL.").optional().or(z.literal("")));
+
 const profileSchema = z.object({
   companyName: z.string().min(2, "Company name must be at least 2 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
-  size: z.coerce.number({ message: "Company size must be a number." }).int("Company size must be a whole number.").positive("Company size must be a positive number."),
+  size: z.coerce.number({ message: "Company size must be a number." }).int("Company size must be a whole number.").positive("Company size must be a positive number.").default(1),
   type: z.string().min(2, "Please select a company type."),
-  yearOfEstablishment: z.coerce.number({ message: "Founded year must be a number." }).int("Founded year must be a whole number."),
+  yearOfEstablishment: z.coerce.number({ message: "Founded year must be a number." }).int("Founded year must be a whole number.").default(new Date().getFullYear()),
   dealIn: z.array(z.string()).min(1, "Please select at least one service you deal in."),
-  website: z.string().url("Please enter a valid website URL.").optional().or(z.literal("")),
-  location: z.string().optional(),
+  website: optionalWebsite,
+  location: z.string().optional().default(""),
   lookingFor: z.array(z.string()).optional().default([]),
 });
 
@@ -203,10 +214,19 @@ export async function PUT(req: NextRequest) {
       bannerUrl = await uploadImage(newBanner, "banners");
     }
 
-    await prisma.companyProfile.update({
-      where: { userId: user.id },
-      data: { ...validation.data, logoUrl, bannerUrl }
-    });
+    await prisma.$transaction([
+      prisma.companyProfile.update({
+        where: { userId: user.id },
+        data: { ...validation.data, logoUrl, bannerUrl }
+      }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: validation.data.companyName,
+          ...(logoUrl && { image: logoUrl })
+        }
+      })
+    ]);
 
     (async () => {
       const aiDataset = await generateUserDataset(validation.data.type, validation.data.dealIn);
@@ -221,10 +241,11 @@ export async function PUT(req: NextRequest) {
       }
 
       await syncVectors(user.id, validation.data.description, validation.data.dealIn, combinedNeeds);
-    })();
+    })().catch((err) => console.error("Background AI generation error:", err));
 
     return NextResponse.json({ success: true, message: "Profile updated successfully" }, { status: 200 });
-  } catch {
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  } catch (err: any) {
+    console.error("Error updating company profile:", err);
+    return NextResponse.json({ success: false, message: err?.message || "Internal server error" }, { status: 500 });
   }
 }

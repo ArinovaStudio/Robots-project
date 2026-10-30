@@ -10,10 +10,7 @@ import {
   Handshake,
   Landmark,
   Compass,
-  Lock,
-  Layers,
   Bookmark,
-  Users,
   Sparkles,
   TrendingUp,
   type LucideIcon,
@@ -53,12 +50,6 @@ export default function MenuCard() {
       label: "Collaborate",
       href: "/collaborate",
     },
-    {
-      icon: Landmark,
-      label: "My Pitches & Funding",
-      badge: "Pitches",
-      href: "/company/pitches",
-    },
   ];
 
   const investorMenu: MenuItem[] = [
@@ -80,12 +71,6 @@ export default function MenuCard() {
       href: "/investors/portal?tab=performers",
     },
     {
-      icon: Landmark,
-      label: "My Pitches",
-      badge: "Pitches",
-      href: "/investors/my-pitches",
-    },
-    {
       icon: Building2,
       label: "Directory",
       href: "/directory",
@@ -99,16 +84,23 @@ export default function MenuCard() {
 
   const menu = isInvestor ? investorMenu : companyMenu;
 
-  const quickLinks = isInvestor
-    ? []
-    : [
-      { icon: Layers, label: "My Posts", href: "/profile/my-posts" },
-      { icon: Bookmark, label: "Saved Posts", href: "/profile/saved-posts" },
-      { icon: Users, label: "Groups", href: "/groups" },
-    ];
+  // Below Collaborate: keep only saved pitches and saved posts
+  const belowCollaborateLinks: MenuItem[] = [
+    {
+      icon: Landmark,
+      label: "Saved Pitches",
+      badge: "Pitches",
+      href: isInvestor ? "/investors/my-pitches" : "/company/pitches",
+    },
+    {
+      icon: Bookmark,
+      label: "Saved Posts",
+      href: "/profile/saved-posts",
+    },
+  ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-col gap-1.5">
+    <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-1.5">
       {menu.map((item) => {
         const isActive = pathname === item.href;
 
@@ -140,29 +132,37 @@ export default function MenuCard() {
         );
       })}
 
+      {/* Kept below Collaborate: only Saved Pitches and Saved Posts */}
+      <div className="my-1 border-t border-gray-100" />
+      {belowCollaborateLinks.map((item) => {
+        const isActive = pathname === item.href;
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`
+              flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
+              ${isActive
+                ? "bg-blue-50 text-blue-700 font-semibold"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }
+            `}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+              <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>
+                {item.label}
+              </span>
+            </div>
 
-
-      {quickLinks.length > 0 && (
-        <>
-          <div className="my-1 border-t border-gray-100" />
-          {quickLinks.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
-                  ? "bg-blue-50 text-blue-700 font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-              >
-                <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
-                <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
-              </Link>
-            );
-          })}
-        </>
-      )}
+            {item.badge && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                {item.badge}
+              </span>
+            )}
+          </Link>
+        );
+      })}
     </div>
   );
 }
