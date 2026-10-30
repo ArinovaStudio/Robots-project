@@ -8,11 +8,8 @@ import {
   TrendingUp,
   Target,
   Search,
-  Filter,
   CheckCircle2,
   DollarSign,
-  Building2,
-  ArrowRight,
   ExternalLink,
   PlusCircle,
   Clock,
@@ -37,7 +34,14 @@ import RatePitchModal from "@/components/modals/rate-pitch-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
-import ReadMoreText from "@/components/ui/read-more-text";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PitchItem {
   id: string;
@@ -100,6 +104,35 @@ interface PreferenceCompany {
   isConnectionSender?: boolean;
 }
 
+function formatSectorLabel(value: string) {
+  const normalized = value
+    .trim()
+    .replace(/heatlh care/gi, "Healthcare")
+    .replace(/health care/gi, "Healthcare")
+    .replace(/healthcare/gi, "Healthcare")
+    .replace(/\bai\b/gi, "AI")
+    .replace(/\bml\b/gi, "ML")
+    .replace(/\s+/g, " ");
+
+  return normalized
+    .split(" ")
+    .map((word) => {
+      if (word === "AI" || word === "ML") return word;
+      if (word === "&") return "&";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function formatDescription(value: string) {
+  return value
+    .trim()
+    .split(/\n+/)
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export default function InvestorPortalClient() {
   const { user } = useUserStore();
   const searchParams = useSearchParams();
@@ -108,6 +141,8 @@ export default function InvestorPortalClient() {
   const [activeTab, setActiveTab] = useState<"pitches" | "performers">(initialTab);
   const [pitches, setPitches] = useState<PitchItem[]>([]);
   const [performers, setPerformers] = useState<PreferenceCompany[]>([]);
+  const [selectedPitch, setSelectedPitch] = useState<PitchItem | null>(null);
+  const [selectedPerformer, setSelectedPerformer] = useState<PreferenceCompany | null>(null);
   const [preferences, setPreferences] = useState<{ sectors: string[]; stages: string[]; investmentRange: string } | null>(null);
 
   const [loadingPitches, setLoadingPitches] = useState(true);
@@ -209,7 +244,9 @@ export default function InvestorPortalClient() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPitches();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPerformers();
   }, []);
 
@@ -270,7 +307,7 @@ export default function InvestorPortalClient() {
                 <span className="font-medium text-slate-400">Your Selected Preferences:</span>
                 {preferences.sectors.map((sec) => (
                   <span key={sec} className="rounded-full bg-white/10 px-2.5 py-0.5 font-semibold text-blue-200 border border-white/10">
-                    {sec}
+                    {formatSectorLabel(sec)}
                   </span>
                 ))}
                 {preferences.investmentRange && (
@@ -521,13 +558,21 @@ export default function InvestorPortalClient() {
                               {pitch.tagline}
                             </p>
                           )}
-                          <ReadMoreText
-                            text={pitch.summary}
-                            charLimit={150}
-                            title={pitch.title}
-                            subtitle={`${pitch.company.companyName} · ${pitch.sector}`}
-                            className="mt-2 text-xs text-[#64748B] leading-relaxed"
-                          />
+                          <div className="mt-2">
+                            <p className="line-clamp-3 whitespace-pre-line break-words text-sm leading-6 text-[#64748B]">
+                              {formatDescription(pitch.summary)}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                recordPitchView(pitch.id);
+                                setSelectedPitch(pitch);
+                              }}
+                              className="mt-1 text-xs font-semibold text-[#2563EB] hover:underline"
+                            >
+                              View full details
+                            </button>
+                          </div>
                         </div>
 
                         {/* Highlights */}
@@ -742,14 +787,18 @@ export default function InvestorPortalClient() {
                         </div>
                       </div>
 
-                      {/* Description */}
-                      <ReadMoreText
-                        text={company.description}
-                        charLimit={120}
-                        title={company.companyName}
-                        subtitle={`${company.type} · ${company.location || "Global"}`}
-                        className="text-xs text-[#64748B] leading-relaxed"
-                      />
+                      <div>
+                        <p className="line-clamp-3 whitespace-pre-line break-words text-sm leading-6 text-[#64748B]">
+                          {formatDescription(company.description)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPerformer(company)}
+                          className="mt-1 text-xs font-semibold text-[#2563EB] hover:underline"
+                        >
+                          View company details
+                        </button>
+                      </div>
 
                       {/* Performance Badges */}
                       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -837,6 +886,239 @@ export default function InvestorPortalClient() {
           )}
         </section>
       )}
+
+      <Dialog
+        open={selectedPerformer !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPerformer(null);
+        }}
+      >
+        {selectedPerformer && (
+          <DialogContent className="max-w-2xl rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-7">
+            <DialogHeader className="gap-2">
+              <DialogTitle className="pr-8 text-xl font-bold text-[#172033]">
+                {selectedPerformer.companyName}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-[#64748B]">
+                {selectedPerformer.type} · {selectedPerformer.location || "Global"} · {selectedPerformer.matchPercentage}% match
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-2">
+              <section>
+                <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-[#64748B]">About this company</h3>
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#172033]">
+                  {formatDescription(selectedPerformer.description) || "No company description provided."}
+                </p>
+              </section>
+
+              {selectedPerformer.dealIn?.length > 0 && (
+                <section>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">Services and sectors</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPerformer.dealIn.map((item) => (
+                      <span key={item} className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {selectedPerformer.badges.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedPerformer.badges.map((badge) => (
+                    <span key={badge} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex flex-wrap justify-start gap-2 border-t border-[#E5E7EB] pt-4 sm:justify-start">
+              {selectedPerformer.connectionStatus === "ACCEPTED" ? (
+                <Link
+                  href={`/messages/${selectedPerformer.userId}`}
+                  onClick={() => setSelectedPerformer(null)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <MessageSquare size={14} /> Message
+                </Link>
+              ) : selectedPerformer.connectionStatus === "PENDING" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmCancelTarget({
+                      userId: selectedPerformer.userId,
+                      connectionId: selectedPerformer.connectionId,
+                      name: selectedPerformer.companyName,
+                    });
+                    setSelectedPerformer(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                >
+                  <Clock size={14} /> Cancel pending request
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedConnectCompany({ id: selectedPerformer.userId, name: selectedPerformer.companyName });
+                    setSelectedPerformer(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <Send size={14} /> Connect
+                </button>
+              )}
+              <Link
+                href={`/profile/${selectedPerformer.userId}`}
+                onClick={() => setSelectedPerformer(null)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <ExternalLink size={14} /> View company
+              </Link>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={selectedPitch !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPitch(null);
+        }}
+      >
+        {selectedPitch && (
+          <DialogContent className="max-w-3xl rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-7">
+            <DialogHeader className="gap-2">
+              <DialogTitle className="pr-8 text-xl font-bold text-[#172033]">
+                {selectedPitch.title}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-[#64748B]">
+                {selectedPitch.company.companyName} · {selectedPitch.sector} · {selectedPitch.stage}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedPitch.tagline && (
+              <p className="text-sm font-medium text-[#2563EB]">{selectedPitch.tagline}</p>
+            )}
+
+            <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-2">
+              <section>
+                <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-[#64748B]">Overview</h3>
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#172033]">
+                  {formatDescription(selectedPitch.summary)}
+                </p>
+              </section>
+
+              {selectedPitch.highlights?.length > 0 && (
+                <section>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">Highlights</h3>
+                  <ul className="space-y-2">
+                    {selectedPitch.highlights.map((highlight, index) => (
+                      <li key={`${selectedPitch.id}-highlight-${index}`} className="flex items-start gap-2 text-sm leading-5 text-[#172033]">
+                        <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#2563EB]" />
+                        <span className="break-words">{highlight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              <div className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Target Raise</span>
+                  <p className="mt-1 text-sm font-bold text-[#172033]">
+                    {selectedPitch.targetAmount ? formatTargetAmount(selectedPitch.targetAmount) : "Strategic Capital"}
+                  </p>
+                </div>
+                {selectedPitch.equityOffered && (
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Terms / Structure</span>
+                    <p className="mt-1 text-sm font-bold text-[#2563EB]">{selectedPitch.equityOffered}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="flex flex-wrap justify-start gap-2 border-t border-[#E5E7EB] pt-4 sm:justify-start">
+              {selectedPitch.connectionStatus === "ACCEPTED" ? (
+                <Link
+                  href={`/messages/${selectedPitch.userId}`}
+                  onClick={() => setSelectedPitch(null)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <MessageSquare size={14} /> Message
+                </Link>
+              ) : selectedPitch.connectionStatus === "PENDING" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmCancelTarget({
+                      userId: selectedPitch.userId,
+                      connectionId: selectedPitch.connectionId,
+                      name: selectedPitch.company.companyName,
+                    });
+                    setSelectedPitch(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                >
+                  <Clock size={14} /> Cancel pending request
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedConnectCompany({
+                      id: selectedPitch.userId,
+                      name: selectedPitch.company.companyName,
+                    });
+                    setSelectedPitch(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <Send size={14} /> Connect
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setOfferTarget({
+                    pitchId: selectedPitch.id,
+                    pitchTitle: selectedPitch.title,
+                    companyName: selectedPitch.company.companyName,
+                  });
+                  setSelectedPitch(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+              >
+                <DollarSign size={14} /> Make an offer
+              </button>
+              {!selectedPitch.isRated && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRateTarget({ pitchId: selectedPitch.id, pitchTitle: selectedPitch.title });
+                    setSelectedPitch(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                >
+                  <Star size={14} /> Rate
+                </button>
+              )}
+              <Link
+                href={`/profile/${selectedPitch.userId}`}
+                onClick={() => setSelectedPitch(null)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <ExternalLink size={14} /> View company
+              </Link>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Connect Modal */}
       {selectedConnectCompany && (

@@ -7,7 +7,14 @@ import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
 import { toast } from "sonner";
-import ReadMoreText from "@/components/ui/read-more-text";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Performer {
   id: string;
@@ -28,11 +35,40 @@ interface Performer {
   connectionId?: string | null;
 }
 
-export default function InvestorDashboardWidget({ user }: { user: any }) {
+function formatDescription(value: string) {
+  return value
+    .trim()
+    .split(/\n+/)
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function formatSectorLabel(value: string) {
+  const normalized = value
+    .trim()
+    .replace(/heatlh care/gi, "Healthcare")
+    .replace(/health care/gi, "Healthcare")
+    .replace(/healthcare/gi, "Healthcare")
+    .replace(/\bai\b/gi, "AI")
+    .replace(/\bml\b/gi, "ML")
+    .replace(/\s+/g, " ");
+
+  return normalized
+    .split(" ")
+    .map((word) => {
+      if (word === "AI" || word === "ML") return word;
+      if (word === "&") return "&";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+export default function InvestorDashboardWidget({ user }: { user: { id: string; name?: string | null } | null }) {
   const [performers, setPerformers] = useState<Performer[]>([]);
+  const [selectedPerformer, setSelectedPerformer] = useState<Performer | null>(null);
   const [preferences, setPreferences] = useState<{ sectors: string[]; stages: string[]; investmentRange: string } | null>(null);
   const [stats, setStats] = useState<{ connectedCompanies: number; investedIn: number } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [connectTarget, setConnectTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancellingUserId, setCancellingUserId] = useState<string | null>(null);
   const [confirmCancelTarget, setConfirmCancelTarget] = useState<{
@@ -67,12 +103,16 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
     }
   };
 
+  const userId = user?.id;
+
   useEffect(() => {
+    if (!userId) return;
+
     const fetchData = async () => {
       try {
         const [perfRes, profileRes] = await Promise.all([
           fetch("/api/investor/preference-matches"),
-          fetch(`/api/profile/${user.id}`)
+          fetch(`/api/profile/${userId}`)
         ]);
 
         const perfJson = await perfRes.json();
@@ -90,13 +130,11 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
         }
       } catch {
         // ignore
-      } finally {
-        setLoading(false);
       }
     };
 
-    if (user?.id) fetchData();
-  }, [user?.id]);
+    fetchData();
+  }, [userId]);
 
   return (
     <div className="space-y-4">
@@ -105,21 +143,15 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-bold text-white border border-white/20">
-                Investor Dashboard
-              </span>
               {preferences?.sectors?.length ? (
                 <span className="text-xs text-slate-300">
-                  Focus: <strong className="text-white">{preferences.sectors.slice(0, 2).join(", ")}</strong>
+                  Focus: <strong className="text-white">{preferences.sectors.slice(0, 2).map(formatSectorLabel).join(", ")}</strong>
                 </span>
               ) : null}
             </div>
             <h2 className="mt-1 text-xl font-extrabold text-white">
               Welcome, {user?.name || "Investor"}
             </h2>
-            <p className="text-xs text-slate-300 mt-0.5 max-w-lg">
-              Explore vetted ideas, products, and pitches in your portal. Connect with top-performing companies.
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
@@ -190,13 +222,18 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
                     </span>
                   </div>
 
-                  <ReadMoreText
-                    text={company.description}
-                    charLimit={90}
-                    title={company.companyName}
-                    subtitle={`${company.type} · ${company.location || "Global"}`}
-                    className="mt-2 text-[11px] text-[#64748B] leading-relaxed"
-                  />
+                  <div className="mt-2">
+                    <p className="line-clamp-3 whitespace-pre-line break-words text-xs leading-5 text-[#64748B]">
+                      {formatDescription(company.description)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPerformer(company)}
+                      className="mt-1 text-[11px] font-semibold text-[#2563EB] hover:underline"
+                    >
+                      View company details
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-3 pt-2.5 border-t border-[#E5E7EB] flex items-center justify-between">
@@ -242,6 +279,105 @@ export default function InvestorDashboardWidget({ user }: { user: any }) {
               </div>
             ))}
           </div>
+
+          <Dialog
+            open={selectedPerformer !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedPerformer(null);
+            }}
+          >
+            {selectedPerformer && (
+              <DialogContent className="max-w-2xl rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-7">
+                <DialogHeader className="gap-2">
+                  <DialogTitle className="pr-8 text-xl font-bold text-[#172033]">
+                    {selectedPerformer.companyName}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-[#64748B]">
+                    {selectedPerformer.type} · {selectedPerformer.location || "Global"}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-2">
+                  <section>
+                    <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-[#64748B]">About this company</h3>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#172033]">
+                      {formatDescription(selectedPerformer.description) || "No company description provided."}
+                    </p>
+                  </section>
+
+                  {selectedPerformer.badges.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPerformer.badges.map((badge) => (
+                        <span key={badge} className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+                    <div>
+                      <span className="block text-sm font-bold text-[#172033]">{selectedPerformer.stats.followers}</span>
+                      <span className="text-[10px] text-[#64748B]">Followers</span>
+                    </div>
+                    <div>
+                      <span className="block text-sm font-bold text-[#172033]">{selectedPerformer.stats.connections}</span>
+                      <span className="text-[10px] text-[#64748B]">Connections</span>
+                    </div>
+                    <div>
+                      <span className="block text-sm font-bold text-[#2563EB]">+{selectedPerformer.stats.recentViews}</span>
+                      <span className="text-[10px] text-[#64748B]">Views this week</span>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex flex-wrap justify-start gap-2 border-t border-[#E5E7EB] pt-4 sm:justify-start">
+                  {selectedPerformer.connectionStatus === "ACCEPTED" ? (
+                    <Link
+                      href={`/messages/${selectedPerformer.userId}`}
+                      onClick={() => setSelectedPerformer(null)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      <MessageSquare size={14} /> Message
+                    </Link>
+                  ) : selectedPerformer.connectionStatus === "PENDING" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmCancelTarget({
+                          userId: selectedPerformer.userId,
+                          connectionId: selectedPerformer.connectionId,
+                          name: selectedPerformer.companyName,
+                        });
+                        setSelectedPerformer(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                    >
+                      <Clock size={14} /> Cancel pending request
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConnectTarget({ id: selectedPerformer.userId, name: selectedPerformer.companyName });
+                        setSelectedPerformer(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      <Send size={14} /> Connect
+                    </button>
+                  )}
+                  <Link
+                    href={`/profile/${selectedPerformer.userId}`}
+                    onClick={() => setSelectedPerformer(null)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    <ArrowRight size={14} /> View profile
+                  </Link>
+                </DialogFooter>
+              </DialogContent>
+            )}
+          </Dialog>
 
           {/* Action button below Top Performers on main explore */}
           <div className="mt-4 pt-3.5 border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">

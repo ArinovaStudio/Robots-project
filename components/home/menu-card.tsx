@@ -61,13 +61,11 @@ export default function MenuCard() {
     {
       icon: Sparkles,
       label: "Investor Portal",
-      badge: "Pitches",
       href: "/investors/portal",
     },
     {
       icon: TrendingUp,
       label: "Top Performers",
-      badge: "Matches",
       href: "/investors/portal?tab=performers",
     },
     {
@@ -89,7 +87,6 @@ export default function MenuCard() {
     {
       icon: Landmark,
       label: "Saved Pitches",
-      badge: "Pitches",
       href: isInvestor ? "/investors/my-pitches" : "/company/pitches",
     },
     {

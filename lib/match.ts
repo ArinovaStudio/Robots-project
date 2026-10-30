@@ -27,7 +27,14 @@ async function getFallbackCompanies(userId: string): Promise<CompanyProfileWithV
 
 export async function getSimilarCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
   const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
-  if (!userProfile || !userProfile.offeringVector) return getFallbackCompanies(userId);
+  if (!userProfile) return getFallbackCompanies(userId);
+
+  const [vectorStatus] = await prisma.$queryRaw<{ hasOfferingVector: boolean }[]>`
+    SELECT "offeringVector" IS NOT NULL AS "hasOfferingVector"
+    FROM "CompanyProfile"
+    WHERE "userId" = ${userId}
+  `;
+  if (!vectorStatus?.hasOfferingVector) return getFallbackCompanies(userId);
 
   return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
     SELECT cp.*, 
