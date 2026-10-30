@@ -20,7 +20,8 @@ import {
   ShieldAlert,
   Loader2,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -193,10 +194,7 @@ export default function CompanyPitchesClient() {
       <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-8 text-white border border-[#1E3A5F]">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-2.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-              <span>Company Fundraising & Pitches</span>
-            </div>
+
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
               My Pitches & Funding Dashboard
             </h1>
@@ -275,15 +273,15 @@ export default function CompanyPitchesClient() {
                 pitch.type === "PITCH"
                   ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
                   : pitch.type === "PRODUCT"
-                  ? "bg-slate-100 text-slate-700 border-slate-200"
-                  : "bg-neutral-100 text-neutral-700 border-neutral-200";
+                    ? "bg-slate-100 text-slate-700 border-slate-200"
+                    : "bg-neutral-100 text-neutral-700 border-neutral-200";
 
               const typeLabel =
                 pitch.type === "PITCH"
                   ? "Pitch Deck"
                   : pitch.type === "PRODUCT"
-                  ? "Live Product"
-                  : "Early Idea";
+                    ? "Live Product"
+                    : "Early Idea";
 
               return (
                 <ScrollReveal key={pitch.id} direction="up" delay={0.05}>
@@ -301,6 +299,18 @@ export default function CompanyPitchesClient() {
                           <span className="rounded-md bg-gray-50 px-2 py-0.5 text-xs text-gray-500">
                             {pitch.sector}
                           </span>
+                          {pitch.pitchDeckUrl && (
+                            <a
+                              href={pitch.pitchDeckUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-[#2563EB] hover:bg-blue-100 transition"
+                              title="View Pitch Deck"
+                            >
+                              <FileText size={12} />
+                              <span>Deck</span>
+                            </a>
+                          )}
                         </div>
                         <h3 className="mt-2 text-xl font-bold text-[#172033] leading-snug">
                           {pitch.title}
@@ -622,13 +632,12 @@ export default function CompanyPitchesClient() {
                     )}
 
                     <div className="flex items-center justify-between border-t border-gray-100 pt-2.5">
-                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        offer.status === "ACCEPTED"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : offer.status === "DECLINED"
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${offer.status === "ACCEPTED"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : offer.status === "DECLINED"
                           ? "bg-red-100 text-red-700"
                           : "bg-amber-100 text-amber-800"
-                      }`}>
+                        }`}>
                         Status: {offer.status}
                       </span>
 
@@ -680,13 +689,12 @@ export default function CompanyPitchesClient() {
             <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between gap-4 bg-white shrink-0">
               <div className="space-y-1.5 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-md border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                    previewingPitch.type === "PITCH"
-                      ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
-                      : previewingPitch.type === "PRODUCT"
+                  <span className={`rounded-md border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${previewingPitch.type === "PITCH"
+                    ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
+                    : previewingPitch.type === "PRODUCT"
                       ? "bg-slate-100 text-slate-700 border-slate-200"
                       : "bg-neutral-100 text-neutral-700 border-neutral-200"
-                  }`}>
+                    }`}>
                     {previewingPitch.type === "PITCH" ? "Pitch Deck" : previewingPitch.type === "PRODUCT" ? "Live Product" : "Early Idea"}
                   </span>
                   <span className="rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
@@ -858,13 +866,12 @@ export default function CompanyPitchesClient() {
 
                         <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                           <span
-                            className={`rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
-                              offer.status === "ACCEPTED"
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                : offer.status === "DECLINED"
+                            className={`rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${offer.status === "ACCEPTED"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : offer.status === "DECLINED"
                                 ? "bg-red-100 text-red-700 border border-red-200"
                                 : "bg-amber-100 text-amber-800 border border-amber-200"
-                            }`}
+                              }`}
                           >
                             Status: {offer.status}
                           </span>

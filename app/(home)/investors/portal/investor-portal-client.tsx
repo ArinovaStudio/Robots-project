@@ -22,6 +22,7 @@ import {
   Star,
   MessageSquare,
   X,
+  FileText,
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -690,14 +691,19 @@ export default function InvestorPortalClient() {
                             </button>
                           )}
 
-                          <Link
-                            href={`/profile/${pitch.userId}`}
-                            onClick={() => recordPitchView(pitch.id)}
-                            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-                            title="View Full Profile"
-                          >
-                            <ExternalLink size={14} />
-                          </Link>
+                          {pitch.pitchDeckUrl ? (
+                            <a
+                              href={pitch.pitchDeckUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => recordPitchView(pitch.id)}
+                              className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                              title="Open pitch deck PDF in a new tab"
+                              aria-label={`Open PDF pitch deck for ${pitch.title} in a new tab`}
+                            >
+                              <FileText size={14} />
+                            </a>
+                          ) : null}
                         </div>
                       </div>
                     </div>

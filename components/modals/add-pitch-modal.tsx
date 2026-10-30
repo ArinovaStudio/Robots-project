@@ -23,6 +23,7 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
   const [highlightInput, setHighlightInput] = useState("");
   const [highlights, setHighlights] = useState<string[]>([]);
   const [pitchDeckUrl, setPitchDeckUrl] = useState("");
+  const [pitchDeckFile, setPitchDeckFile] = useState<File | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +38,24 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
     setHighlights(highlights.filter((_, i) => i !== index));
   };
 
+  const handlePitchDeckChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please select a PDF file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("PDF files must be 10 MB or smaller.");
+      return;
+    }
+
+    setPitchDeckFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !summary.trim() || !sector.trim()) {
@@ -46,22 +65,23 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
 
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("tagline", tagline.trim());
+      formData.append("type", type);
+      formData.append("summary", summary.trim());
+      formData.append("sector", sector);
+      formData.append("stage", stage);
+      formData.append("targetAmount", targetAmount.trim() ? formatTargetAmount(targetAmount.trim()) : "");
+      formData.append("equityOffered", equityOffered.trim());
+      formData.append("highlights", JSON.stringify(highlights));
+      formData.append("pitchDeckUrl", pitchDeckUrl.trim());
+      formData.append("websiteUrl", websiteUrl.trim());
+      if (pitchDeckFile) formData.append("pitchDeck", pitchDeckFile);
+
       const res = await fetch("/api/company/pitches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          tagline: tagline.trim() || undefined,
-          type,
-          summary: summary.trim(),
-          sector,
-          stage,
-          targetAmount: targetAmount.trim() ? formatTargetAmount(targetAmount.trim()) : undefined,
-          equityOffered: equityOffered.trim() || undefined,
-          highlights,
-          pitchDeckUrl: pitchDeckUrl.trim() || undefined,
-          websiteUrl: websiteUrl.trim() || undefined
-        })
+        body: formData,
       });
 
       const data = await res.json();
@@ -110,7 +130,7 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
                 <button
                   type="button"
                   key={opt.id}
-                  onClick={() => setType(opt.id as any)}
+                  onClick={() => setType(opt.id as "PITCH" | "PRODUCT" | "IDEA")}
                   className={`rounded-xl border p-2.5 text-left transition ${
                     type === opt.id
                       ? "border-blue-600 bg-blue-50/70 text-blue-900"
@@ -271,6 +291,32 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
                 placeholder="https://docsend.com/view/..."
                 className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+              <label className="mt-3 block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Or upload PDF (up to 10 MB)
+              </label>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePitchDeckChange}
+                disabled={loading}
+                className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {pitchDeckFile && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                  <span className="flex min-w-0 items-center gap-2 text-xs text-gray-700">
+                    <FileText size={14} className="shrink-0 text-blue-600" />
+                    <span className="truncate">{pitchDeckFile.name}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPitchDeckFile(null)}
+                    disabled={loading}
+                    className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Demo / Website Link</label>

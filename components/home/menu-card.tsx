@@ -82,11 +82,11 @@ export default function MenuCard() {
 
   const menu = isInvestor ? investorMenu : companyMenu;
 
-  // Below Collaborate: keep only saved pitches and saved posts
+  // Keep the investor label unchanged; company users manage their own pitches here.
   const belowCollaborateLinks: MenuItem[] = [
     {
       icon: Landmark,
-      label: "Saved Pitches",
+      label: isInvestor ? "Saved Pitches" : "My Pitches",
       href: isInvestor ? "/investors/my-pitches" : "/company/pitches",
     },
     {
