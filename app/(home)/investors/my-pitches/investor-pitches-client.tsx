@@ -437,43 +437,35 @@ export default function InvestorPitchesClient() {
           ) : (
             <div className="space-y-3">
               {offers.map((offer) => {
-                const statusBadge =
-                  offer.status === "ACCEPTED"
-                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    : offer.status === "DECLINED"
-                    ? "bg-red-100 text-red-800 border-red-300"
-                    : "bg-amber-100 text-amber-800 border-amber-300";
-
                 return (
                   <ScrollReveal key={offer.id} direction="up" delay={0.03}>
                     <div className="rounded-2xl border border-gray-200 bg-white p-5 hover:border-gray-300 transition">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-gray-900">{offer.companyName}</span>
-                            <span className="text-xs text-gray-400">·</span>
-                            <span className="text-xs text-gray-500">{offer.sector} ({offer.stage})</span>
-                          </div>
-                          <h4 className="text-sm font-extrabold text-gray-900 mt-0.5 truncate">
-                            {offer.pitchTitle}
-                          </h4>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Offer: <strong className="text-gray-900">{formatTargetAmount(offer.amount)}</strong> · Terms: <span className="font-semibold text-blue-700">{offer.terms}</span>
-                          </p>
-                          {offer.message && (
-                            <p className="text-xs text-gray-600 italic mt-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                              &ldquo;{offer.message}&rdquo;
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-gray-900">{offer.companyName}</span>
+                              <span className="text-xs text-gray-400">·</span>
+                              <span className="text-xs text-gray-500">{offer.sector} ({offer.stage})</span>
+                            </div>
+                            <h4 className="mt-0.5 text-sm font-extrabold text-gray-900 break-words">
+                              {offer.pitchTitle}
+                            </h4>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Offer: <strong className="text-gray-900">{formatTargetAmount(offer.amount)}</strong> · Terms: <span className="font-semibold text-blue-700">{offer.terms}</span>
                             </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
+                            {offer.message && (
+                              <p className="mt-1 rounded-lg border border-gray-100 bg-gray-50 p-2 text-xs italic text-gray-600">
+                                &ldquo;{offer.message}&rdquo;
+                              </p>
+                            )}
+                          </div>
                           {offer.status === "PENDING" ? (
                             <button
                               type="button"
                               onClick={() => setConfirmCancelOfferTarget(offer)}
                               disabled={cancellingOfferId === offer.id}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition cursor-pointer disabled:opacity-50"
+                              className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 transition cursor-pointer disabled:opacity-50"
                               title="Click to cancel pending investment offer"
                             >
                               {cancellingOfferId === offer.id ? (
@@ -484,10 +476,13 @@ export default function InvestorPitchesClient() {
                               <span>Pending</span>
                             </button>
                           ) : (
-                            <span className={`rounded-xl border px-3 py-1.5 text-xs font-bold ${statusBadge}`}>
+                            <span className={`shrink-0 text-xs font-semibold ${offer.status === "ACCEPTED" ? "text-emerald-700" : "text-red-700"}`}>
                               {offer.status}
                             </span>
                           )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
                           {offer.status === "ACCEPTED" && (
                             <Link
                               href={`/messages/${offer.founderId}`}
@@ -548,14 +543,14 @@ export default function InvestorPitchesClient() {
                 <ScrollReveal key={rating.id} direction="up" delay={0.03}>
                   <div className="rounded-2xl border border-gray-200 bg-white p-5 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
                           <span className="text-xs font-medium text-gray-400">{rating.companyName}</span>
-                          <h4 className="text-sm font-bold text-gray-900 mt-0.5">{rating.pitchTitle}</h4>
-                          <span className="text-[11px] text-gray-500">{rating.sector} · {rating.stage}</span>
+                          <h4 className="mt-0.5 break-words text-sm font-bold leading-5 text-gray-900">{rating.pitchTitle}</h4>
+                          <span className="mt-1 block break-words text-[11px] leading-4 text-gray-500">{rating.sector} · {rating.stage}</span>
                         </div>
-                        <div className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700 border border-slate-200">
-                          <Star size={13} className="fill-[#2563EB] text-[#2563EB]" />
+                        <div className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold leading-none text-slate-700">
+                          <Star size={13} className="shrink-0 fill-[#2563EB] text-[#2563EB]" />
                           <span>{rating.rating} / 5</span>
                         </div>
                       </div>
