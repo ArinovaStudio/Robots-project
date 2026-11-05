@@ -1,10 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, Handshake } from "lucide-react";
 import CompanyStats from "@/components/home/search/company-stats";
 import ReadMoreText from "@/components/ui/read-more-text";
 
-export default function CompanyCard({ company }: { company: any }) {
+interface CompanyCardProps {
+  company: any;
+  onCollaborate?: (company: any) => void;
+  showCollaborate?: boolean;
+}
+
+export default function CompanyCard({
+  company,
+  onCollaborate,
+  showCollaborate = false,
+}: CompanyCardProps) {
+  const matchSource = company.matchSource;
+  const matchReason = company.matchReason;
+
   return (
     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-4">
       <div className="flex items-start justify-between gap-4">
@@ -36,6 +49,23 @@ export default function CompanyCard({ company }: { company: any }) {
                   Boosted
                 </span>
               )}
+
+              {/* Match Reason Badge */}
+              {matchSource === "both" && (
+                <span className="shrink-0 px-2 py-0.5 bg-blue-50 text-[10px] font-bold text-[#2563EB] rounded-md border border-blue-200">
+                  Profile & Post Match
+                </span>
+              )}
+              {matchSource === "post" && (
+                <span className="shrink-0 px-2 py-0.5 bg-blue-50/70 text-[10px] font-bold text-blue-700 rounded-md border border-blue-200">
+                  Post Match
+                </span>
+              )}
+              {matchSource === "profile" && (
+                <span className="shrink-0 px-2 py-0.5 bg-gray-100 text-[10px] font-medium text-gray-600 rounded-md border border-gray-200">
+                  Profile Match
+                </span>
+              )}
             </div>
             <p className="text-sm text-[#64748B] font-medium truncate">{company.type}</p>
           </div>
@@ -62,6 +92,28 @@ export default function CompanyCard({ company }: { company: any }) {
           year={company.yearOfEstablishment}
         />
       </div>
+
+      {/* Collaborate Action inside Marketplace */}
+      {showCollaborate && onCollaborate && (
+        <div className="mt-4 pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-3">
+          <div className="text-xs text-[#64748B] font-medium truncate">
+            {matchReason ||
+              (matchSource === "both"
+                ? "Matched through profile & relevant posts"
+                : matchSource === "post"
+                ? "Matched through commercial post intent"
+                : "Matched through business profile")}
+          </div>
+          <button
+            type="button"
+            onClick={() => onCollaborate(company)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition shrink-0"
+          >
+            <Handshake size={14} />
+            <span>Collaborate</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

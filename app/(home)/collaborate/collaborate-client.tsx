@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { Users, Briefcase } from "lucide-react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useUserStore } from "@/store/AuthStore";
 
 type CompanyLike = {
   id: string | number;
@@ -12,11 +15,13 @@ type CompanyLike = {
 };
 
 export default function CollaborateClient() {
+  const { status } = useSession();
+  const user = useUserStore((state) => state.user);
   const [activeTab, setActiveTab] = useState<"suggested" | "similar">("suggested");
   const [companies, setCompanies] = useState<CompanyLike[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchMatches = async (type: "suggested" | "similar") => {
+  const fetchMatches = useCallback(async (type: "suggested" | "similar") => {
     setLoading(true);
     setCompanies([]);
     try {
@@ -28,12 +33,14 @@ export default function CollaborateClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchMatches(activeTab);
-  }, [activeTab]);
+    if (status === "authenticated" && user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchMatches(activeTab);
+    }
+  }, [activeTab, status, user?.id, fetchMatches]);
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
@@ -67,7 +74,11 @@ export default function CollaborateClient() {
 
       {/* Content */}
       <div className="space-y-4">
-        {loading ? (
+        {status === "unauthenticated" ? (
+          <div className="text-center py-20 text-gray-500 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <Link href="/login" className="font-medium text-blue-700 hover:underline">Sign in</Link> to discover collaboration partners.
+          </div>
+        ) : loading || status === "loading" || (status === "authenticated" && !user?.id) ? (
           <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">

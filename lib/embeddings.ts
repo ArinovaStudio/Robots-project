@@ -1,14 +1,18 @@
 import { Ollama } from "ollama";
 import { prisma } from "./prisma";
 
+export const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
+export const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+export const OLLAMA_INTENT_MODEL = process.env.OLLAMA_INTENT_MODEL || 'phi3:latest';
+
 const ollama = new Ollama({ 
-  host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434' 
+  host: OLLAMA_HOST
 });
 
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string, model: string = OLLAMA_EMBED_MODEL): Promise<number[]> {
   try {
     const response = await ollama.embeddings({
-      model: 'nomic-embed-text',
+      model,
       prompt: text,
     });
     return response.embedding;

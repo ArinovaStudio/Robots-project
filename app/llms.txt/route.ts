@@ -9,7 +9,7 @@ export async function GET() {
 ## Key Pages
 - [Home](${baseUrl}/): Overview of Connecto B2B network platform.
 - [B2B Directory](${baseUrl}/directory): Browse verified companies, suppliers, and service providers.
-- [B2B Marketplace](${baseUrl}/marketplace): Find AI-matched service buyers and suppliers.
+- [B2B Collaboration](${baseUrl}/marketplace): Find AI-matched service buyers and suppliers.
 - [Business Collaboration](${baseUrl}/collaborate): Discover synergistic business partners.
 - [Investor Matchmaking](${baseUrl}/investors): Pitch angel investors and VC funding networks.
 

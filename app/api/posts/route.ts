@@ -3,6 +3,7 @@ import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage } from "@/lib/uploads";
 import { validateTextContent } from "@/lib/textFilter";
+import { analyzePostBusinessIntent } from "@/lib/post-intent";
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     const uploadedMedia = await Promise.all(uploadPromises);
 
-    await prisma.post.create({
+    const newPost = await prisma.post.create({
       data: {
         authorId: user.id,
         content: content,
@@ -95,6 +96,14 @@ export async function POST(req: NextRequest) {
         })
       },
     });
+
+    if (content && content.trim().length >= 15) {
+      setImmediate(() => {
+        analyzePostBusinessIntent(newPost.id, content, user.id).catch((err) => {
+          console.error("Async post business intent failed:", err);
+        });
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Post created successfully" }, { status: 201 });
 

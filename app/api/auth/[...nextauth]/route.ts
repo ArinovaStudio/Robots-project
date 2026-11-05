@@ -85,8 +85,8 @@ export const authOptions: NextAuthOptions = {
         if (user.image) token.picture = user.image;
       }
 
-      // If user was not yet onboarded or client called update(), refresh directly from DB
-      if (token.email && (!user || trigger === "update" || token.isOnboarded === false)) {
+      // Refresh incomplete or legacy tokens, or when the client explicitly updates the session.
+      if (token.email && (trigger === "update" || token.isOnboarded !== true)) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           include: { company: true, investor: true },

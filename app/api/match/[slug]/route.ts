@@ -18,7 +18,11 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ slu
       return NextResponse.json( { success: false, message: "Invalid match type" }, { status: 400 } );
     }
 
-    const matches = await getMatches(user.id, slug as MatchSlug);
+    const sourceParam = req.nextUrl.searchParams.get("source");
+    const source: "overall" | "posts" | "profile" =
+      sourceParam === "posts" || sourceParam === "profile" ? sourceParam : "overall";
+
+    const matches = await getMatches(user.id, slug as MatchSlug, source);
 
     return NextResponse.json({ success: true, data: matches }, { status: 200 });
 

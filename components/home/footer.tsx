@@ -16,7 +16,7 @@ const NAV_COLS = [
       { label: "Feed",         href: "/feed" },
       { label: "Explore",      href: "/explore" },
       { label: "Collaborate",  href: "/collaborate" },
-      { label: "Marketplace",  href: "/marketplace" },
+      { label: "B2B Collaboration",  href: "/marketplace" },
     ],
   },
   {

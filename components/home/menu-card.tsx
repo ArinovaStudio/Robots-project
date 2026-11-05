@@ -37,7 +37,7 @@ export default function MenuCard() {
     },
     {
       icon: ArrowLeftRight,
-      label: "Marketplace",
+      label: "B2B Collaboration",
       href: "/marketplace",
     },
     {

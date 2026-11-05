@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import AchievementPost from "@/components/home/achievements-post";
 import InvestorDashboardWidget from "@/components/home/investor-dashboard-widget";
 import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useUserStore } from "@/store/AuthStore";
+import { useSession } from "next-auth/react";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 
 export default function ExploreClient() {
   const { user } = useUserStore();
+  const { status } = useSession();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -20,16 +23,16 @@ export default function ExploreClient() {
 
   const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
 
-  useEffect(() => {
-    if (isIntersecting && hasMore && !loading && !loadingMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchFeed(nextPage, true);
+  const fetchFeed = useCallback(async (pageNum: number, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+      setPage(pageNum);
+    } else {
+      setLoading(true);
+      setPosts([]);
+      setHasMore(true);
+      setPage(1);
     }
-  }, [isIntersecting, hasMore, loading, loadingMore, page]);
-
-  const fetchFeed = async (pageNum: number, append = false) => {
-    if (append) setLoadingMore(true);
     
     try {
       const res = await fetch(`/api/user/feed/explore?page=${pageNum}&limit=15`);
@@ -54,11 +57,22 @@ export default function ExploreClient() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchFeed(1);
-  }, []);
+    if (status === "authenticated" && user?.id && isIntersecting && hasMore && !loading && !loadingMore) {
+      const nextPage = page + 1;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchFeed(nextPage, true);
+    }
+  }, [status, user?.id, isIntersecting, hasMore, loading, loadingMore, page, fetchFeed]);
+
+  useEffect(() => {
+    if (status === "authenticated" && user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchFeed(1);
+    }
+  }, [status, user?.id, fetchFeed]);
 
   return (
     <div className="space-y-5 pb-20">
@@ -74,7 +88,11 @@ export default function ExploreClient() {
         <AchievementPost />
       </ScrollReveal>
       
-      {loading ? (
+      {status === "unauthenticated" ? (
+        <div className="rounded-3xl border border-slate-200/80 bg-white py-10 text-center text-slate-500">
+          <Link href="/login" className="font-medium text-blue-700 hover:underline">Sign in</Link> to view the explore feed.
+        </div>
+      ) : loading || status === "loading" || (status === "authenticated" && !user?.id) ? (
         <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex flex-col rounded-2xl bg-white p-4 border border-slate-100 shadow-sm space-y-4">

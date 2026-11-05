@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import MenuCard from "./menu-card";
 import ProfileCard from "./profile-card";
 import Link from "next/link";
@@ -11,16 +12,19 @@ import { Pencil } from "lucide-react";
 import EditProfileModal from "../modals/edit-profile-modal";
 
 export default function LeftSidebar() {
+  const { status } = useSession();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const user = useUserStore((state) => state.user);
+  const userId = user?.id;
+  const accountType = user?.accountType;
 
   const [investorStats, setInvestorStats] = useState<{ connectedCompanies: number; investedIn: number } | null>(null);
 
-  const fetchProfile = async () => {
-    if (user?.accountType === "INVESTOR") {
+  const fetchProfile = useCallback(async () => {
+    if (accountType === "INVESTOR") {
       try {
-        const res = await fetch(`/api/profile/${user.id}`);
+        const res = await fetch(`/api/profile/${userId}`);
         const json = await res.json();
         if (json.success && json.data?.stats) {
           setInvestorStats({
@@ -48,28 +52,72 @@ export default function LeftSidebar() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accountType, userId]);
 
   useEffect(() => {
-    fetchProfile();
-  }, [user?.accountType, user?.id]);
+    if (status === "authenticated" && userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchProfile();
+    }
+  }, [status, userId, fetchProfile]);
 
-  if (loading) {
+  if (status === "unauthenticated") {
     return (
       <div className="space-y-4">
-        {/* Placeholder for menu skeleton or empty space */}
+        <MenuCard />
       </div>
     );
   }
+
+  // Pre-load from cached company in persistent AuthStore while API revalidates
+  const fallbackCompanyProfile = user?.company
+    ? {
+        ...user.company,
+        logoUrl: user.company.logoUrl || user.image,
+        followersCount: user.company.followersCount ?? 0,
+        connectionsCount: user.company.connectionsCount ?? 0,
+        verificationStatus: user.isVerified ? "VERIFIED" : undefined,
+      }
+    : null;
+
+  const activeProfile = profileData || fallbackCompanyProfile;
+  const isProfileLoading =
+    (status === "loading" || (!userId && loading)) && !activeProfile && !user?.investor;
 
   return (
     <div className="space-y-4">
       {user?.accountType === "INVESTOR" ? (
         <InvestorSidebarCard user={user} stats={investorStats} refreshProfile={fetchProfile} />
-      ) : profileData ? (
-        <ProfileCard profile={profileData} refreshProfile={fetchProfile} />
+      ) : activeProfile ? (
+        <ProfileCard profile={activeProfile} refreshProfile={fetchProfile} />
+      ) : isProfileLoading ? (
+        <ProfileCardSkeleton />
       ) : null}
       <MenuCard />
+    </div>
+  );
+}
+
+function ProfileCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="h-16 w-full bg-slate-200 animate-pulse" />
+      <div className="relative -mt-8 flex flex-col items-center px-4 pb-4 text-center">
+        <div className="h-16 w-16 rounded-full border-2 border-white bg-slate-200 animate-pulse" />
+        <div className="mt-3 h-4 w-28 rounded bg-slate-200 animate-pulse" />
+        <div className="mt-1.5 h-3 w-20 rounded bg-slate-100 animate-pulse" />
+        <div className="mt-3 h-3 w-40 rounded bg-slate-100 animate-pulse" />
+      </div>
+      <div className="border-t border-gray-100 py-3 px-4 space-y-2">
+        <div className="flex justify-between items-center">
+          <div className="h-3 w-16 rounded bg-slate-100 animate-pulse" />
+          <div className="h-3 w-8 rounded bg-slate-200 animate-pulse" />
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="h-3 w-20 rounded bg-slate-100 animate-pulse" />
+          <div className="h-3 w-8 rounded bg-slate-200 animate-pulse" />
+        </div>
+      </div>
     </div>
   );
 }

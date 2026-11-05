@@ -6,6 +6,8 @@ interface CompanyProfileWithVectors extends CompanyProfile {
   offeringVector?: number[];
   needsVector?: number[];
   similarity?: number;
+  matchSource?: "profile" | "post" | "both";
+  matchReason?: string;
 }
 
 async function getFallbackCompanies(userId: string): Promise<CompanyProfileWithVectors[]> {
@@ -110,33 +112,273 @@ export async function getBuyers(userId: string): Promise<CompanyProfileWithVecto
   `;
 }
 
-export async function getMatches(userId: string, matchType: "similar" | "suggested" | "suppliers" | "buyers") {
+export async function getPostMatchesSuppliers(userId: string): Promise<CompanyProfileWithVectors[]> {
+  try {
+    const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
+    if (!userProfile) return [];
+
+    return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
+      SELECT cp.*,
+        COALESCE(
+          (
+            SELECT (1 - (pbi."embedding" <=> user_cp."needsVector"))
+            FROM "PostBusinessIntent" pbi
+            WHERE pbi."authorId" = cp."userId"
+              AND pbi."isBusinessIntent" = true
+              AND pbi."intentType" = 'OFFERING'
+              AND pbi."embedding" IS NOT NULL
+            ORDER BY (pbi."embedding" <=> user_cp."needsVector") ASC
+            LIMIT 1
+          ),
+          (
+            SELECT (1 - (user_pbi."embedding" <=> cp."offeringVector"))
+            FROM "PostBusinessIntent" user_pbi
+            WHERE user_pbi."authorId" = ${userId}
+              AND user_pbi."isBusinessIntent" = true
+              AND user_pbi."intentType" = 'LOOKING_FOR'
+              AND user_pbi."embedding" IS NOT NULL
+            ORDER BY (user_pbi."embedding" <=> cp."offeringVector") ASC
+            LIMIT 1
+          ),
+          0.8
+        ) as similarity
+      FROM "CompanyProfile" cp
+      INNER JOIN "User" u ON cp."userId" = u.id
+      CROSS JOIN "CompanyProfile" user_cp
+      WHERE user_cp."userId" = ${userId}
+        AND cp."userId" != ${userId}
+        AND u.status = 'ACTIVE'
+        AND (
+          EXISTS (
+            SELECT 1 FROM "PostBusinessIntent" pbi
+            WHERE pbi."authorId" = cp."userId"
+              AND pbi."isBusinessIntent" = true
+              AND pbi."intentType" = 'OFFERING'
+              AND pbi."embedding" IS NOT NULL
+          )
+          OR EXISTS (
+            SELECT 1 FROM "PostBusinessIntent" user_pbi
+            WHERE user_pbi."authorId" = ${userId}
+              AND user_pbi."isBusinessIntent" = true
+              AND user_pbi."intentType" = 'LOOKING_FOR'
+              AND user_pbi."embedding" IS NOT NULL
+          )
+        )
+      ORDER BY cp."isBoosted" DESC, similarity DESC
+      LIMIT 40
+    `;
+  } catch (err) {
+    console.error("getPostMatchesSuppliers error:", err);
+    return [];
+  }
+}
+
+export async function getPostMatchesBuyers(userId: string): Promise<CompanyProfileWithVectors[]> {
+  try {
+    const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
+    if (!userProfile) return [];
+
+    return await prisma.$queryRaw<CompanyProfileWithVectors[]>`
+      SELECT cp.*,
+        COALESCE(
+          (
+            SELECT (1 - (pbi."embedding" <=> user_cp."offeringVector"))
+            FROM "PostBusinessIntent" pbi
+            WHERE pbi."authorId" = cp."userId"
+              AND pbi."isBusinessIntent" = true
+              AND pbi."intentType" = 'LOOKING_FOR'
+              AND pbi."embedding" IS NOT NULL
+            ORDER BY (pbi."embedding" <=> user_cp."offeringVector") ASC
+            LIMIT 1
+          ),
+          (
+            SELECT (1 - (user_pbi."embedding" <=> cp."needsVector"))
+            FROM "PostBusinessIntent" user_pbi
+            WHERE user_pbi."authorId" = ${userId}
+              AND user_pbi."isBusinessIntent" = true
+              AND user_pbi."intentType" = 'OFFERING'
+              AND user_pbi."embedding" IS NOT NULL
+            ORDER BY (user_pbi."embedding" <=> cp."needsVector") ASC
+            LIMIT 1
+          ),
+          0.8
+        ) as similarity
+      FROM "CompanyProfile" cp
+      INNER JOIN "User" u ON cp."userId" = u.id
+      CROSS JOIN "CompanyProfile" user_cp
+      WHERE user_cp."userId" = ${userId}
+        AND cp."userId" != ${userId}
+        AND u.status = 'ACTIVE'
+        AND (
+          EXISTS (
+            SELECT 1 FROM "PostBusinessIntent" pbi
+            WHERE pbi."authorId" = cp."userId"
+              AND pbi."isBusinessIntent" = true
+              AND pbi."intentType" = 'LOOKING_FOR'
+              AND pbi."embedding" IS NOT NULL
+          )
+          OR EXISTS (
+            SELECT 1 FROM "PostBusinessIntent" user_pbi
+            WHERE user_pbi."authorId" = ${userId}
+              AND user_pbi."isBusinessIntent" = true
+              AND user_pbi."intentType" = 'OFFERING'
+              AND user_pbi."embedding" IS NOT NULL
+          )
+        )
+      ORDER BY cp."isBoosted" DESC, similarity DESC
+      LIMIT 40
+    `;
+  } catch (err) {
+    console.error("getPostMatchesBuyers error:", err);
+    return [];
+  }
+}
+
+export async function getMatches(
+  userId: string,
+  matchType: "similar" | "suggested" | "suppliers" | "buyers",
+  source: "overall" | "posts" | "profile" = "overall"
+) {
   try {
     const userProfile = await prisma.companyProfile.findUnique({ where: { userId } });
     if (!userProfile) return [];
 
     let candidates: CompanyProfileWithVectors[] = [];
-    if (matchType === "similar") candidates = await getSimilarCompanies(userId);
-    else if (matchType === "suggested") candidates = await getSuggestedCompanies(userId);
-    else if (matchType === "suppliers") candidates = await getSuppliers(userId);
-    else if (matchType === "buyers") candidates = await getBuyers(userId);
+
+    if (matchType === "similar") {
+      candidates = await getSimilarCompanies(userId);
+    } else if (matchType === "suggested") {
+      candidates = await getSuggestedCompanies(userId);
+    } else if (matchType === "suppliers") {
+      if (source === "profile") {
+        const profileItems = await getSuppliers(userId);
+        candidates = profileItems.map((c) => ({
+          ...c,
+          matchSource: "profile",
+          matchReason: "Profile match",
+        }));
+      } else if (source === "posts") {
+        const postItems = await getPostMatchesSuppliers(userId);
+        candidates = postItems.map((c) => ({
+          ...c,
+          matchSource: "post",
+          matchReason: "Post match",
+        }));
+      } else {
+        // Overall: combine both and deduplicate
+        const [profileItems, postItems] = await Promise.all([
+          getSuppliers(userId),
+          getPostMatchesSuppliers(userId),
+        ]);
+
+        const mergedMap = new Map<string, CompanyProfileWithVectors>();
+
+        profileItems.forEach((c) => {
+          mergedMap.set(c.id, {
+            ...c,
+            matchSource: "profile",
+            matchReason: "Profile match",
+          });
+        });
+
+        postItems.forEach((c) => {
+          if (mergedMap.has(c.id)) {
+            const existing = mergedMap.get(c.id)!;
+            mergedMap.set(c.id, {
+              ...existing,
+              matchSource: "both",
+              matchReason: "Both",
+              similarity: Math.max(existing.similarity || 0, c.similarity || 0),
+            });
+          } else {
+            mergedMap.set(c.id, {
+              ...c,
+              matchSource: "post",
+              matchReason: "Post match",
+            });
+          }
+        });
+
+        candidates = Array.from(mergedMap.values()).sort((a, b) => {
+          if (a.isBoosted && !b.isBoosted) return -1;
+          if (!a.isBoosted && b.isBoosted) return 1;
+          return (b.similarity || 0) - (a.similarity || 0);
+        });
+      }
+    } else if (matchType === "buyers") {
+      if (source === "profile") {
+        const profileItems = await getBuyers(userId);
+        candidates = profileItems.map((c) => ({
+          ...c,
+          matchSource: "profile",
+          matchReason: "Profile match",
+        }));
+      } else if (source === "posts") {
+        const postItems = await getPostMatchesBuyers(userId);
+        candidates = postItems.map((c) => ({
+          ...c,
+          matchSource: "post",
+          matchReason: "Post match",
+        }));
+      } else {
+        // Overall: combine both and deduplicate
+        const [profileItems, postItems] = await Promise.all([
+          getBuyers(userId),
+          getPostMatchesBuyers(userId),
+        ]);
+
+        const mergedMap = new Map<string, CompanyProfileWithVectors>();
+
+        profileItems.forEach((c) => {
+          mergedMap.set(c.id, {
+            ...c,
+            matchSource: "profile",
+            matchReason: "Profile match",
+          });
+        });
+
+        postItems.forEach((c) => {
+          if (mergedMap.has(c.id)) {
+            const existing = mergedMap.get(c.id)!;
+            mergedMap.set(c.id, {
+              ...existing,
+              matchSource: "both",
+              matchReason: "Both",
+              similarity: Math.max(existing.similarity || 0, c.similarity || 0),
+            });
+          } else {
+            mergedMap.set(c.id, {
+              ...c,
+              matchSource: "post",
+              matchReason: "Post match",
+            });
+          }
+        });
+
+        candidates = Array.from(mergedMap.values()).sort((a, b) => {
+          if (a.isBoosted && !b.isBoosted) return -1;
+          if (!a.isBoosted && b.isBoosted) return 1;
+          return (b.similarity || 0) - (a.similarity || 0);
+        });
+      }
+    }
 
     if (candidates.length === 0) return [];
 
-    const boostedCompanies = candidates.filter(c => c.isBoosted);
-    const freeCompanies = candidates.filter(c => !c.isBoosted);
+    const boostedCompanies = candidates.filter((c) => c.isBoosted);
+    const freeCompanies = candidates.filter((c) => !c.isBoosted);
 
     const shuffledBoosted = boostedCompanies.sort(() => 0.5 - Math.random());
     const shuffledFree = freeCompanies.sort(() => 0.5 - Math.random());
 
-    const finalFeed = [...shuffledBoosted, ...shuffledFree].slice(0, 10);
+    const finalFeed = [...shuffledBoosted, ...shuffledFree].slice(0, 15);
 
     const cleanMatches = finalFeed.map((company) => {
       const { offeringVector, needsVector, ...safeData } = company;
       return safeData;
     });
 
-    const userIds = cleanMatches.map(c => c.userId);
+    const userIds = cleanMatches.map((c) => c.userId);
     const userCounts = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: {
@@ -145,24 +387,24 @@ export async function getMatches(userId: string, matchType: "similar" | "suggest
           select: {
             followers: true,
             receivedConnections: { where: { status: "ACCEPTED" } },
-            sentConnections: { where: { status: "ACCEPTED" } }
-          }
-        }
-      }
+            sentConnections: { where: { status: "ACCEPTED" } },
+          },
+        },
+      },
     });
 
-    const countsMap = new Map(userCounts.map(u => [u.id, u._count]));
+    const countsMap = new Map(userCounts.map((u) => [u.id, u._count]));
 
     return cleanMatches.map((company) => {
       const counts = countsMap.get(company.userId);
       return {
         ...company,
         followersCount: counts?.followers || 0,
-        connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0)
+        connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0),
       };
     });
-
-  } catch {
+  } catch (err) {
+    console.error("getMatches error:", err);
     return [];
   }
 }

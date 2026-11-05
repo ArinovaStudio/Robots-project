@@ -4,17 +4,20 @@ import { useEffect, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Store, ShoppingBag, Target, Sparkles, ArrowRight, ShieldAlert } from "lucide-react";
+import { Store, ShoppingBag, Target, Sparkles, ArrowRight, ShieldAlert, Layers, FileText, UserCheck } from "lucide-react";
 import { useUserStore } from "@/store/AuthStore";
 import Link from "next/link";
+import CollaborateModal from "@/components/modals/collaborate-modal";
 
 export default function MarketplaceClient() {
   const { user } = useUserStore();
   const isInvestor = user?.accountType === "INVESTOR";
   const [activeTab, setActiveTab] = useState<"suppliers" | "buyers">("suppliers");
+  const [secondaryTab, setSecondaryTab] = useState<"overall" | "posts" | "profile">("overall");
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [buyers, setBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [collaborateTarget, setCollaborateTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchMatches = async () => {
     if (isInvestor) {
@@ -23,7 +26,9 @@ export default function MarketplaceClient() {
     }
     setLoading(true);
     try {
-      const endpoint = activeTab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers";
+      const endpoint = `${
+        activeTab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers"
+      }?source=${secondaryTab}`;
       const res = await fetch(endpoint);
       const json = await res.json();
       
@@ -40,7 +45,7 @@ export default function MarketplaceClient() {
 
   useEffect(() => {
     fetchMatches();
-  }, [activeTab, isInvestor]);
+  }, [activeTab, secondaryTab, isInvestor]);
 
   if (isInvestor) {
     return (
@@ -93,48 +98,99 @@ export default function MarketplaceClient() {
           <Target className="w-48 h-48" />
         </div>
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">B2B Service Marketplace</h1>
+          <h1 className="text-3xl font-bold mb-2">B2B Collaboration</h1>
           <p className="text-blue-100 max-w-2xl">
             We use AI vector matching to pair what you offer with companies who need it, and match what you need with companies who supply it.
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200 p-1 shadow-sm flex items-center">
+      {/* Primary Section Tabs */}
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1">
         <button
           onClick={() => setActiveTab("suppliers")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
             activeTab === "suppliers" 
-              ? "bg-blue-50 text-blue-700 shadow-sm" 
+              ? "bg-[#2563EB] text-white shadow-xs" 
               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           }`}
         >
           <Store className="w-5 h-5" />
-          Suppliers for what you need
+          <span>Suppliers for what you need</span>
         </button>
         <button
           onClick={() => setActiveTab("buyers")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
             activeTab === "buyers" 
-              ? "bg-blue-50 text-blue-700 shadow-sm" 
+              ? "bg-[#2563EB] text-white shadow-xs" 
               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           }`}
         >
           <ShoppingBag className="w-5 h-5" />
-          Buyers for what you offer
+          <span>Buyers for what you offer</span>
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
-          {activeTab === "suppliers" ? "Recommended Suppliers" : "Potential Buyers"}
-        </h2>
+      {/* Main Results Container */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-xs space-y-6">
+        {/* Header & Secondary Navigation Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-xl font-bold text-[#172033]">
+              {activeTab === "suppliers" ? "Recommended Suppliers" : "Potential Buyers"}
+            </h2>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              {activeTab === "suppliers"
+                ? "Discover businesses that can fulfill your commercial requirements and operational needs."
+                : "Discover businesses actively in market for the products and services you provide."}
+            </p>
+          </div>
+
+          {/* Secondary Navigation: Overall, Posts, Profile */}
+          <div className="inline-flex items-center gap-1 bg-[#EFF6FF] border border-blue-100 p-1 rounded-xl self-start sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setSecondaryTab("overall")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                secondaryTab === "overall"
+                  ? "bg-[#2563EB] text-white shadow-xs"
+                  : "text-blue-900 hover:bg-blue-100/60"
+              }`}
+            >
+              <Layers size={13} />
+              <span>Overall</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecondaryTab("posts")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                secondaryTab === "posts"
+                  ? "bg-[#2563EB] text-white shadow-xs"
+                  : "text-blue-900 hover:bg-blue-100/60"
+              }`}
+            >
+              <FileText size={13} />
+              <span>Posts</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecondaryTab("profile")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                secondaryTab === "profile"
+                  ? "bg-[#2563EB] text-white shadow-xs"
+                  : "text-blue-900 hover:bg-blue-100/60"
+              }`}
+            >
+              <UserCheck size={13} />
+              <span>Profile</span>
+            </button>
+          </div>
+        </div>
         
         {loading ? (
           <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="border border-gray-100 rounded-xl p-5">
                   <div className="flex gap-4">
                     <Skeleton circle width={56} height={56} />
@@ -151,7 +207,12 @@ export default function MarketplaceClient() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(activeTab === "suppliers" ? suppliers : buyers).map((company) => (
-              <CompanyCard key={company.id} company={company} />
+              <CompanyCard
+                key={company.id}
+                company={company}
+                showCollaborate={true}
+                onCollaborate={(c) => setCollaborateTarget({ id: c.userId, name: c.companyName })}
+              />
             ))}
           </div>
         )}
@@ -159,10 +220,31 @@ export default function MarketplaceClient() {
         {!loading && (activeTab === "suppliers" ? suppliers : buyers).length === 0 && (
           <div className="text-center py-16 text-gray-500">
             <Target className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p>No matches found yet. Try adding more keywords to your profile!</p>
+            <p className="text-sm font-semibold text-gray-700">
+              {secondaryTab === "posts"
+                ? "No post-based commercial intent matches found yet."
+                : secondaryTab === "profile"
+                ? "No profile matches found for your current services or requirements."
+                : "No collaboration recommendations found yet."}
+            </p>
+            <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+              {secondaryTab === "posts"
+                ? "Publish a post explicitly describing what your business is looking for or offering to generate AI intent matches!"
+                : "Try adding more keywords, services offered, and requirements to your company profile!"}
+            </p>
           </div>
         )}
       </div>
+
+      {/* Collaborate Modal */}
+      {collaborateTarget && (
+        <CollaborateModal
+          recipientId={collaborateTarget.id}
+          companyName={collaborateTarget.name}
+          onClose={() => setCollaborateTarget(null)}
+          onSuccess={() => setCollaborateTarget(null)}
+        />
+      )}
     </section>
   );
 }

@@ -68,6 +68,9 @@ model User {
   submittedReports PostReport[]
   notifications Notification[]
   collaborationRequests CollaborationRequest[]
+  postBusinessIntents PostBusinessIntent[]
+  sentMarketplaceCollaborations MarketplaceCollaboration[] @relation("CollabRequester")
+  receivedMarketplaceCollaborations MarketplaceCollaboration[] @relation("CollabRecipient")
 }
 
 model VerificationApplication {
@@ -370,6 +373,7 @@ model Post {
   reactions PostReaction[]
   savedBy SavedPost[]
   reports PostReport[]
+  businessIntent PostBusinessIntent?
 }
 
 model PostEvent {
@@ -588,4 +592,51 @@ model CollaborationRequest {
   updatedAt DateTime @updatedAt
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model PostBusinessIntent {
+  id String @id @default(uuid())
+  postId String @unique
+  authorId String
+  isBusinessIntent Boolean @default(false)
+  intentType String?
+  category String?
+  services String[] @default([])
+  industry String?
+  confidence Float?
+  rawAnalysis Json?
+  embedding Unsupported("vector(768)")?
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([intentType])
+  @@index([status])
+}
+
+model MarketplaceCollaboration {
+  id String @id @default(uuid())
+  requesterId String
+  recipientId String
+  expectations String[] @default([])
+  offerings String[] @default([])
+  contributionDesc String? @db.Text
+  resourcesAvailable String? @db.Text
+  expertiseCapabilities String? @db.Text
+  existingAssets String? @db.Text
+  overview String @db.Text
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requester User @relation("CollabRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient User @relation("CollabRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([recipientId])
+  @@index([status])
 }
