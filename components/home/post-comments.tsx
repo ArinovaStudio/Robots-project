@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { CommentThread } from "./CommentThread";
 
-export default function PostComments({ postId, currentUser }: { postId: string, currentUser: any }) {
+export default function PostComments({ postId, currentUser, canComment = true }: { postId: string, currentUser: any, canComment?: boolean }) {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,12 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
   return (
     <div className="bg-white border-t border-slate-100 p-4 rounded-b-2xl">
       {/* Top Input Section */}
-      <div className="flex gap-3 mb-6">
+      {!canComment && (
+        <div className="mb-6 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-500">
+          Only the author's connections can comment on this post.
+        </div>
+      )}
+      {canComment && <div className={`flex gap-3 ${loading || comments.length > 0 ? "mb-6" : ""}`}>
         {currentUser?.image || currentUser?.company?.logoUrl ? (
           <img 
             src={currentUser?.company?.logoUrl || currentUser?.image} 
@@ -86,29 +91,23 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a public comment..."
-            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:bg-white min-h-[50px]"
+            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-32 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:bg-white min-h-[50px]"
           />
-          <div className="flex justify-end mt-2">
-            <button 
-              onClick={handlePostComment}
-              disabled={posting || !newComment.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-white bg-blue-600 text-sm font-medium disabled:opacity-50 transition hover:bg-blue-700"
-            >
-              {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              Comment
-            </button>
-          </div>
+          <button
+            onClick={handlePostComment}
+            disabled={posting || !newComment.trim()}
+            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            Comment
+          </button>
         </div>
-      </div>
+      </div>}
 
-      {/* Scrollable Comments Area */}
-      <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar space-y-5">
+      {/* Scrollable Comments Area (hidden entirely when there are no comments) */}
+      {(loading || comments.length > 0) && <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar space-y-5">
         {loading ? (
-          <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-slate-300 h-8 w-8" /></div>
-        ) : comments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-400 font-medium">
-            No comments yet. Be the first to share your thoughts!
-          </div>
+          <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-slate-300 h-6 w-6" /></div>
         ) : (
           comments.map((comment) => (
             <CommentThread 
@@ -134,7 +133,7 @@ export default function PostComments({ postId, currentUser }: { postId: string, 
             Load more comments
           </button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

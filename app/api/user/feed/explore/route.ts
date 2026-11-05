@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { summarizeReactions } from "@/lib/reactions";
 import { getSuggestedFeedAuthors } from "@/lib/match";
+import { visibleToViewer, withCanComment, withHasReposted, withIsFollowing, notHiddenBy, repostOfInclude } from "@/lib/post-visibility";
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,7 +40,8 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const fetchPosts = async (currentWhere: any) => {
+    const fetchPosts = async (baseWhere: any) => {
+      const currentWhere = { AND: [baseWhere, visibleToViewer(user.id), notHiddenBy(user.id)] };
       return await Promise.all([
         prisma.post.findMany({
           where: currentWhere,
@@ -50,8 +53,8 @@ export async function GET(req: NextRequest) {
           ],
           include: {
             media: true,
-            // @ts-ignore - Bypass stale Prisma cache in IDE
             event: true,
+            repostOf: repostOfInclude,
             author: {
               select: {
                 id: true,
@@ -79,15 +82,16 @@ export async function GET(req: NextRequest) {
       ]);
     };
 
-    let [posts, totalCount] = await fetchPosts(whereClause);
+    let [rawPosts, totalCount] = await fetchPosts(whereClause);
 
-    if (posts.length === 0 && !targetUserId) {
+    if (rawPosts.length === 0 && !targetUserId) {
       const fallbackWhere = { status: "ACTIVE" }; 
       const [fallbackPosts, fallbackCount] = await fetchPosts(fallbackWhere);
-      posts = fallbackPosts;
+      rawPosts = fallbackPosts;
       totalCount = fallbackCount;
     }
 
+    const posts = await withIsFollowing(await withHasReposted(await withCanComment(rawPosts, user.id), user.id), user.id);
     const postIds = posts.map(p => p.id);
     const reactionCounts = postIds.length > 0 ? await prisma.postReaction.groupBy({
       by: ['postId', 'type'],
@@ -96,8 +100,7 @@ export async function GET(req: NextRequest) {
     }) : [];
 
     const formattedPosts = posts.map(post => {
-      const likes = reactionCounts.find(r => r.postId === post.id && r.type === "LIKE")?._count.type || 0;
-      const dislikes = reactionCounts.find(r => r.postId === post.id && r.type === "DISLIKE")?._count.type || 0;
+      const { likesCount, reactionCounts: reactionBreakdown } = summarizeReactions(reactionCounts.filter(r => r.postId === post.id));
 
       if (post.author && post.author.company) {
         post.author.company.logoUrl = post.author.company.logoUrl || post.author.image;
@@ -105,12 +108,10 @@ export async function GET(req: NextRequest) {
 
       return {
         ...post,
-        // @ts-ignore
         userReaction: post.reactions[0]?.type || null, 
-        // @ts-ignore
         isSaved: post.savedBy?.length > 0,
-        likesCount: likes,
-        dislikesCount: dislikes
+        likesCount,
+        reactionCounts: reactionBreakdown
       };
     });
 

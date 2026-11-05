@@ -59,3 +59,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json( { success: false, message: "Internal server error" }, { status: 500 } );
   }
 }
+export async function DELETE(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const validation = followSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ success: false, message: validation.error.issues[0].message }, { status: 400 });
+    }
+
+    await prisma.follow.deleteMany({
+      where: { followerId: user.id, followingId: validation.data.targetUserId },
+    });
+
+    return NextResponse.json({ success: true, message: "Unfollowed successfully", isFollowing: false });
+  } catch {
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { summarizeReactions } from "@/lib/reactions";
+import { withCanComment, withHasReposted, withIsFollowing, repostOfInclude } from "@/lib/post-visibility";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,6 +26,7 @@ export async function GET(req: NextRequest) {
           post: {
             include: { 
               media: true,
+              repostOf: repostOfInclude,
               author: {
                 select: { 
                   id: true, 
@@ -49,6 +52,8 @@ export async function GET(req: NextRequest) {
       prisma.savedPost.count({ where: { userId: user.id, post: { status: "ACTIVE" } } })
     ]);
 
+    const withAccess = await withIsFollowing(await withHasReposted(await withCanComment(savedPostsData.map(sp => sp.post), user.id), user.id), user.id);
+    savedPostsData.forEach((sp, i) => { sp.post = withAccess[i] as typeof sp.post; });
     const postIds = savedPostsData.map(sp => sp.postId);
     const reactionCounts = postIds.length > 0 ? await prisma.postReaction.groupBy({
       by: ['postId', 'type'],
@@ -59,16 +64,15 @@ export async function GET(req: NextRequest) {
     const formattedPosts = savedPostsData.map(savedRecord => {
       const post = savedRecord.post;
       
-      const likes = reactionCounts.find(r => r.postId === post.id && r.type === "LIKE")?._count.type || 0;
-      const dislikes = reactionCounts.find(r => r.postId === post.id && r.type === "DISLIKE")?._count.type || 0;
+      const { likesCount, reactionCounts: reactionBreakdown } = summarizeReactions(reactionCounts.filter(r => r.postId === post.id));
 
       return {
         ...post,
         savedAt: savedRecord.createdAt,
         userReaction: post.reactions[0]?.type || null, 
         isSaved: true, 
-        likesCount: likes,
-        dislikesCount: dislikes
+        likesCount,
+        reactionCounts: reactionBreakdown
       };
     });
 

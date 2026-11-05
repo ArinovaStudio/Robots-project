@@ -3,6 +3,7 @@ import { getOnboardedUser, getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { validateTextContent } from "@/lib/textFilter";
+import { visibleToViewer, getConnectedAmong } from "@/lib/post-visibility";
 
 export async function GET(req: NextRequest) {
   try {
@@ -107,9 +108,18 @@ export async function POST(req: NextRequest) {
 
     const { postId, content, parentId } = validation.data;
 
-    const postExists = await prisma.post.findUnique({ where: { id: postId, status: "ACTIVE" } });
+    const postExists = await prisma.post.findFirst({
+      where: { id: postId, status: "ACTIVE", AND: [visibleToViewer(user.id)] },
+    });
     if (!postExists) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 });
+    }
+
+    if (postExists.commentAccess === "CONNECTIONS" && postExists.authorId !== user.id) {
+      const connected = await getConnectedAmong(user.id, [postExists.authorId]);
+      if (!connected.has(postExists.authorId)) {
+        return NextResponse.json({ success: false, message: "Only the author's connections can comment on this post" }, { status: 403 });
+      }
     }
 
     if (parentId) {

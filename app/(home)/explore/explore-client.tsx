@@ -11,6 +11,8 @@ import { useUserStore } from "@/store/AuthStore";
 import { useSession } from "next-auth/react";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useNewConnectionPosts } from "@/hooks/useNewConnectionPosts";
+import NewPostsPill from "@/components/home/new-posts-pill";
 
 export default function ExploreClient() {
   const { user } = useUserStore();
@@ -22,6 +24,9 @@ export default function ExploreClient() {
   const [hasMore, setHasMore] = useState(true);
 
   const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
+  const { count: newPostsCount, reset: resetNewPosts } = useNewConnectionPosts(
+  status === "authenticated" && !!user?.id && !loading
+);
 
   const fetchFeed = useCallback(async (pageNum: number, append = false) => {
     if (append) {
@@ -73,10 +78,15 @@ export default function ExploreClient() {
       fetchFeed(1);
     }
   }, [status, user?.id, fetchFeed]);
-
+const showNewPosts = () => {
+  resetNewPosts();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  fetchFeed(1);
+};
   return (
     <div className="space-y-5 pb-20">
       <h1 className="sr-only">Connecto B2B Feed & Updates</h1>
+      <NewPostsPill count={newPostsCount} onClick={showNewPosts} />
 
       {user?.accountType === "INVESTOR" && (
         <ScrollReveal direction="down">

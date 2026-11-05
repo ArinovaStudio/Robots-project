@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser, getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { summarizeReactions } from "@/lib/reactions";
+import { visibleToViewer, withCanComment, withHasReposted, withIsFollowing, repostOfInclude } from "@/lib/post-visibility";
 import { uploadFile, uploadImage, deleteFile } from "@/lib/uploads";
 import { validateTextContent } from "@/lib/textFilter";
 
@@ -9,10 +11,17 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
     const { user } = await getUser();
     const { id } = await params;
 
-    const post = await prisma.post.findUnique({
-      where: { id, status: "ACTIVE" },
+    const post = await prisma.post.findFirst({
+      where: {
+        id,
+        status: "ACTIVE",
+        // Anonymous viewers only see posts that are open to anyone
+        ...(user?.id ? { AND: [visibleToViewer(user.id)] } : { visibility: "ANYONE" }),
+      },
       include: {
         media: true,
+        event: true,
+        repostOf: repostOfInclude,
         author: {
           select: {
             id: true,
@@ -47,15 +56,18 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
       _count: { type: true }
     });
 
-    const likes = reactionCounts.find(r => r.type === "LIKE")?._count.type || 0;
-    const dislikes = reactionCounts.find(r => r.type === "DISLIKE")?._count.type || 0;
+    const { likesCount, reactionCounts: reactionBreakdown } = summarizeReactions(reactionCounts);
+
+    const [postWithAccess] = user?.id
+      ? await withIsFollowing(await withHasReposted(await withCanComment([post], user.id), user.id), user.id)
+      : [{ ...post, canComment: false, hasReposted: false, isFollowingAuthor: false }];
 
     const formattedPost = {
-      ...post,
+      ...postWithAccess,
       userReaction: (post as any).reactions?.[0]?.type || null,
       isSaved: (post as any).savedBy?.length > 0,
-      likesCount: likes,
-      dislikesCount: dislikes 
+      likesCount,
+      reactionCounts: reactionBreakdown
     };
 
     delete (formattedPost as any).reactions;

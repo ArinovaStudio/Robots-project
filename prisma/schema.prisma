@@ -62,6 +62,7 @@ model User {
   postReactions PostReaction[]
   commentReactions CommentReaction[]
   savedPosts SavedPost[]
+  hiddenPosts HiddenPost[]
   conversationsAsUser1 Conversation[] @relation("ConversationUser1")
   conversationsAsUser2 Conversation[] @relation("ConversationUser2")
   sentMessages DirectMessage[] @relation("MessageSender")
@@ -356,24 +357,42 @@ enum PostStatus {
   SUSPENDED
 }
 
+enum PostVisibility {
+  ANYONE
+  CONNECTIONS
+}
+
+enum CommentAccess {
+  ANYONE
+  CONNECTIONS
+}
+
 model Post {
   id String @id @default(uuid())
   authorId String
   content String? @db.Text
   status PostStatus @default(ACTIVE)
   isEdited Boolean @default(false)
+  visibility PostVisibility @default(ANYONE)
+  commentAccess CommentAccess @default(ANYONE)
+  repostOfId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  repostOf Post? @relation("PostReposts", fields: [repostOfId], references: [id], onDelete: SetNull)
+  reposts Post[] @relation("PostReposts")
   media PostMedia[]
   event PostEvent?
   comments Comment[]
   reactions PostReaction[]
   savedBy SavedPost[]
+  hiddenBy HiddenPost[]
   reports PostReport[]
   businessIntent PostBusinessIntent?
+
+  @@index([repostOfId])
 }
 
 model PostEvent {
@@ -418,6 +437,11 @@ model Comment {
 enum ReactionType {
   LIKE
   DISLIKE
+  CELEBRATE
+  SUPPORT
+  LOVE
+  INSIGHTFUL
+  FUNNY
 }
 
 model PostReaction {
@@ -425,11 +449,13 @@ model PostReaction {
   postId String
   userId String
   type ReactionType
+  createdAt DateTime @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId]) 
+  @@index([postId, type, createdAt])
 }
 
 model CommentReaction {
@@ -445,6 +471,18 @@ model CommentReaction {
 }
 
 model SavedPost {
+  id String @id @default(uuid())
+  userId String
+  postId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model HiddenPost {
   id String @id @default(uuid())
   userId String
   postId String

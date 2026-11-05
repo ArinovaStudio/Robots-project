@@ -93,15 +93,18 @@ export default function MarketplaceClient() {
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       
-      <div className="bg-[#1E3A5F] rounded-2xl p-8 text-white shadow-xs border border-[#1E3A5F] relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <Target className="w-48 h-48" />
-        </div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">B2B Collaboration</h1>
-          <p className="text-blue-100 max-w-2xl">
-            We use AI vector matching to pair what you offer with companies who need it, and match what you need with companies who supply it.
-          </p>
+      {/* Sticky header: sits under the navbar (h-16); the wrapper repaints the page background so content never shows in the gap above the card */}
+      <div className="sticky top-16 z-20 -mt-5 bg-[#F3F2EF] pt-5">
+        <div className="bg-[#1E3A5F] rounded-2xl p-8 text-white shadow-xs border border-[#1E3A5F] relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <Target className="w-48 h-48" />
+          </div>
+          <div className="relative z-10">
+            <h1 className="text-3xl font-bold mb-2">B2B Collaboration</h1>
+            <p className="text-blue-100 max-w-2xl">
+              We use AI vector matching to pair what you offer with companies who need it, and match what you need with companies who supply it.
+            </p>
+          </div>
         </div>
       </div>
 

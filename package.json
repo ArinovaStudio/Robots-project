@@ -78,7 +78,7 @@
     "jest": "^30.5.1",
     "jest-environment-jsdom": "^30.5.1",
     "jest-html-reporter": "^4.4.2",
-    "prisma": "^7.8.0",
+    "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",

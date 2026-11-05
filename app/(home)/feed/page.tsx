@@ -1,7 +1,4 @@
-
-
 "use client";
-
 import { useEffect, useState } from "react";
 import AchievementPost from "@/components/home/achievements-post";
 import FeedCard from "@/components/home/feed-card";
@@ -10,6 +7,8 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useUserStore } from "@/store/AuthStore";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useNewConnectionPosts } from "@/hooks/useNewConnectionPosts";
+import NewPostsPill from "@/components/home/new-posts-pill";
 
 export default function DashboardPage() {
   const { user } = useUserStore();
@@ -20,6 +19,14 @@ export default function DashboardPage() {
   const [hasMore, setHasMore] = useState(true);
 
   const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
+  const { count: newPostsCount, reset: resetNewPosts } = useNewConnectionPosts(!!user?.id && !loading);
+
+const showNewPosts = () => {
+  resetNewPosts();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  setPage(1);
+  fetchFeed(1);
+};
 
   useEffect(() => {
     if (isIntersecting && hasMore && !loading && !loadingMore) {
@@ -65,6 +72,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 pb-20">
+      <NewPostsPill count={newPostsCount} onClick={showNewPosts} />
       <ScrollReveal direction="down">
         <AchievementPost />
       </ScrollReveal>

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Plus, Check, Clock, TrendingUp, Sparkles, MessageSquare, X, Loader2 } from "lucide-react";
+import { Plus, Clock, TrendingUp, Sparkles, MessageSquare, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ConnectModal from "@/components/modals/connect-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
@@ -133,10 +133,9 @@ export default function TopInvestors() {
         ) : (
           investors.map((investor) => {
             const subtitle = investor.firmName || investor.investorType || "Investor";
-            const tag = investor.investmentRange || investor.sectors[0] || null;
 
             return (
-              <div key={investor.id} className="flex gap-3 items-start group">
+              <div key={investor.id} className="flex items-center gap-3 group">
                 <Link href={`/profile/${investor.id}`} className="shrink-0">
                   <div className="h-11 w-11 rounded-full relative overflow-hidden bg-[#EFF6FF] border border-[#E5E7EB] cursor-pointer hover:opacity-90 transition-opacity">
                     {investor.image ? (
@@ -154,64 +153,51 @@ export default function TopInvestors() {
                   </div>
                 </Link>
 
-                <div className="flex flex-col items-start w-full min-w-0">
-                  <div className="flex items-center gap-1 w-full min-w-0">
-                    <Link
-                      href={`/profile/${investor.id}`}
-                      className="truncate text-xs font-bold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer flex items-center gap-1 min-w-0"
-                    >
-                      <span className="truncate">{investor.name}</span>
-                      <VerificationBadge status={investor.verificationStatus} size="xs" />
-                    </Link>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/profile/${investor.id}`}
+                    className="truncate text-xs font-bold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer flex items-center gap-1 min-w-0"
+                  >
+                    <span className="truncate">{investor.name}</span>
+                    <VerificationBadge status={investor.verificationStatus} size="xs" />
+                  </Link>
 
                   <p className="text-[11px] text-gray-500 truncate w-full mt-0.5">
                     {subtitle}
                   </p>
+                </div>
 
-                  {tag && (
-                    <span className="mt-1 inline-block text-[10px] font-medium text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {tag}
-                    </span>
-                  )}
-
-                  <div className="mt-2">
-                    {investor.connectionStatus === "ACCEPTED" ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">
-                          <Check size={12} /> Connected
-                        </span>
-                        <Link
-                          href={`/messages/${investor.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-600 text-white font-medium text-[11px] hover:bg-blue-700 transition"
-                        >
-                          <MessageSquare size={11} /> Message
-                        </Link>
-                      </div>
-                    ) : investor.connectionStatus === "PENDING" ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-medium text-[11px] border border-amber-200">
-                          <Clock size={12} /> Pending
-                        </span>
-                        <button
-                          onClick={() => handleCancelRequest(investor.id, investor.connectionId)}
-                          disabled={cancellingId === investor.id}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-red-600 bg-red-50 hover:bg-red-100 text-[11px] font-semibold border border-red-200 transition disabled:opacity-50"
-                          title="Cancel connection request"
-                        >
-                          {cancellingId === investor.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
+                <div className="shrink-0">
+                  {investor.connectionStatus === "ACCEPTED" ? (
+                    <Link
+                      href={`/messages/${investor.id}`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-600 text-white font-medium text-[11px] whitespace-nowrap hover:bg-blue-700 transition"
+                    >
+                      <MessageSquare size={11} /> Message
+                    </Link>
+                  ) : investor.connectionStatus === "PENDING" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-medium text-[11px] border border-amber-200">
+                        <Clock size={12} /> Pending
+                      </span>
                       <button
-                        onClick={() => setSelectedInvestor(investor)}
-                        className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
+                        onClick={() => handleCancelRequest(investor.id, investor.connectionId)}
+                        disabled={cancellingId === investor.id}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition disabled:opacity-50"
+                        title="Cancel connection request"
+                        aria-label="Cancel connection request"
                       >
-                        <Plus size={14} /> Connect
+                        {cancellingId === investor.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedInvestor(investor)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
+                    >
+                      <Plus size={14} /> Connect
+                    </button>
+                  )}
                 </div>
               </div>
             );
