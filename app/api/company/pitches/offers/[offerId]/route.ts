@@ -49,7 +49,7 @@ export async function PATCH(
         data: {
           userId: offer.investorId,
           actorId: user.id,
-          type: "SYSTEM",
+          type: "INVESTOR_OFFER",
           content: `${user.name || "The company"} has ${action === "ACCEPTED" ? "accepted" : "declined"} your offer of ${offer.amount} for "${offer.pitchTitle}"`,
           link: `/investors/portal`
         }

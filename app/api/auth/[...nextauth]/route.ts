@@ -25,50 +25,77 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
-        }
+  console.log("[LOGIN] Authorization started");
 
-        const identifier = credentials.email.trim();
+  try {
+    if (!credentials?.email || !credentials?.password) {
+      console.log("[LOGIN] Missing email or password");
+      return null;
+    }
 
-        // Support case-insensitive email, name/username, company name, or investor firm
-        const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: { equals: identifier, mode: "insensitive" } },
-              { name: { equals: identifier, mode: "insensitive" } },
-              { company: { companyName: { equals: identifier, mode: "insensitive" } } },
-              { investor: { firmName: { equals: identifier, mode: "insensitive" } } },
-            ],
+    const identifier = credentials.email.trim();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: "insensitive" } },
+          { name: { equals: identifier, mode: "insensitive" } },
+          {
+            company: {
+              companyName: {
+                equals: identifier,
+                mode: "insensitive",
+              },
+            },
           },
-        });
+          {
+            investor: {
+              firmName: {
+                equals: identifier,
+                mode: "insensitive",
+              },
+            },
+          },
+        ],
+      },
+    });
 
-        if (!user || !user.password) {
-          throw new Error("Invalid credentials");
-        }
+    console.log("[LOGIN] User found:", Boolean(user));
 
-        if (user.status === "SUSPENDED") {
-          throw new Error("Your account has been suspended");
-        }
+    if (!user) return null;
 
-        const isPasswordValid =
-          (await bcrypt.compare(credentials.password, user.password)) ||
-          (await bcrypt.compare(credentials.password.trim(), user.password));
+    console.log("[LOGIN] Password exists:", Boolean(user.password));
+    console.log("[LOGIN] Account status:", user.status);
 
-        if (!isPasswordValid) {
-          throw new Error("Invalid credentials");
-        }
+    if (!user.password || user.status === "SUSPENDED") {
+      return null;
+    }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          isOnboarded: user.isOnboarded,
-          role: user.role,
-          accountType: user.accountType,
-        };
-      }
+    const isPasswordValid = await bcrypt.compare(
+      credentials.password,
+      user.password
+    );
+
+    console.log("[LOGIN] Password valid:", isPasswordValid);
+
+    if (!isPasswordValid) return null;
+
+    console.log("[LOGIN] Authentication successful");
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      isOnboarded: user.isOnboarded,
+      role: user.role,
+      accountType: user.accountType,
+    };
+  } catch (error) {
+    console.error("[LOGIN] Authorization error:", error);
+    throw error;
+  }
+}
     })
   ],
   session: {
@@ -137,6 +164,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRateLimiter, getIP } from "@/lib/rate-limit";
 
 const handler = NextAuth(authOptions);
+console.log("[AUTH DEBUG] NextAuth v4 handler initialized");
+
+async function debugPOST(req: NextRequest, ctx: any) {
+  console.log("[AUTH DEBUG] POST received:", req.nextUrl.pathname);
+
+  if (req.nextUrl.pathname.includes("/callback/credentials")) {
+    console.log("[AUTH DEBUG] Credentials callback reached");
+  }
+
+  return rateLimitedPOST(req, ctx);
+}
 
 async function rateLimitedPOST(req: NextRequest, ctx: any) {
   const pathname = req.nextUrl?.pathname || "";
@@ -156,5 +194,4 @@ async function rateLimitedPOST(req: NextRequest, ctx: any) {
 
   return handler(req, ctx);
 }
-
-export { handler as GET, rateLimitedPOST as POST };
+export { handler as GET, debugPOST as POST };

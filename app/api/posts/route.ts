@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyMentions } from "@/lib/notify";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage } from "@/lib/uploads";
@@ -96,6 +97,10 @@ export async function POST(req: NextRequest) {
         })
       },
     });
+
+    if (content) {
+      await notifyMentions({ content, actorId: user.id, postId: newPost.id, where: "post" });
+    }
 
     if (content && content.trim().length >= 15) {
       setImmediate(() => {

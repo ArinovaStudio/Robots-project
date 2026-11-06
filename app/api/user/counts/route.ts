@@ -10,11 +10,17 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
+    // Badge counts only notifications that arrived since the notifications tab was last opened.
+    // Their highlight (isRead) is separate and persists until the user opens them.
+    const seenRow = await prisma.user.findUnique({ where: { id: user.id }, select: { notificationsSeenAt: true } });
+    const seenAt = seenRow?.notificationsSeenAt ?? new Date(0);
+
     const [unreadNotifications, pendingRequests, requestNotifications, unreadMessages] = await Promise.all([
       prisma.notification.count({
         where: {
           userId: user.id,
           isRead: false,
+          createdAt: { gt: seenAt },
         }
       }),
       prisma.connection.findMany({

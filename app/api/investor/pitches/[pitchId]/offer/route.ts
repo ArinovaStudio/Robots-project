@@ -72,7 +72,7 @@ export async function POST(
         data: {
           userId: pitchOwnerId,
           actorId: user.id,
-          type: "SYSTEM",
+          type: "INVESTOR_OFFER",
           content: `${user.name || "An investor"} made an investment offer of ${amount.trim()} for your pitch: "${pitches[0].title}"`,
           link: "/company/pitches"
         }

@@ -3,6 +3,7 @@ import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { POST_REACTION_TYPES } from "@/lib/reactions";
 import { z } from "zod";
+import { notifyPostReaction } from "@/lib/notify";
 
 const reactionSchema = z.object({
   type: z.enum(POST_REACTION_TYPES),
@@ -43,6 +44,8 @@ export async function POST( req: NextRequest, { params }: { params: Promise<{ id
       create: { postId, userId: user.id, type },
       update: { type },
     });
+
+    if (!existing) await notifyPostReaction(postId, user.id);
 
     const status = existing ? 200 : 201;
     const message = !existing ? "Reaction added successfully" : existing.type === type ? "Reaction unchanged" : "Reaction changed successfully";

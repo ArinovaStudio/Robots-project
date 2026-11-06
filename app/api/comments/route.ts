@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { validateTextContent } from "@/lib/textFilter";
 import { visibleToViewer, getConnectedAmong } from "@/lib/post-visibility";
+import { notifyPostComment, notifyMentions } from "@/lib/notify";
 
 export async function GET(req: NextRequest) {
   try {
@@ -146,6 +147,9 @@ export async function POST(req: NextRequest) {
     await prisma.comment.create({
       data: { postId, authorId: user.id, content, parentId: parentId || null }
     });
+
+    const notified = await notifyPostComment(postId, user.id, parentId);
+    await notifyMentions({ content, actorId: user.id, postId, where: "comment", skipUserIds: notified });
 
     return NextResponse.json({ success: true, message: "Comment added successfully" }, { status: 201 });
 

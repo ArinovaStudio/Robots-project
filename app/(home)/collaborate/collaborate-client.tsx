@@ -57,7 +57,7 @@ export default function CollaborateClient() {
           }`}
         >
           <Users className="w-5 h-5" />
-          Suggested Partners
+          Suggested Investors
         </button>
         <button
           onClick={() => setActiveTab("similar")}
@@ -68,7 +68,7 @@ export default function CollaborateClient() {
           }`}
         >
           <Briefcase className="w-5 h-5" />
-          Similar Businesses
+          Invested in similar business
         </button>
       </div>
 

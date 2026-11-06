@@ -1,6 +1,8 @@
 
 import { prisma } from "./prisma";
 import { CompanyProfile } from "@prisma/client";
+import { scoreMatches } from "./match-score";
+import { getConnectedAmong } from "./post-visibility";
 
 interface CompanyProfileWithVectors extends CompanyProfile {
   offeringVector?: number[];
@@ -379,30 +381,68 @@ export async function getMatches(
     });
 
     const userIds = cleanMatches.map((c) => c.userId);
-    const userCounts = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: {
-        id: true,
-        _count: {
-          select: {
-            followers: true,
-            receivedConnections: { where: { status: "ACCEPTED" } },
-            sentConnections: { where: { status: "ACCEPTED" } },
+    const isMarketplace = matchType === "suppliers" || matchType === "buyers";
+
+    const [userCounts, connectedIds, collabRows, scores] = await Promise.all([
+      prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: {
+          id: true,
+          _count: {
+            select: {
+              followers: true,
+              receivedConnections: { where: { status: "ACCEPTED" } },
+              sentConnections: { where: { status: "ACCEPTED" } },
+            },
           },
         },
-      },
-    });
+      }),
+      isMarketplace ? getConnectedAmong(userId, userIds) : Promise.resolve(new Set<string>()),
+      isMarketplace
+        ? prisma.$queryRaw<{ requesterId: string; recipientId: string; status: string }[]>`
+            SELECT "requesterId", "recipientId", "status"
+            FROM "MarketplaceCollaboration"
+            WHERE ("requesterId" = ${userId} AND "recipientId" = ANY(${userIds}::text[]))
+               OR ("recipientId" = ${userId} AND "requesterId" = ANY(${userIds}::text[]))
+          `.catch(() => [])
+        : Promise.resolve([]),
+      isMarketplace
+        ? scoreMatches(userProfile, finalFeed, matchType as "suppliers" | "buyers")
+        : Promise.resolve(new Map()),
+    ]);
 
     const countsMap = new Map(userCounts.map((u) => [u.id, u._count]));
 
-    return cleanMatches.map((company) => {
-      const counts = countsMap.get(company.userId);
-      return {
-        ...company,
-        followersCount: counts?.followers || 0,
-        connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0),
-      };
+    // Relationship with each company: pending proposal (either direction) or already collaborated
+    const pendingIds = new Set<string>(); // requests I sent (can be cancelled)
+    const incomingIds = new Set<string>(); // requests they sent me
+    const collaboratedIds = new Set<string>();
+    collabRows.forEach((r) => {
+      const other = r.requesterId === userId ? r.recipientId : r.requesterId;
+      if (r.status === "PENDING") (r.requesterId === userId ? pendingIds : incomingIds).add(other);
+      else if (r.status === "ACCEPTED" || r.status === "COMPLETED") collaboratedIds.add(other);
     });
+
+    return cleanMatches
+      .filter((company) => !collaboratedIds.has(company.userId)) // already collaborated: don't show again
+      .map((company) => {
+        const counts = countsMap.get(company.userId);
+        const score = scores.get(company.userId);
+        return {
+          ...company,
+          followersCount: counts?.followers || 0,
+          connectionsCount: (counts?.receivedConnections || 0) + (counts?.sentConnections || 0),
+          ...(isMarketplace && {
+            collabStatus: pendingIds.has(company.userId) ? "PENDING" : incomingIds.has(company.userId) ? "INCOMING" : "NONE",
+            isConnected: connectedIds.has(company.userId),
+            matchScore: score?.score ?? null,
+            matchScoreSource: score?.source ?? null, // "ollama" | "keyword"
+            matchedServices: score?.matchedServices ?? [],
+            matchedKeywords: score?.matchedKeywords ?? [],
+            matchedTags: score?.matchedTags ?? [],
+          }),
+        };
+      });
   } catch (err) {
     console.error("getMatches error:", err);
     return [];

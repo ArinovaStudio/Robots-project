@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AchievementPost from "@/components/home/achievements-post";
 import InvestorDashboardWidget from "@/components/home/investor-dashboard-widget";
@@ -14,6 +14,13 @@ import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { useNewConnectionPosts } from "@/hooks/useNewConnectionPosts";
 import NewPostsPill from "@/components/home/new-posts-pill";
 
+type FeedTab = "foryou" | "network";
+
+const TABS: { id: FeedTab; label: string }[] = [
+  { id: "foryou", label: "For you" },
+  { id: "network", label: "Network" },
+];
+
 export default function ExploreClient() {
   const { user } = useUserStore();
   const { status } = useSession();
@@ -22,6 +29,8 @@ export default function ExploreClient() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [activeTab, setActiveTab] = useState<FeedTab>("foryou");
+  const requestId = useRef(0);
 
   const { ref, isIntersecting } = useIntersectionObserver({ rootMargin: '200px' });
   const { count: newPostsCount, reset: resetNewPosts } = useNewConnectionPosts(
@@ -29,6 +38,7 @@ export default function ExploreClient() {
 );
 
   const fetchFeed = useCallback(async (pageNum: number, append = false) => {
+    const thisRequest = ++requestId.current;
     if (append) {
       setLoadingMore(true);
       setPage(pageNum);
@@ -40,8 +50,9 @@ export default function ExploreClient() {
     }
     
     try {
-      const res = await fetch(`/api/user/feed/explore?page=${pageNum}&limit=15`);
+      const res = await fetch(`/api/user/feed/explore?page=${pageNum}&limit=15&tab=${activeTab}`);
       const json = await res.json();
+      if (thisRequest !== requestId.current) return; // a newer request (e.g. tab switch) replaced this one
       
       if (json.success) {
         if (append) {
@@ -59,10 +70,12 @@ export default function ExploreClient() {
     } catch (error) {
       console.error("Failed to load feed", error);
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (thisRequest === requestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (status === "authenticated" && user?.id && isIntersecting && hasMore && !loading && !loadingMore) {
@@ -93,6 +106,24 @@ const showNewPosts = () => {
           <InvestorDashboardWidget user={user} />
         </ScrollReveal>
       )}
+
+      <div className="flex gap-2 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === tab.id
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       <ScrollReveal direction="down">
         <AchievementPost />
@@ -127,12 +158,20 @@ const showNewPosts = () => {
         </SkeletonTheme>
       ) : posts.length === 0 ? (
         <div className="text-center py-10 text-slate-500 bg-white rounded-3xl border border-slate-200/80">
-          No posts to show yet. Follow some companies to build your feed!
+          {activeTab === "network"
+            ? "No posts from your connections yet. Connect with more people to fill this feed!"
+            : "No posts to show yet."}
         </div>
       ) : (
         <>
           {posts.map((post) => (
             <ScrollReveal key={post.id} direction="up" delay={0.1}>
+              {post.connectionActivity && (
+                <p className="mb-1.5 px-2 text-xs font-medium text-slate-500">
+                  <span className="font-semibold text-slate-700">{post.connectionActivity.name}</span>{" "}
+                  {post.connectionActivity.type === "COMMENTED" ? "commented on this" : "reacted to this"}
+                </p>
+              )}
               <FeedCard 
                 post={post} 
                 currentUser={user} 

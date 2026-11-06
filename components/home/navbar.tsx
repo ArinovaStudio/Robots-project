@@ -28,7 +28,8 @@ export default function Navbar() {
     revalidateOnFocus: true,
   });
 
-  const unreadNotifications = countsData?.data?.unreadNotifications || 0;
+  const unreadNotifications =
+    pathname === "/notifications" ? 0 : countsData?.data?.unreadNotifications || 0;
   const pendingConnections = countsData?.data?.unreadConnectionRequests || 0;
   const unreadMessages = countsData?.data?.unreadMessages || 0;
 
@@ -202,6 +203,13 @@ export default function Navbar() {
             label="Notifications"
             isActive={pathname === "/notifications"}
             badge={unreadNotifications > 0 ? unreadNotifications : undefined}
+            onClick={() => mutateCounts(
+              (current: any) =>
+                current?.data
+                  ? { ...current, data: { ...current.data, unreadNotifications: 0 } }
+                  : current,
+              { revalidate: false }
+            )}
           />
 
           <div className="hidden sm:flex h-full items-center ml-2 border-l pl-6 border-gray-200">
@@ -296,7 +304,7 @@ function NavItem({
     >
       <div className="relative">
         {icon}
-        {badge && (
+        {badge !== undefined && badge > 0 && (
           <span className="absolute -top-1 -right-2 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white border border-white">
             {badge}
           </span>

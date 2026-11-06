@@ -144,3 +144,63 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * Cancel a collaboration request you sent that is still pending.
+ * Body: { recipientId: string }
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const recipientId = body?.recipientId;
+    if (!recipientId || typeof recipientId !== "string") {
+      return NextResponse.json({ success: false, message: "Recipient business ID is required." }, { status: 400 });
+    }
+
+    // Only the sender can cancel, and only while it is still pending
+    const pending = await prisma.$queryRaw<{ id: string; createdAt: Date }[]>`
+      SELECT "id", "createdAt" FROM "MarketplaceCollaboration"
+      WHERE "requesterId" = ${user.id}
+        AND "recipientId" = ${recipientId}
+        AND "status" = 'PENDING'
+    `;
+
+    if (pending.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "No pending collaboration request found for this business." },
+        { status: 404 }
+      );
+    }
+
+    await prisma.$executeRaw`
+      DELETE FROM "MarketplaceCollaboration"
+      WHERE "requesterId" = ${user.id}
+        AND "recipientId" = ${recipientId}
+        AND "status" = 'PENDING'
+    `;
+
+    // Best effort: remove the "submitted a proposal" notification we sent them
+    const earliest = pending.reduce((min, r) => (r.createdAt < min ? r.createdAt : min), pending[0].createdAt);
+    await prisma.notification
+      .deleteMany({
+        where: {
+          userId: recipientId,
+          actorId: user.id,
+          type: "SYSTEM",
+          content: { endsWith: "submitted a B2B collaboration proposal to your business." },
+          createdAt: { gte: new Date(new Date(earliest).getTime() - 5000) },
+        },
+      })
+      .catch(() => null);
+
+    return NextResponse.json({ success: true, message: "Collaboration request cancelled." });
+  } catch (error) {
+    console.error("Collaborate cancel error:", error);
+    return NextResponse.json({ success: false, message: "Failed to cancel collaboration request." }, { status: 500 });
+  }
+}
+

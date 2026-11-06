@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { getMatches } from "@/lib/match";
+import { prisma } from "@/lib/prisma";
 
 const VALID_SLUGS = ["similar", "suggested", "suppliers", "buyers"] as const;
 type MatchSlug = (typeof VALID_SLUGS)[number];
@@ -22,9 +23,16 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ slu
     const source: "overall" | "posts" | "profile" =
       sourceParam === "posts" || sourceParam === "profile" ? sourceParam : "overall";
 
-    const matches = await getMatches(user.id, slug as MatchSlug, source);
+    const [matches, hiddenRows] = await Promise.all([
+      getMatches(user.id, slug as MatchSlug, source),
+      prisma.hiddenCompany.findMany({ where: { userId: user.id }, select: { companyUserId: true } }),
+    ]);
 
-    return NextResponse.json({ success: true, data: matches }, { status: 200 });
+    // Drop businesses the viewer chose to hide
+    const hiddenIds = new Set(hiddenRows.map((h) => h.companyUserId));
+    const visible = matches.filter((m: any) => !hiddenIds.has(m.userId));
+
+    return NextResponse.json({ success: true, data: visible }, { status: 200 });
 
   } catch {
     return NextResponse.json( { success: false, message: "Internal server error" }, { status: 500 } );

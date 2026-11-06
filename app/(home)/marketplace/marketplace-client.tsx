@@ -215,6 +215,12 @@ export default function MarketplaceClient() {
                 company={company}
                 showCollaborate={true}
                 onCollaborate={(c) => setCollaborateTarget({ id: c.userId, name: c.companyName })}
+                onCollabCancelled={(c) => {
+                  const reset = (list: any[]) =>
+                    list.map((x) => (x.userId === c.userId ? { ...x, collabStatus: "NONE" } : x));
+                  setSuppliers(reset);
+                  setBuyers(reset);
+                }}
               />
             ))}
           </div>
@@ -245,7 +251,14 @@ export default function MarketplaceClient() {
           recipientId={collaborateTarget.id}
           companyName={collaborateTarget.name}
           onClose={() => setCollaborateTarget(null)}
-          onSuccess={() => setCollaborateTarget(null)}
+          onSuccess={() => {
+            // Flip the button to "Pending" right away, no refetch needed
+            const markPending = (list: any[]) =>
+              list.map((c) => (c.userId === collaborateTarget.id ? { ...c, collabStatus: "PENDING" } : c));
+            setSuppliers(markPending);
+            setBuyers(markPending);
+            setCollaborateTarget(null);
+          }}
         />
       )}
     </section>

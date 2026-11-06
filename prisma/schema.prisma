@@ -43,6 +43,7 @@ model User {
   status UserStatus @default(ACTIVE)
   verificationStatus VerificationStatus @default(UNVERIFIED)
   isOnboarded Boolean @default(false)
+  notificationsSeenAt DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -67,6 +68,10 @@ model User {
   conversationsAsUser2 Conversation[] @relation("ConversationUser2")
   sentMessages DirectMessage[] @relation("MessageSender")
   submittedReports PostReport[]
+  hiddenCompanies HiddenCompany[] @relation("HiddenCompanyOwner")
+  hiddenByUsers HiddenCompany[] @relation("HiddenCompanyTarget")
+  submittedCompanyReports CompanyReport[] @relation("CompanyReporter")
+  companyReports CompanyReport[] @relation("CompanyReported")
   notifications Notification[]
   collaborationRequests CollaborationRequest[]
   postBusinessIntents PostBusinessIntent[]
@@ -559,6 +564,35 @@ model PostReport {
   @@unique([postId, userId]) 
 }
 
+model HiddenCompany {
+  id String @id @default(uuid())
+  userId String
+  companyUserId String
+  createdAt DateTime @default(now())
+
+  user User @relation("HiddenCompanyOwner", fields: [userId], references: [id], onDelete: Cascade)
+  company User @relation("HiddenCompanyTarget", fields: [companyUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyUserId])
+}
+
+model CompanyReport {
+  id String @id @default(uuid())
+  companyUserId String
+  userId String
+  reason ReportReason
+  details String? @db.Text
+  status ReportStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company User @relation("CompanyReported", fields: [companyUserId], references: [id], onDelete: Cascade)
+  user User @relation("CompanyReporter", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyUserId, userId])
+}
+
 model SearchStat {
   id String @id @default(uuid())
   query String   
@@ -598,6 +632,9 @@ enum NotificationType {
   POST_LIKE
   NEW_COMMENT
   SYSTEM
+  MENTION
+  NETWORK_ACTIVITY
+  INVESTOR_OFFER
 }
 
 model Notification {
@@ -612,6 +649,7 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+   @@index([userId, createdAt])
 }
 
 enum CollabStatus {
