@@ -256,8 +256,11 @@ export async function GET() {
       };
     });
 
-    // Sort by performance score descending
-    formattedCompanies.sort((a, b) => b.performanceScore - a.performanceScore);
+    formattedCompanies.sort(
+      (a, b) =>
+        b.matchPercentage - a.matchPercentage ||
+        b.performanceScore - a.performanceScore,
+    );
 
     return NextResponse.json({
       success: true,

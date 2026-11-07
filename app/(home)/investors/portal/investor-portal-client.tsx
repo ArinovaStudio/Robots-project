@@ -105,26 +105,6 @@ interface PreferenceCompany {
   isConnectionSender?: boolean;
 }
 
-function formatSectorLabel(value: string) {
-  const normalized = value
-    .trim()
-    .replace(/heatlh care/gi, "Healthcare")
-    .replace(/health care/gi, "Healthcare")
-    .replace(/healthcare/gi, "Healthcare")
-    .replace(/\bai\b/gi, "AI")
-    .replace(/\bml\b/gi, "ML")
-    .replace(/\s+/g, " ");
-
-  return normalized
-    .split(" ")
-    .map((word) => {
-      if (word === "AI" || word === "ML") return word;
-      if (word === "&") return "&";
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
-}
-
 function formatDescription(value: string) {
   return value
     .trim()
@@ -295,57 +275,14 @@ export default function InvestorPortalClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-24">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-8 text-white border border-[#1E3A5F]">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-200 mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-              <span>Investor Deal Flow & Pitches</span>
-            </div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
-              Discover Ideas, Products & Pitches
-            </h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Explore vetted B2B companies raising capital, discover innovative products and early-stage ideas, and connect with companies doing good in your preferences.
-            </p>
-
-            {preferences?.sectors?.length ? (
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                <span className="font-medium text-slate-400">Your Selected Preferences:</span>
-                {preferences.sectors.map((sec) => (
-                  <span key={sec} className="rounded-full bg-white/10 px-2.5 py-0.5 font-semibold text-blue-200 border border-white/10">
-                    {formatSectorLabel(sec)}
-                  </span>
-                ))}
-                {preferences.investmentRange && (
-                  <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-semibold text-blue-200 border border-white/20">
-                    Range: {preferences.investmentRange}
-                  </span>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Active Opportunities</span>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white">{pitches.length}</span>
-                <span className="text-xs text-blue-300">Deals in Portal</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="relative z-10 mt-8 flex border-b border-white/15">
+      <div className="rounded-xl border border-gray-200 bg-white p-2">
+        <div className="flex border-b border-gray-100">
           <button
             onClick={() => setActiveTab("pitches")}
             className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
               activeTab === "pitches"
-                ? "border-blue-400 text-white"
-                : "border-transparent text-slate-400 hover:text-white"
+                ? "border-blue-600 text-blue-700"
+                : "border-transparent text-gray-500 hover:text-gray-900"
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -355,12 +292,12 @@ export default function InvestorPortalClient() {
             onClick={() => setActiveTab("performers")}
             className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
               activeTab === "performers"
-                ? "border-blue-400 text-white"
-                : "border-transparent text-slate-400 hover:text-white"
+                ? "border-blue-600 text-blue-700"
+                : "border-transparent text-gray-500 hover:text-gray-900"
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            Companies Doing Good in Your Preferences ({performers.length})
+            Company Doing Good ({performers.length})
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Edit2, Trash2, Check, CheckCheck, Ban } from "lucide-react";
+import { MoreVertical, Edit2, Trash2, Check, CheckCheck, Ban, FileText } from "lucide-react";
 import Image from "next/image";
 import { globalSocket } from "@/components/SocketAnnouncer";
 
@@ -131,6 +131,17 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
                     >
                       Your browser does not support video playback.
                     </video>
+                  )}
+                  {message.mediaUrl && message.mediaType === "PDF" && (
+                    <a
+                      href={message.mediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                    >
+                      <FileText size={18} />
+                      Open PDF
+                    </a>
                   )}
                   {message.content && (
                     <p className="whitespace-pre-wrap break-words">{message.content}</p>

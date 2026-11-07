@@ -15,13 +15,16 @@ export default function directChatHandler(io: Server, socket: Socket) {
     receiverId: string;
     content: string;
     mediaUrl?: string;
-    mediaType?: "IMAGE" | "VIDEO";
+    mediaType?: "IMAGE" | "VIDEO" | "PDF";
   }, acknowledge?: (result: { success: boolean; message?: string }) => void) => {
     // TODO: Verify senderId matches authenticated socket session to prevent spoofing
     try {
       const content = typeof data.content === "string" ? data.content.trim() : "";
       const mediaUrl = typeof data.mediaUrl === "string" ? data.mediaUrl.trim() : "";
-      const mediaType = data.mediaType === "IMAGE" || data.mediaType === "VIDEO" ? data.mediaType : null;
+      const mediaType =
+        data.mediaType === "IMAGE" || data.mediaType === "VIDEO" || data.mediaType === "PDF"
+          ? data.mediaType
+          : null;
       if (!content && (!mediaUrl || !mediaType)) {
         acknowledge?.({ success: false, message: "Add a message or attach media before sending." });
         return;
@@ -43,7 +46,9 @@ export default function directChatHandler(io: Server, socket: Socket) {
       }
 
       const [user1Id, user2Id] = [data.senderId, data.receiverId].sort();
-      const lastMessage = content || (mediaType === "VIDEO" ? "Video" : "Photo");
+      const lastMessage =
+        content ||
+        (mediaType === "VIDEO" ? "Video" : mediaType === "PDF" ? "Document" : "Photo");
 
       const conversation = await prisma.conversation.upsert({
         where: { user1Id_user2Id: { user1Id, user2Id } },

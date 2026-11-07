@@ -19,29 +19,37 @@ interface Business {
   connectedCount: number;
 }
 
+async function loadTopBusinesses(): Promise<Business[]> {
+  const res = await fetch("/api/investor/top-businesses");
+  const json = await res.json();
+  if (!res.ok || !json.success || !Array.isArray(json.data)) {
+    throw new Error(json.message || "Failed to fetch businesses");
+  }
+  return json.data;
+}
+
 export default function TopBusinesses() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
   useEffect(() => {
-    const fetchBusinesses = async () => {
-      try {
-        const res = await fetch("/api/investor/top-businesses");
-        const json = await res.json();
-        if (!res.ok || !json.success || !Array.isArray(json.data)) {
-          throw new Error(json.message || "Failed to fetch businesses");
-        }
-        setBusinesses(json.data);
-      } catch (error) {
+    let active = true;
+    loadTopBusinesses()
+      .then((data) => {
+        if (active) setBusinesses(data);
+      })
+      .catch((error) => {
         console.error("Failed to fetch top businesses:", error);
         toast.error("Couldn't load suggested businesses.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-    fetchBusinesses();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleConnectSuccess = (message: string) => {
@@ -49,6 +57,12 @@ export default function TopBusinesses() {
     if (selectedBusiness) {
       setBusinesses((current) => current.filter((business) => business.id !== selectedBusiness.id));
       setSelectedBusiness(null);
+      loadTopBusinesses()
+        .then(setBusinesses)
+        .catch((error) => {
+          console.error("Failed to refresh top businesses:", error);
+          toast.error("Couldn't refresh suggested businesses.");
+        });
     }
   };
 
@@ -61,7 +75,7 @@ export default function TopBusinesses() {
         <h3 className="text-sm font-bold tracking-tight text-gray-900">Top Businesses</h3>
       </div>
 
-      <div className="space-y-3.5">
+      <div className="space-y-5">
         {loading ? (
           <div className="space-y-3" aria-label="Loading businesses">
             {[1, 2, 3].map((item) => (
@@ -78,7 +92,7 @@ export default function TopBusinesses() {
           </div>
         ) : (
           businesses.map((business) => (
-            <div key={business.id} className="flex items-center gap-3">
+            <div key={business.id} className="flex items-center gap-3 py-1">
               <Link href={`/profile/${business.id}`} className="shrink-0">
                 <div className="relative h-11 w-11 overflow-hidden rounded-lg border border-gray-200 bg-blue-50">
                   {business.image ? (

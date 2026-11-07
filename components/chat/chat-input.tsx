@@ -8,7 +8,7 @@ interface ChatInputProps {
   targetUserId: string; 
   editingMessage: any | null;
   onCancelEdit: () => void;
-  onSendMessage: (text: string, media?: { url: string; type: "IMAGE" | "VIDEO" }) => Promise<void>;
+  onSendMessage: (text: string, media?: { url: string; type: "IMAGE" | "VIDEO" | "PDF" }) => Promise<void>;
 }
 
 export default function ChatInput({ currentUserId, targetUserId, editingMessage, onCancelEdit, onSendMessage }: ChatInputProps) {
@@ -48,7 +48,7 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
   const sendMessage = async () => {
     setSending(true);
     try {
-      let media: { url: string; type: "IMAGE" | "VIDEO" } | undefined;
+      let media: { url: string; type: "IMAGE" | "VIDEO" | "PDF" } | undefined;
       if (mediaFile) {
         const formData = new FormData();
         formData.append("media", mediaFile);
@@ -77,13 +77,22 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
     const file = event.target.files?.[0] ?? null;
     event.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      toast.error("Choose an image or video file.");
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isVideo && !isPdf) {
+      toast.error("Choose an image, video, or PDF file.");
       return;
     }
-    const maxSize = file.type.startsWith("video/") ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSize = isVideo ? 200 * 1024 * 1024 : isImage ? 40 * 1024 * 1024 : 120 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(file.type.startsWith("video/") ? "Videos must be 50 MB or smaller." : "Images must be 10 MB or smaller.");
+      toast.error(
+        isVideo
+          ? "Videos must be 200 MB or smaller."
+          : isImage
+            ? "Images must be 40 MB or smaller."
+            : "PDFs must be 120 MB or smaller.",
+      );
       return;
     }
     setMediaFile(file);
@@ -112,7 +121,7 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/*,video/*,application/pdf"
           onChange={handleFileChange}
           className="hidden"
           disabled={sending || !!editingMessage}
@@ -122,8 +131,8 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={sending}
-            aria-label="Attach photo or video"
-            title="Attach photo or video"
+            aria-label="Attach image, video, or PDF"
+            title="Attach image, video, or PDF"
             className="flex size-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-blue-600 disabled:opacity-50"
           >
             <ImagePlus size={20} />

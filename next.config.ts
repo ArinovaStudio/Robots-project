@@ -5,6 +5,9 @@ import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    proxyClientMaxBodySize: "210mb",
+  },
   turbopack: {
     root: process.cwd(),
   },

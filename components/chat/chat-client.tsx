@@ -109,7 +109,7 @@ export default function ChatClient({ currentUserId, targetUserId }: ChatClientPr
 
   const handleSendMessage = (
     text: string,
-    media?: { url: string; type: "IMAGE" | "VIDEO" },
+    media?: { url: string; type: "IMAGE" | "VIDEO" | "PDF" },
   ): Promise<void> =>
     new Promise((resolve, reject) => {
       if (!globalSocket.connected) {

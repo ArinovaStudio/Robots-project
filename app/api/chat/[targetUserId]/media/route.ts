@@ -3,8 +3,9 @@ import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile, uploadImage } from "@/lib/uploads";
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 40 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024;
+const MAX_PDF_SIZE = 120 * 1024 * 1024;
 
 export async function POST(
   req: NextRequest,
@@ -38,25 +39,31 @@ export async function POST(
     const formData = await req.formData();
     const value = formData.get("media");
     if (!(value instanceof File) || value.size === 0) {
-      return NextResponse.json({ success: false, message: "Choose an image or video to upload." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Choose an image, video, or PDF to upload." }, { status: 400 });
     }
 
-    let type: "IMAGE" | "VIDEO";
+    let type: "IMAGE" | "VIDEO" | "PDF";
     let url: string;
     if (value.type.startsWith("image/")) {
       if (value.size > MAX_IMAGE_SIZE) {
-        return NextResponse.json({ success: false, message: "Images must be 10 MB or smaller." }, { status: 400 });
+        return NextResponse.json({ success: false, message: "Images must be 40 MB or smaller." }, { status: 400 });
       }
       type = "IMAGE";
       url = await uploadImage(value, "messages/images");
     } else if (value.type.startsWith("video/")) {
       if (value.size > MAX_VIDEO_SIZE) {
-        return NextResponse.json({ success: false, message: "Videos must be 50 MB or smaller." }, { status: 400 });
+        return NextResponse.json({ success: false, message: "Videos must be 200 MB or smaller." }, { status: 400 });
       }
       type = "VIDEO";
       url = await uploadFile(value, "messages/videos");
+    } else if (value.type === "application/pdf") {
+      if (value.size > MAX_PDF_SIZE) {
+        return NextResponse.json({ success: false, message: "PDFs must be 120 MB or smaller." }, { status: 400 });
+      }
+      type = "PDF";
+      url = await uploadFile(value, "messages/documents");
     } else {
-      return NextResponse.json({ success: false, message: "Only images and videos are supported." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Only images, videos, and PDFs are supported." }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data: { url, type } }, { status: 201 });

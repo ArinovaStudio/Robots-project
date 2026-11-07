@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useUserStore } from "@/store/AuthStore";
 
 import {
   ArrowLeftRight,
-  Building2,
   Handshake,
   Landmark,
   Compass,
@@ -26,6 +25,7 @@ interface MenuItem {
 
 export default function MenuCard() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUserStore();
   const isInvestor = user?.accountType === "INVESTOR";
 
@@ -39,11 +39,6 @@ export default function MenuCard() {
       icon: ArrowLeftRight,
       label: "B2B Collaboration",
       href: "/marketplace",
-    },
-    {
-      icon: Building2,
-      label: "Directory",
-      href: "/directory",
     },
     {
       icon: Handshake,
@@ -67,11 +62,6 @@ export default function MenuCard() {
       icon: TrendingUp,
       label: "Top Performers",
       href: "/investors/portal?tab=performers",
-    },
-    {
-      icon: Building2,
-      label: "Directory",
-      href: "/directory",
     },
     {
       icon: Handshake,
@@ -99,7 +89,12 @@ export default function MenuCard() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-1.5">
       {menu.map((item) => {
-        const isActive = pathname === item.href;
+        const [itemPath, itemQuery] = item.href.split("?");
+        const isActive =
+          pathname === itemPath &&
+          (itemQuery
+            ? new URLSearchParams(itemQuery).get("tab") === searchParams.get("tab")
+            : itemPath !== "/investors/portal" || searchParams.get("tab") !== "performers");
 
         return (
           <Link
