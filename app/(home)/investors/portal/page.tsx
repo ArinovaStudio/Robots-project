@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function InvestorPortalPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-sm text-gray-500">Loading portal...</div>}>
-      <InvestorPortalClient />
+      <InvestorPortalClient view="pitches" />
     </Suspense>
   );
 }

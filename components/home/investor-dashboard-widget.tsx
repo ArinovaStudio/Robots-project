@@ -184,7 +184,7 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
               </h3>
             </div>
             <Link
-              href="/investors/portal?tab=performers"
+              href="/investors/top-performers"
               className="text-xs font-semibold text-[#2563EB] hover:underline flex items-center gap-1"
             >
               See all ranked companies <ArrowRight size={13} />

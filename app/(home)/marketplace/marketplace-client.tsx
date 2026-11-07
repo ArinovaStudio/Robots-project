@@ -77,7 +77,7 @@ export default function MarketplaceClient() {
                   <Sparkles className="w-4 h-4" /> Open Investor Portal <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  href="/investors/portal?tab=performers"
+                  href="/investors/top-performers"
                   className="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-5 py-2.5 text-sm font-semibold text-[#172033] hover:bg-gray-50 transition"
                 >
                   View Companies Matching Your Preferences

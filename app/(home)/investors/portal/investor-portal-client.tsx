@@ -27,8 +27,6 @@ import {
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
-import { useUserStore } from "@/store/AuthStore";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ConnectModal from "@/components/modals/connect-modal";
 import MakeOfferModal from "@/components/modals/make-offer-modal";
 import RatePitchModal from "@/components/modals/rate-pitch-modal";
@@ -114,19 +112,7 @@ function formatDescription(value: string) {
     .join("\n\n");
 }
 
-export default function InvestorPortalClient() {
-  const { user } = useUserStore();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") === "performers" ? "performers" : "pitches";
-  const setActiveTab = (tab: "pitches" | "performers") => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === "performers") params.set("tab", tab);
-    else params.delete("tab");
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  };
+export default function InvestorPortalClient({ view }: { view: "pitches" | "performers" }) {
   const [pitches, setPitches] = useState<PitchItem[]>([]);
   const [performers, setPerformers] = useState<PreferenceCompany[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<PitchItem | null>(null);
@@ -232,11 +218,13 @@ export default function InvestorPortalClient() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPitches();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPerformers();
-  }, []);
+    if (view === "pitches") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchPitches();
+    } else {
+      fetchPerformers();
+    }
+  }, [view]);
 
   const filteredPitches = useMemo(() => {
     return pitches.filter(p => {
@@ -275,36 +263,9 @@ export default function InvestorPortalClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-24">
-      <div className="rounded-xl border border-gray-200 bg-white p-2">
-        <div className="flex border-b border-gray-100">
-          <button
-            onClick={() => setActiveTab("pitches")}
-            className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-              activeTab === "pitches"
-                ? "border-blue-600 text-blue-700"
-                : "border-transparent text-gray-500 hover:text-gray-900"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            Ideas, Products & Pitches ({pitches.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("performers")}
-            className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-              activeTab === "performers"
-                ? "border-blue-600 text-blue-700"
-                : "border-transparent text-gray-500 hover:text-gray-900"
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Company Doing Good ({performers.length})
-          </button>
-        </div>
-      </div>
-
-      {/* TAB 1: PITCHES, PRODUCTS & IDEAS */}
-      {activeTab === "pitches" && (
+      {view === "pitches" && (
         <section className="space-y-6">
+          
           {/* Filter Bar */}
           <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -659,14 +620,13 @@ export default function InvestorPortalClient() {
         </section>
       )}
 
-      {/* TAB 2: COMPANIES DOING GOOD IN SELECTED PREFERENCES */}
-      {activeTab === "performers" && (
+      {view === "performers" && (
         <section className="space-y-6">
           <div className="rounded-2xl border border-[#E5E7EB] bg-[#EFF6FF] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-[#172033] flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-[#2563EB]" />
-                Top Performing Companies in Your Preferences
+                Company Doing Good
               </h2>
               <p className="text-xs text-[#64748B] mt-1">
                 Ranked by accepted connections, posts, comments, pitches, and accepted investment offers.
