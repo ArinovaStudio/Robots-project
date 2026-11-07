@@ -107,13 +107,39 @@ export default function ChatClient({ currentUserId, targetUserId }: ChatClientPr
     };
   }, [currentUserId, targetUserId]);
 
-  const handleSendMessage = (text: string) => {
-    globalSocket.emit("send_dm", {
-      senderId: currentUserId,
-      receiverId: targetUserId,
-      content: text,
+  const handleSendMessage = (
+    text: string,
+    media?: { url: string; type: "IMAGE" | "VIDEO" },
+  ): Promise<void> =>
+    new Promise((resolve, reject) => {
+      if (!globalSocket.connected) {
+        reject(new Error("Chat connection is unavailable. Please try again."));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error("Message could not be sent. Please try again."));
+      }, 15000);
+
+      globalSocket.emit(
+        "send_dm",
+        {
+          senderId: currentUserId,
+          receiverId: targetUserId,
+          content: text,
+          mediaUrl: media?.url,
+          mediaType: media?.type,
+        },
+        (result?: { success: boolean; message?: string }) => {
+          clearTimeout(timeoutId);
+          if (!result?.success) {
+            reject(new Error(result?.message || "Failed to send message."));
+          } else {
+            resolve();
+          }
+        },
+      );
     });
-  };
 
   if (loading) {
     return (

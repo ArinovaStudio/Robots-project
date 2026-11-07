@@ -237,7 +237,9 @@ export default function CompanyPitchesClient() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#172033]">Your Active Pitches & Opportunities</h2>
-          <span className="text-xs text-[#64748B]">{pitches.length} total</span>
+          {pitches.length > 0 && (
+            <span className="text-xs text-[#64748B]">{pitches.length} total</span>
+          )}
         </div>
 
         {loading ? (

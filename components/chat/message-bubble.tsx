@@ -109,7 +109,33 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
                   This message was deleted
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                <div className="space-y-2">
+                  {message.mediaUrl && message.mediaType === "IMAGE" && (
+                    <a href={message.mediaUrl} target="_blank" rel="noreferrer">
+                      <Image
+                        src={message.mediaUrl}
+                        alt="Shared photo"
+                        width={480}
+                        height={320}
+                        unoptimized
+                        className="h-auto max-h-80 max-w-full rounded-xl object-contain"
+                      />
+                    </a>
+                  )}
+                  {message.mediaUrl && message.mediaType === "VIDEO" && (
+                    <video
+                      src={message.mediaUrl}
+                      controls
+                      preload="metadata"
+                      className="max-h-80 max-w-full rounded-xl"
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  )}
+                  {message.content && (
+                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

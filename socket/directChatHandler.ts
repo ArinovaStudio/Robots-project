@@ -10,10 +10,22 @@ export default function directChatHandler(io: Server, socket: Socket) {
     socket.join(roomName);
   });
 
-  socket.on("send_dm", async (data: { senderId: string; receiverId: string; content: string }) => {
+  socket.on("send_dm", async (data: {
+    senderId: string;
+    receiverId: string;
+    content: string;
+    mediaUrl?: string;
+    mediaType?: "IMAGE" | "VIDEO";
+  }, acknowledge?: (result: { success: boolean; message?: string }) => void) => {
     // TODO: Verify senderId matches authenticated socket session to prevent spoofing
     try {
-      if (!data.content || data.content.trim() === "") return;
+      const content = typeof data.content === "string" ? data.content.trim() : "";
+      const mediaUrl = typeof data.mediaUrl === "string" ? data.mediaUrl.trim() : "";
+      const mediaType = data.mediaType === "IMAGE" || data.mediaType === "VIDEO" ? data.mediaType : null;
+      if (!content && (!mediaUrl || !mediaType)) {
+        acknowledge?.({ success: false, message: "Add a message or attach media before sending." });
+        return;
+      }
 
       const connection = await prisma.connection.findFirst({
         where: {
@@ -26,22 +38,26 @@ export default function directChatHandler(io: Server, socket: Socket) {
       });
 
       if (!connection) {
-        return socket.emit("dm_error", { message: "You can only chat with accepted connections." });
+        acknowledge?.({ success: false, message: "You can only chat with accepted connections." });
+        return;
       }
 
       const [user1Id, user2Id] = [data.senderId, data.receiverId].sort();
+      const lastMessage = content || (mediaType === "VIDEO" ? "Video" : "Photo");
 
       const conversation = await prisma.conversation.upsert({
         where: { user1Id_user2Id: { user1Id, user2Id } },
-        update: { lastMessage: data.content, lastMessageAt: new Date() },
-        create: { user1Id, user2Id, lastMessage: data.content, lastMessageAt: new Date() }
+        update: { lastMessage, lastMessageAt: new Date() },
+        create: { user1Id, user2Id, lastMessage, lastMessageAt: new Date() }
       });
 
       const savedMessage = await prisma.directMessage.create({
         data: {
           conversationId: conversation.id,
           senderId: data.senderId,
-          content: data.content
+          content,
+          mediaUrl: mediaUrl || null,
+          mediaType: mediaUrl ? mediaType : null,
         },
         include: {
           sender: { select: { id: true, name: true, image: true, accountType: true, company: { select: { logoUrl: true, companyName: true } }, investor: { select: { firmName: true, investorType: true } } } }
@@ -50,23 +66,27 @@ export default function directChatHandler(io: Server, socket: Socket) {
 
       const roomName = `dm_${getRoomId(data.senderId, data.receiverId)}`;
       io.to(roomName).emit("receive_dm", savedMessage);
+      acknowledge?.({ success: true });
 
       // Create Notification
-      const notification = await prisma.notification.create({
-        data: {
-          userId: data.receiverId,
-          actorId: data.senderId,
-          type: "NEW_MESSAGE",
-          content: `${savedMessage.sender.name || "Someone"} sent you a message`,
-          link: `/messages/${data.senderId}`,
-        }
-      });
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: data.receiverId,
+            actorId: data.senderId,
+            type: "NEW_MESSAGE",
+            content: `${savedMessage.sender.name || "Someone"} sent you a message`,
+            link: `/messages/${data.senderId}`,
+          }
+        });
 
-      // Emit to global room
-      io.to(`user_${data.receiverId}`).emit("new_notification", notification);
-
-    } catch {
-      socket.emit("dm_error", { message: "Failed to send message." });
+        io.to(`user_${data.receiverId}`).emit("new_notification", notification);
+      } catch (error) {
+        console.error("Failed to create direct message notification:", error);
+      }
+    } catch (error) {
+      console.error("Failed to send direct message:", error);
+      acknowledge?.({ success: false, message: "Failed to send message." });
     }
   });
 
@@ -83,7 +103,7 @@ export default function directChatHandler(io: Server, socket: Socket) {
 
       const deletedMessage = await prisma.directMessage.update({
         where: { id: data.messageId },
-        data: { content: "", isDeleted: true },
+        data: { content: "", mediaUrl: null, mediaType: null, isDeleted: true },
         include: {
           sender: { select: { id: true, name: true, image: true, accountType: true, company: { select: { logoUrl: true, companyName: true } }, investor: { select: { firmName: true, investorType: true } } } }
         }

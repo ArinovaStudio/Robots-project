@@ -47,7 +47,7 @@ export default function MenuCard() {
     },
     {
       icon: Handshake,
-      label: "Collaborate",
+      label: "B2I Collaboration",
       href: "/collaborate",
     },
   ];
@@ -75,7 +75,7 @@ export default function MenuCard() {
     },
     {
       icon: Handshake,
-      label: "Collaborate",
+      label: "Business Collaboration",
       href: "/collaborate",
     },
   ];

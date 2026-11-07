@@ -77,6 +77,10 @@ model User {
   postBusinessIntents PostBusinessIntent[]
   sentMarketplaceCollaborations MarketplaceCollaboration[] @relation("CollabRequester")
   receivedMarketplaceCollaborations MarketplaceCollaboration[] @relation("CollabRecipient")
+  companyPitches CompanyPitch[]
+  pitchViews CompanyPitchView[] @relation("InvestorPitchViews")
+  pitchOffers CompanyPitchOffer[] @relation("InvestorPitchOffers")
+  pitchRatings CompanyPitchRating[] @relation("InvestorPitchRatings")
 }
 
 model VerificationApplication {
@@ -521,6 +525,8 @@ model DirectMessage {
   conversationId String
   senderId String
   content String @db.Text
+  mediaUrl String?
+  mediaType String?
   isEdited Boolean @default(false)
   isRead Boolean @default(false)
   isDeleted Boolean @default(false)
@@ -692,6 +698,83 @@ model PostBusinessIntent {
   @@index([authorId])
   @@index([intentType])
   @@index([status])
+}
+
+model CompanyPitch {
+  id String @id @default(uuid())
+  userId String
+  title String
+  tagline String?
+  type String @default("PITCH")
+  summary String @db.Text
+  sector String
+  stage String @default("Seed")
+  targetAmount String?
+  equityOffered String?
+  highlights Json @default("[]")
+  pitchDeckUrl String?
+  websiteUrl String?
+  status String @default("ACTIVE")
+  isSharedWithCompanies Boolean @default(false)
+  feedPostId String?
+  collabRequestId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  owner User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views CompanyPitchView[]
+  offers CompanyPitchOffer[]
+  ratings CompanyPitchRating[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model CompanyPitchView {
+  id String @id @default(uuid())
+  pitchId String
+  investorId String
+  createdAt DateTime @default(now())
+
+  pitch CompanyPitch @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  investor User @relation("InvestorPitchViews", fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@unique([pitchId, investorId])
+  @@index([investorId])
+}
+
+model CompanyPitchOffer {
+  id String @id @default(uuid())
+  pitchId String
+  investorId String
+  amount String
+  amountValue Float
+  terms String
+  message String? @db.Text
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  pitch CompanyPitch @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  investor User @relation("InvestorPitchOffers", fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@index([pitchId, createdAt])
+  @@index([investorId, createdAt])
+}
+
+model CompanyPitchRating {
+  id String @id @default(uuid())
+  pitchId String
+  investorId String
+  rating Int
+  feedback String? @db.Text
+  createdAt DateTime @default(now())
+
+  pitch CompanyPitch @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  investor User @relation("InvestorPitchRatings", fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@unique([pitchId, investorId])
+  @@index([investorId, createdAt])
 }
 
 model MarketplaceCollaboration {

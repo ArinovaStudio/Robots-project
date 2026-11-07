@@ -28,7 +28,7 @@ import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
 import { useUserStore } from "@/store/AuthStore";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ConnectModal from "@/components/modals/connect-modal";
 import MakeOfferModal from "@/components/modals/make-offer-modal";
 import RatePitchModal from "@/components/modals/rate-pitch-modal";
@@ -136,10 +136,17 @@ function formatDescription(value: string) {
 
 export default function InvestorPortalClient() {
   const { user } = useUserStore();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "performers" ? "performers" : "pitches";
-
-  const [activeTab, setActiveTab] = useState<"pitches" | "performers">(initialTab);
+  const activeTab = searchParams.get("tab") === "performers" ? "performers" : "pitches";
+  const setActiveTab = (tab: "pitches" | "performers") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "performers") params.set("tab", tab);
+    else params.delete("tab");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const [pitches, setPitches] = useState<PitchItem[]>([]);
   const [performers, setPerformers] = useState<PreferenceCompany[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<PitchItem | null>(null);
@@ -725,7 +732,7 @@ export default function InvestorPortalClient() {
                 Top Performing Companies in Your Preferences
               </h2>
               <p className="text-xs text-[#64748B] mt-1">
-                Ranked by real network traction: weekly profile views, follower growth, verified status, and alignment with your preferred sectors ({preferences?.sectors?.join(", ") || "All"}).
+                Ranked by accepted connections, posts, comments, pitches, and accepted investment offers.
               </p>
             </div>
             <div className="rounded-xl bg-white px-4 py-2 border border-[#E5E7EB] shrink-0 text-center">

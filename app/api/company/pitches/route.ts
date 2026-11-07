@@ -154,6 +154,10 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    if (!Array.isArray(highlights) || !highlights.every((highlight) => typeof highlight === "string")) {
+      return NextResponse.json({ success: false, message: "Highlights must be a list of text values." }, { status: 400 });
+    }
+
     let uploadedPitchDeckUrl: string | null = null;
     if (pitchDeckFile) {
       if (pitchDeckFile.type !== "application/pdf") {
@@ -171,31 +175,31 @@ export async function POST(req: NextRequest) {
       uploadedPitchDeckUrl = await uploadFile(pitchDeckFile, "pitches/decks");
     }
 
-    const pitchId = crypto.randomUUID();
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "CompanyPitch" (
-        "id", "userId", "title", "tagline", "type", "summary", "sector", "stage",
-        "targetAmount", "equityOffered", "highlights", "pitchDeckUrl", "websiteUrl", "status", "isSharedWithCompanies"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ACTIVE', false)`,
-      pitchId,
-      user.id,
-      title.trim(),
-      tagline ? tagline.trim() : null,
-      type,
-      summary.trim(),
-      sector.trim(),
-      stage,
-      targetAmount ? formatTargetAmount(targetAmount) : null,
-      equityOffered ? equityOffered.trim() : null,
-      Array.isArray(highlights) ? highlights : [],
-      uploadedPitchDeckUrl || (pitchDeckUrl ? pitchDeckUrl.trim() : null),
-      websiteUrl ? websiteUrl.trim() : null
-    );
+    const pitch = await prisma.companyPitch.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        title: title.trim(),
+        tagline: tagline.trim() || null,
+        type,
+        summary: summary.trim(),
+        sector: sector.trim(),
+        stage,
+        targetAmount: targetAmount ? formatTargetAmount(targetAmount) : null,
+        equityOffered: equityOffered.trim() || null,
+        highlights,
+        pitchDeckUrl: uploadedPitchDeckUrl || (pitchDeckUrl ? pitchDeckUrl.trim() : null),
+        websiteUrl: websiteUrl.trim() || null,
+        status: "ACTIVE",
+        isSharedWithCompanies: false,
+      },
+      select: { id: true },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Pitch created successfully.",
-      data: { id: pitchId }
+      data: { id: pitch.id }
     }, { status: 201 });
 
   } catch (error) {

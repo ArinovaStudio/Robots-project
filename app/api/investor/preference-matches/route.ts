@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const { user, error } = await getOnboardedUser();
     if (error || !user) {
@@ -121,20 +121,92 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // Score and format each company
+    const companyUserIds = candidateCompanies.map((company) => company.userId);
+    const pitchRows = await prisma.companyPitch.findMany({
+      where: { userId: { in: companyUserIds } },
+      select: { id: true, userId: true },
+    });
+    const pitchIds = pitchRows.map((pitch) => pitch.id);
+
+    const [
+      sentConnections,
+      receivedConnections,
+      authoredPosts,
+      authoredComments,
+      companyPitchCounts,
+      acceptedOfferCounts,
+    ] = await Promise.all([
+      prisma.connection.groupBy({
+        by: ["senderId"],
+        where: { status: "ACCEPTED", senderId: { in: companyUserIds } },
+        _count: { _all: true },
+      }),
+      prisma.connection.groupBy({
+        by: ["receiverId"],
+        where: { status: "ACCEPTED", receiverId: { in: companyUserIds } },
+        _count: { _all: true },
+      }),
+      prisma.post.groupBy({
+        by: ["authorId"],
+        where: { authorId: { in: companyUserIds }, status: "ACTIVE" },
+        _count: { _all: true },
+      }),
+      prisma.comment.groupBy({
+        by: ["authorId"],
+        where: { authorId: { in: companyUserIds } },
+        _count: { _all: true },
+      }),
+      prisma.companyPitch.groupBy({
+        by: ["userId"],
+        where: { userId: { in: companyUserIds } },
+        _count: { _all: true },
+      }),
+      pitchIds.length
+        ? prisma.companyPitchOffer.groupBy({
+            by: ["pitchId"],
+            where: { pitchId: { in: pitchIds }, status: "ACCEPTED" },
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const countMap = <TRow extends { _count: { _all: number } }>(
+      rows: TRow[],
+      key: (row: TRow) => string,
+    ) => new Map(rows.map((row) => [key(row), row._count._all]));
+    const sentConnectionsByUser = countMap(sentConnections, (row) => row.senderId);
+    const receivedConnectionsByUser = countMap(receivedConnections, (row) => row.receiverId);
+    const postsByUser = countMap(authoredPosts, (row) => row.authorId);
+    const commentsByUser = countMap(authoredComments, (row) => row.authorId);
+    const pitchesByUser = countMap(companyPitchCounts, (row) => row.userId);
+    const userByPitchId = new Map(pitchRows.map((pitch) => [pitch.id, pitch.userId]));
+    const investmentsByUser = new Map<string, number>();
+    for (const offer of acceptedOfferCounts) {
+      const pitchOwnerId = userByPitchId.get(offer.pitchId);
+      if (pitchOwnerId) {
+        investmentsByUser.set(
+          pitchOwnerId,
+          (investmentsByUser.get(pitchOwnerId) || 0) + offer._count._all,
+        );
+      }
+    }
+
+    // Score each company from its connections, posts, comments, pitches, and accepted investments.
     const formattedCompanies = candidateCompanies.map(c => {
       const followersCount = c.user._count.followers;
       const connectionsCount = c.user._count.sentConnections + c.user._count.receivedConnections;
       const recentViews = c.profileViews.reduce((sum, v) => sum + v.count, 0);
       const isVerified = c.user.verificationStatus === "VERIFIED";
 
-      // Calculate performance score ("doing good" metric)
+      const acceptedConnections =
+        (sentConnectionsByUser.get(c.userId) || 0) +
+        (receivedConnectionsByUser.get(c.userId) || 0);
       const performanceScore =
-        (recentViews * 3) +
-        (followersCount * 2) +
-        (connectionsCount * 3) +
-        (c.isBoosted ? 30 : 0) +
-        (isVerified ? 40 : 15);
+        acceptedConnections +
+        (postsByUser.get(c.userId) || 0) +
+        (commentsByUser.get(c.userId) || 0) +
+        (pitchesByUser.get(c.userId) || 0) +
+        (investmentsByUser.get(c.userId) || 0);
 
       // Check preference sector match
       const sectorMatched = sectors.some(s =>

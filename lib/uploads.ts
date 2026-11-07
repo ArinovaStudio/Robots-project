@@ -22,7 +22,7 @@ export async function uploadFile(file: File, subfolder: string = ""): Promise<st
       return `/uploads/${subfolder ? subfolder + "/" : ""}${sanitizedFilename}`;
     } catch (err) {
       console.warn("Local upload fallback failed:", err);
-      return `https://via.placeholder.com/800x400?text=${encodeURIComponent(file.name)}`;
+      throw new Error("Failed to store uploaded file.");
     }
   }
 

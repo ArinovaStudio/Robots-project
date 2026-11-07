@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO "CompanyPitch" (
         "id", "userId", "title", "tagline", "type", "summary", "sector", "stage",
         "targetAmount", "equityOffered", "highlights", "pitchDeckUrl", "websiteUrl", "status"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ACTIVE')`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $13, 'ACTIVE')`,
       pitchId,
       user.id,
       title.trim(),
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
       stage,
       targetAmount ? formatTargetAmount(targetAmount) : null,
       equityOffered || null,
-      Array.isArray(highlights) ? highlights : [],
+      JSON.stringify(Array.isArray(highlights) ? highlights : []),
       pitchDeckUrl || null,
       websiteUrl || null
     );

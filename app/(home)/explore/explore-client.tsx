@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AchievementPost from "@/components/home/achievements-post";
-import InvestorDashboardWidget from "@/components/home/investor-dashboard-widget";
 import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -100,12 +99,6 @@ const showNewPosts = () => {
     <div className="space-y-5 pb-20">
       <h1 className="sr-only">Connecto B2B Feed & Updates</h1>
       <NewPostsPill count={newPostsCount} onClick={showNewPosts} />
-
-      {user?.accountType === "INVESTOR" && (
-        <ScrollReveal direction="down">
-          <InvestorDashboardWidget user={user} />
-        </ScrollReveal>
-      )}
 
       <div className="flex gap-2 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm">
         {TABS.map((tab) => (

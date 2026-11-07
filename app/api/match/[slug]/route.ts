@@ -24,13 +24,55 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ slu
       sourceParam === "posts" || sourceParam === "profile" ? sourceParam : "overall";
 
     const [matches, hiddenRows] = await Promise.all([
-      getMatches(user.id, slug as MatchSlug, source),
+      user.accountType === "INVESTOR" && (slug === "suggested" || slug === "similar")
+        ? prisma.companyProfile.findMany({
+            where: {
+              userId: { not: user.id },
+              user: { accountType: "BUSINESS", status: "ACTIVE" },
+            },
+            take: 40,
+            orderBy: [{ isBoosted: "desc" }, { createdAt: "desc" }],
+            select: {
+              id: true,
+              userId: true,
+              companyName: true,
+              description: true,
+              logoUrl: true,
+              size: true,
+              type: true,
+              yearOfEstablishment: true,
+              dealIn: true,
+              website: true,
+              location: true,
+              lookingFor: true,
+              isBoosted: true,
+              user: {
+                select: {
+                  image: true,
+                  _count: {
+                    select: {
+                      followers: true,
+                      receivedConnections: { where: { status: "ACCEPTED" } },
+                      sentConnections: { where: { status: "ACCEPTED" } },
+                    },
+                  },
+                },
+              },
+            },
+          }).then((companies) => companies.map(({ user: companyUser, ...company }) => ({
+            ...company,
+            logoUrl: company.logoUrl || companyUser.image,
+            followersCount: companyUser._count.followers,
+            connectionsCount: companyUser._count.receivedConnections + companyUser._count.sentConnections,
+            matchReason: "Business profile",
+          })))
+        : getMatches(user.id, slug as MatchSlug, source),
       prisma.hiddenCompany.findMany({ where: { userId: user.id }, select: { companyUserId: true } }),
     ]);
 
     // Drop businesses the viewer chose to hide
     const hiddenIds = new Set(hiddenRows.map((h) => h.companyUserId));
-    const visible = matches.filter((m: any) => !hiddenIds.has(m.userId));
+    const visible = matches.filter((match) => !hiddenIds.has(match.userId));
 
     return NextResponse.json({ success: true, data: visible }, { status: 200 });
 
