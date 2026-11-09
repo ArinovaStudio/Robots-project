@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
     const parentId = searchParams.get("parentId");
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "10", 10)));
-    const skip = (page - 1) * limit;
+    const offsetParam = searchParams.get("offset");
+    const skip = offsetParam !== null
+      ? Math.max(0, parseInt(offsetParam, 10) || 0)
+      : (page - 1) * limit;
 
     if (!postId) {
       return NextResponse.json({ success: false, message: "Post ID is required" }, { status: 400 });
@@ -79,6 +82,7 @@ export async function GET(req: NextRequest) {
         page,
         limit,
         totalPages: Math.ceil(totalCount / limit),
+        hasMore: skip + comments.length < totalCount,
       }
     });
 
@@ -144,14 +148,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await prisma.comment.create({
-      data: { postId, authorId: user.id, content, parentId: parentId || null }
+    const created = await prisma.comment.create({
+      data: { postId, authorId: user.id, content, parentId: parentId || null },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            company: { select: { companyName: true, logoUrl: true, isBoosted: true } }
+          }
+        },
+        _count: { select: { replies: true } },
+      }
     });
 
     const notified = await notifyPostComment(postId, user.id, parentId);
     await notifyMentions({ content, actorId: user.id, postId, where: "comment", skipUserIds: notified });
 
-    return NextResponse.json({ success: true, message: "Comment added successfully" }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      message: "Comment added successfully",
+      data: { ...created, likesCount: 0, dislikesCount: 0, userReaction: null },
+    }, { status: 201 });
 
   } catch {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });

@@ -81,6 +81,8 @@ model User {
   pitchViews CompanyPitchView[] @relation("InvestorPitchViews")
   pitchOffers CompanyPitchOffer[] @relation("InvestorPitchOffers")
   pitchRatings CompanyPitchRating[] @relation("InvestorPitchRatings")
+  sentPitchRequests PitchRequest[] @relation("PitchRequestSender")
+  receivedPitchRequests PitchRequest[] @relation("PitchRequestInvestor")
 }
 
 model VerificationApplication {
@@ -798,4 +800,27 @@ model MarketplaceCollaboration {
   @@index([requesterId])
   @@index([recipientId])
   @@index([status])
+}
+
+// A business asking a specific investor to review their pitch (B2I collaboration)
+model PitchRequest {
+  id String @id @default(uuid())
+  senderId String
+  investorId String
+  companyName String
+  problemStatement String @db.Text
+  proposedSolution String @db.Text
+  fundingRequirement String
+  equityOffered String?
+  message String @db.Text
+  pitchDeckUrl String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender User @relation("PitchRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  investor User @relation("PitchRequestInvestor", fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@index([investorId, createdAt])
+  @@index([senderId, investorId, status])
 }

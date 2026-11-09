@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Plus, Clock, TrendingUp, Sparkles, MessageSquare, X, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ConnectModal from "@/components/modals/connect-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
@@ -29,7 +29,6 @@ export default function TopInvestors() {
   const [investors, setInvestors] = useState<TopInvestor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvestor, setSelectedInvestor] = useState<TopInvestor | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTopInvestors = async () => {
@@ -49,41 +48,30 @@ export default function TopInvestors() {
     fetchTopInvestors();
   }, []);
 
-  const handleConnectSuccess = (msg: string) => {
-    toast.success(msg);
-    if (selectedInvestor) {
-      setInvestors((prev) =>
-        prev.map((inv) =>
-          inv.id === selectedInvestor.id ? { ...inv, connectionStatus: "PENDING" } : inv
-        )
-      );
+  // Fetch one replacement profile that isn't already shown / already requested
+  const fetchReplacement = async (excludeIds: string[]) => {
+    try {
+      const res = await fetch(`/api/investor/top?limit=1&exclude=${excludeIds.join(",")}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setInvestors((prev) =>
+          prev.some((inv) => inv.id === json.data[0].id) ? prev : [...prev, json.data[0]]
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch replacement investor:", error);
     }
   };
 
-  const handleCancelRequest = async (investorId: string, connectionId?: string | null) => {
-    setCancellingId(investorId);
-    try {
-      const res = await fetch("/api/network/connect/cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetUserId: investorId, connectionId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || "Connection request cancelled");
-        setInvestors((prev) =>
-          prev.map((inv) =>
-            inv.id === investorId ? { ...inv, connectionStatus: null, connectionId: null } : inv
-          )
-        );
-      } else {
-        toast.error(data.message || "Failed to cancel request");
-      }
-    } catch {
-      toast.error("Failed to cancel request");
-    } finally {
-      setCancellingId(null);
-    }
+  const handleConnectSuccess = (msg: string) => {
+    toast.success(msg);
+    if (!selectedInvestor) return;
+    const sentId = selectedInvestor.id;
+    const shownIds = investors.map((inv) => inv.id);
+    // request sent -> hide this profile and bring in another one
+    setInvestors((prev) => prev.filter((inv) => inv.id !== sentId));
+    setSelectedInvestor(null);
+    fetchReplacement(shownIds);
   };
 
   return (
@@ -168,36 +156,12 @@ export default function TopInvestors() {
                 </div>
 
                 <div className="shrink-0">
-                  {investor.connectionStatus === "ACCEPTED" ? (
-                    <Link
-                      href={`/messages/${investor.id}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-600 text-white font-medium text-[11px] whitespace-nowrap hover:bg-blue-700 transition"
-                    >
-                      <MessageSquare size={11} /> Message
-                    </Link>
-                  ) : investor.connectionStatus === "PENDING" ? (
-                    <div className="flex items-center gap-1">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-medium text-[11px] border border-amber-200">
-                        <Clock size={12} /> Pending
-                      </span>
-                      <button
-                        onClick={() => handleCancelRequest(investor.id, investor.connectionId)}
-                        disabled={cancellingId === investor.id}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition disabled:opacity-50"
-                        title="Cancel connection request"
-                        aria-label="Cancel connection request"
-                      >
-                        {cancellingId === investor.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setSelectedInvestor(investor)}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
-                    >
-                      <Plus size={14} /> Connect
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setSelectedInvestor(investor)}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
+                  >
+                    <Plus size={14} /> Connect
+                  </button>
                 </div>
               </div>
             );

@@ -1,7 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, X, FileText, Expand } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+
+const PdfCarousel = dynamic(() => import("./pdf-carousel"), {
+  ssr: false,
+  loading: () => <div className="aspect-[4/5] max-h-[560px] w-full animate-pulse rounded-xl bg-gray-100" />,
+});
+
+function documentTitle(url: string, fallback: string) {
+  try {
+    const name = decodeURIComponent(new URL(url, "http://x").pathname.split("/").pop() || "");
+    // strip our upload timestamp prefix + extension for a readable title
+    const cleaned = name.replace(/^\d{10,}-/, "").replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim();
+    return cleaned || fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 /* ─── LinkedIn-style image grid layouts ───
  *  1 image  → full width
@@ -175,24 +192,13 @@ export default function MediaSlider({ media }: { media: any[] }) {
           </div>
         ))}
 
-        {/* Documents */}
+        {/* Documents → LinkedIn-style swipeable carousel */}
         {docs.map((d, i) => (
-          <a
-            key={i}
-            href={d.url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 shrink-0">
-              <FileText size={20} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">Document {docs.length > 1 ? i + 1 : ""}</p>
-              <p className="text-xs text-gray-500 font-medium">PDF · Click to open</p>
-            </div>
-            <Expand size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors shrink-0" />
-          </a>
+          <PdfCarousel
+            key={d.id ?? d.url}
+            url={d.url}
+            title={documentTitle(d.url, `Document${docs.length > 1 ? " " + (i + 1) : ""}`)}
+          />
         ))}
       </div>
 

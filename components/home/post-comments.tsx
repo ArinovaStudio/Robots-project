@@ -4,45 +4,62 @@ import { useState, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { CommentThread } from "./CommentThread";
 
-export default function PostComments({ postId, currentUser, canComment = true }: { postId: string, currentUser: any, canComment?: boolean }) {
+const INITIAL_COUNT = 3; // comments shown when the section is first opened
+const LOAD_MORE_COUNT = 10; // comments added on every "Show more comments" click
+
+export default function PostComments({ postId, currentUser, canComment = true, onHide }: { postId: string, currentUser: any, canComment?: boolean, onHide?: () => void }) {
   const [comments, setComments] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
 
-  console.log(currentUser);
+  const remaining = Math.max(0, total - comments.length);
+  const hasMore = remaining > 0;
 
-  const fetchComments = async (pageNum: number, append = false) => {
+  // Fetch `limit` comments starting after `offset` already-loaded comments.
+  const fetchComments = async (offset: number, limit: number, append = false) => {
     try {
-      const res = await fetch(`/api/comments?postId=${postId}&page=${pageNum}&limit=10`);
+      const res = await fetch(`/api/comments?postId=${postId}&offset=${offset}&limit=${limit}`);
       const json = await res.json();
       if (json.success) {
-        const sortedData = json.data.sort((a: any, b: any) => b._count.reactions - a._count.reactions);
-        
         if (append) {
-          setComments(prev => [...prev, ...sortedData]);
+          // de-dupe in case a new comment shifted the server-side offset
+          setComments(prev => {
+            const seen = new Set(prev.map(c => c.id));
+            return [...prev, ...json.data.filter((c: any) => !seen.has(c.id))];
+          });
         } else {
-          setComments(sortedData);
+          setComments(json.data);
         }
-        setHasMore(pageNum < json.pagination.totalPages);
+        setTotal(json.pagination.total);
       }
     } catch (error) {
       console.error("Failed to load comments", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchComments(1);
+    setLoading(true);
+    setComments([]);
+    fetchComments(0, INITIAL_COUNT);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
+
+  const handleShowMore = () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    fetchComments(comments.length, LOAD_MORE_COUNT, true);
+  };
 
   const handlePostComment = async () => {
     if (!newComment.trim()) return;
     setPosting(true);
-    
+
     try {
       const res = await fetch(`/api/comments`, {
         method: "POST",
@@ -50,10 +67,16 @@ export default function PostComments({ postId, currentUser, canComment = true }:
         body: JSON.stringify({ postId, content: newComment })
       });
       const json = await res.json();
-      
+
       if (json.success) {
         setNewComment("");
-        fetchComments(1); 
+        // show the new comment at the top without collapsing what's already loaded
+        if (json.data) {
+          setComments(prev => [json.data, ...prev]);
+          setTotal(prev => prev + 1);
+        } else {
+          fetchComments(0, Math.max(comments.length + 1, INITIAL_COUNT));
+        }
       } else {
         alert(json.message);
       }
@@ -64,6 +87,7 @@ export default function PostComments({ postId, currentUser, canComment = true }:
 
   const removeCommentFromState = (commentId: string) => {
     setComments(prev => prev.filter(c => c.id !== commentId));
+    setTotal(prev => Math.max(0, prev - 1));
   };
 
   return (
@@ -120,20 +144,30 @@ export default function PostComments({ postId, currentUser, canComment = true }:
           ))
         )}
 
-        {/* Pagination Trigger */}
+        {/* Show more button – stays pinned at the bottom of the list */}
         {hasMore && !loading && (
-          <button 
-            onClick={() => {
-              const nextPage = page + 1;
-              setPage(nextPage);
-              fetchComments(nextPage, true);
-            }}
-            className="w-full py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition"
-          >
-            Load more comments
-          </button>
+          <div className="sticky bottom-0 bg-white pt-1">
+            <button
+              onClick={handleShowMore}
+              disabled={loadingMore}
+              className="flex w-full items-center justify-center gap-2 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-60"
+            >
+              {loadingMore && <Loader2 size={14} className="animate-spin" />}
+              Show more comments ({remaining} remaining)
+            </button>
+          </div>
         )}
       </div>}
+
+      {/* Hide comments – collapses the section again */}
+      {onHide && (
+        <button
+          onClick={onHide}
+          className="mt-3 w-full py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl transition"
+        >
+          Hide comments
+        </button>
+      )}
     </div>
   );
 }

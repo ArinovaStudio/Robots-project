@@ -10,7 +10,6 @@ import CreatePostModal from "@/components/modals/create-post-modal";
 export default function AchievementPost() {
   const router = useRouter();
   const { user } = useUserStore();
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialMediaType, setInitialMediaType] = useState<"IMAGE" | "VIDEO" | "DOCUMENT" | "EVENT" | null>(null);
 
@@ -39,9 +38,9 @@ export default function AchievementPost() {
               </div>
             )}
           </div>
-          
+
           <div className="flex-1 flex items-center">
-            <button 
+            <button
               onClick={() => openModal()}
               className="w-full text-left rounded-full border border-gray-300 px-5 py-3 text-gray-500 font-medium hover:bg-gray-50 transition-colors"
             >
@@ -52,20 +51,22 @@ export default function AchievementPost() {
 
         {/* Actions */}
         <div className="flex justify-between items-center pt-2">
-          <div className="flex gap-1 w-full justify-between sm:justify-start sm:gap-2">
-            <Action icon={<ImageIcon className="w-5 h-5 text-[#2563EB]" />} label="Media" onClick={() => openModal("IMAGE")} />
-            <Action icon={<CalendarDays className="w-5 h-5 text-[#2563EB]" />} label="Event" onClick={() => openModal("EVENT")} />
-            <Action icon={<FileText className="w-5 h-5 text-[#2563EB]" />} label="Write article" onClick={() => router.push("/post/article")} />
+          {/* CHANGED: sm:gap-3 and sm:pl-[60px] shift the buttons right, under the "Start a post" field */}
+          <div className="flex gap-1 w-full justify-between sm:justify-start sm:gap-3 sm:pl-[60px]">
+            {/* CHANGED: icons w-5 h-5 -> w-6 h-6 */}
+            <Action icon={<ImageIcon className="w-6 h-6 text-[#2563EB]" />} label="Media" onClick={() => openModal("IMAGE")} />
+            <Action icon={<CalendarDays className="w-6 h-6 text-[#2563EB]" />} label="Event" onClick={() => openModal("EVENT")} />
+            <Action icon={<FileText className="w-6 h-6 text-[#2563EB]" />} label="Write article" onClick={() => router.push("/post/article")} />
           </div>
         </div>
       </div>
 
-      <CreatePostModal 
-        isOpen={isModalOpen} 
+      <CreatePostModal
+        isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setInitialMediaType(null);
-        }} 
+        }}
         initialType={initialMediaType}
       />
     </>
@@ -85,8 +86,9 @@ function Action({
     <button
       onClick={onClick}
       type="button"
+      // CHANGED: bigger click area (px-4 py-3), wider gap, larger text (text-base)
       className="
-        flex items-center justify-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-md transition-colors text-gray-600 font-medium text-sm
+        flex items-center justify-center gap-2.5 px-4 py-3 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 font-medium text-base
       "
     >
       {icon}

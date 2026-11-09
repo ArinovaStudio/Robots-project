@@ -6,14 +6,27 @@ export async function GET(req: NextRequest) {
   try {
     const { user: currentUser } = await getUser().catch(() => ({ user: null }));
 
+    const { searchParams } = new URL(req.url);
+    const take = Math.min(Math.max(parseInt(searchParams.get("limit") || "4", 10) || 4, 1), 10);
+    const excludeIds = (searchParams.get("exclude") || "").split(",").filter(Boolean);
+
     const investors = await prisma.user.findMany({
       where: {
         accountType: "INVESTOR",
         status: "ACTIVE",
         investor: { isNot: null },
-        ...(currentUser?.id ? { id: { not: currentUser.id } } : {}),
+        ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
+        ...(currentUser?.id
+          ? {
+              AND: [
+                { id: { not: currentUser.id } },
+                { receivedConnections: { none: { senderId: currentUser.id } } },
+                { sentConnections: { none: { receiverId: currentUser.id } } },
+              ],
+            }
+          : {}),
       },
-      take: 4,
+      take,
       orderBy: [
         { verificationStatus: "desc" },
         { createdAt: "desc" },

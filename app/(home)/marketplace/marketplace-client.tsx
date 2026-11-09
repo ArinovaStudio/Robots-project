@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
+import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Store, ShoppingBag, Target, Sparkles, ArrowRight, ShieldAlert, Layers, FileText, UserCheck } from "lucide-react";
+import { Store, ShoppingBag, Target, Sparkles, ArrowRight, ShieldAlert, Layers, FileText, UserCheck, Loader2 } from "lucide-react";
 import { useUserStore } from "@/store/AuthStore";
 import Link from "next/link";
 import CollaborateModal from "@/components/modals/collaborate-modal";
@@ -17,35 +18,113 @@ export default function MarketplaceClient() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [buyers, setBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Posts tab: real posts from other businesses that match my Services & Offerings / Looking For
+  const [matchedPosts, setMatchedPosts] = useState<any[]>([]);
+  const [postsPage, setPostsPage] = useState(1);
+  const [postsTotal, setPostsTotal] = useState(0);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const [hasProfileTerms, setHasProfileTerms] = useState(true);
+  const showPosts = secondaryTab === "posts";
   const [collaborateTarget, setCollaborateTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const fetchMatches = async () => {
+  useEffect(() => {
     if (isInvestor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }
-    setLoading(true);
-    try {
-      const endpoint = `${
-        activeTab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers"
-      }?source=${secondaryTab}`;
-      const res = await fetch(endpoint);
-      const json = await res.json();
-      
-      if (json.success) {
-        if (activeTab === "suppliers") setSuppliers(json.data);
-        else setBuyers(json.data);
-      }
-    } catch {
-      // ignore
-    } finally {
+    // The Posts tab shows posts instead of company cards (loaded by the effect below)
+    if (secondaryTab === "posts") {
       setLoading(false);
+      return;
     }
+
+    // Cancel the previous request when the tab changes, so a slow response for
+    // an old tab/source can never overwrite the list the user is looking at now.
+    const controller = new AbortController();
+    const tab = activeTab;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const endpoint = `${
+          tab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers"
+        }?source=${secondaryTab}`;
+        const res = await fetch(endpoint, { signal: controller.signal });
+        const json = await res.json();
+
+        if (json.success) {
+          if (tab === "suppliers") setSuppliers(json.data);
+          else setBuyers(json.data);
+        } else {
+          if (tab === "suppliers") setSuppliers([]);
+          else setBuyers([]);
+        }
+        setLoading(false);
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return; // superseded by a newer request
+        console.error("Failed to load matches:", err);
+        setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [activeTab, secondaryTab, isInvestor]);
+
+  const fetchMatchedPosts = async (tab: "suppliers" | "buyers", page: number, signal?: AbortSignal) => {
+    const res = await fetch(`/api/match/posts?tab=${tab}&page=${page}&limit=10`, { signal });
+    return res.json();
   };
 
   useEffect(() => {
-    fetchMatches();
+    if (isInvestor || secondaryTab !== "posts") return;
+
+    const controller = new AbortController();
+    setPostsLoading(true);
+    setMatchedPosts([]);
+    setPostsPage(1);
+
+    (async () => {
+      try {
+        const json = await fetchMatchedPosts(activeTab, 1, controller.signal);
+        if (json.success) {
+          setMatchedPosts(json.data);
+          setPostsTotal(json.pagination?.total ?? json.data.length);
+          setHasProfileTerms(json.hasProfileTerms !== false);
+        } else {
+          setMatchedPosts([]);
+          setPostsTotal(0);
+        }
+        setPostsLoading(false);
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        console.error("Failed to load matching posts:", err);
+        setPostsLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
   }, [activeTab, secondaryTab, isInvestor]);
+
+  const handleLoadMorePosts = async () => {
+    if (postsLoadingMore) return;
+    setPostsLoadingMore(true);
+    try {
+      const next = postsPage + 1;
+      const json = await fetchMatchedPosts(activeTab, next);
+      if (json.success) {
+        setMatchedPosts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...json.data.filter((p: any) => !seen.has(p.id))];
+        });
+        setPostsPage(next);
+        setPostsTotal(json.pagination?.total ?? postsTotal);
+      }
+    } finally {
+      setPostsLoadingMore(false);
+    }
+  };
 
   if (isInvestor) {
     return (
@@ -190,7 +269,7 @@ export default function MarketplaceClient() {
           </div>
         </div>
         
-        {loading ? (
+        {(showPosts ? postsLoading : loading) ? (
           <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map((i) => (
@@ -207,6 +286,38 @@ export default function MarketplaceClient() {
               ))}
             </div>
           </SkeletonTheme>
+        ) : showPosts ? (
+          <div className="space-y-4 max-w-2xl mx-auto">
+            {matchedPosts.map((post) => (
+              <div key={post.id} className="space-y-2">
+                {post.matchedTerms?.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 px-1 text-[11px]">
+                    <span className="font-semibold text-gray-500">
+                      {activeTab === "suppliers" ? "Offers what you need:" : "Looking for what you offer:"}
+                    </span>
+                    {post.matchedTerms.slice(0, 4).map((t: string) => (
+                      <span key={t} className="rounded-full border border-blue-100 bg-[#EFF6FF] px-2 py-0.5 font-semibold text-[#2563EB]">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <FeedCard post={post} currentUser={user} />
+              </div>
+            ))}
+
+            {matchedPosts.length < postsTotal && (
+              <button
+                type="button"
+                onClick={handleLoadMorePosts}
+                disabled={postsLoadingMore}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:opacity-60"
+              >
+                {postsLoadingMore && <Loader2 size={14} className="animate-spin" />}
+                Show more posts ({postsTotal - matchedPosts.length} remaining)
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(activeTab === "suppliers" ? suppliers : buyers).map((company) => (
@@ -226,7 +337,27 @@ export default function MarketplaceClient() {
           </div>
         )}
         
-        {!loading && (activeTab === "suppliers" ? suppliers : buyers).length === 0 && (
+        {showPosts && !postsLoading && matchedPosts.length === 0 && (
+          <div className="text-center py-16 text-gray-500">
+            <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="text-sm font-semibold text-gray-700">
+              {hasProfileTerms
+                ? activeTab === "suppliers"
+                  ? "No posts offering what you're looking for yet."
+                  : "No posts looking for what you offer yet."
+                : activeTab === "suppliers"
+                ? "Add what you're looking for to see matching posts."
+                : "Add your services & offerings to see matching posts."}
+            </p>
+            <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+              {hasProfileTerms
+                ? "New posts from other businesses will appear here as soon as they match your profile."
+                : "Update the Services & Offerings and Looking For sections of your company profile."}
+            </p>
+          </div>
+        )}
+
+        {!showPosts && !loading && (activeTab === "suppliers" ? suppliers : buyers).length === 0 && (
           <div className="text-center py-16 text-gray-500">
             <Target className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-semibold text-gray-700">

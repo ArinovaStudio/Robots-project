@@ -6,6 +6,8 @@ import { uploadFile, uploadImage } from "@/lib/uploads";
 import { validateTextContent } from "@/lib/textFilter";
 import { analyzePostBusinessIntent } from "@/lib/post-intent";
 
+const MAX_PDF_BYTES = 20 * 1024 * 1024; 
+
 export async function POST(req: NextRequest) {
   try {
     const { user, error } = await getOnboardedUser();
@@ -38,6 +40,31 @@ export async function POST(req: NextRequest) {
     }
 
     const files = formData.getAll("media") as File[];
+
+    // Document (PDF carousel) posts: exactly one PDF, no mixing with photos/videos.
+    const pdfFiles = files.filter((f) => f.type === "application/pdf");
+    const nonPdfDocs = files.filter(
+      (f) => !f.type.startsWith("image/") && !f.type.startsWith("video/") && f.type !== "application/pdf"
+    );
+    if (nonPdfDocs.length > 0) {
+      return NextResponse.json({ success: false, message: "Only PDF documents are supported" }, { status: 400 });
+    }
+    if (pdfFiles.length > 0) {
+      if (pdfFiles.length > 1) {
+        return NextResponse.json({ success: false, message: "You can attach only one PDF per post" }, { status: 400 });
+      }
+      if (files.length > 1) {
+        return NextResponse.json({ success: false, message: "A document post can't include photos or videos" }, { status: 400 });
+      }
+      if (pdfFiles[0].size > MAX_PDF_BYTES) {
+        return NextResponse.json({ success: false, message: "PDF is too large. Maximum size is 20 MB" }, { status: 400 });
+      }
+      // Magic-byte check so a renamed file can't masquerade as a PDF.
+      const head = Buffer.from(await pdfFiles[0].slice(0, 5).arrayBuffer()).toString("latin1");
+      if (head !== "%PDF-") {
+        return NextResponse.json({ success: false, message: "That file isn't a valid PDF" }, { status: 400 });
+      }
+    }
 
     if (!content && files.length === 0 && !eventData) {
       return NextResponse.json( { success: false, message: "Post must contain text, media, or event details" }, { status: 400 });

@@ -423,7 +423,7 @@ export async function getMatches(
       else if (r.status === "ACCEPTED" || r.status === "COMPLETED") collaboratedIds.add(other);
     });
 
-    return cleanMatches
+    const results = cleanMatches
       .filter((company) => !collaboratedIds.has(company.userId)) // already collaborated: don't show again
       .map((company) => {
         const counts = countsMap.get(company.userId);
@@ -443,6 +443,14 @@ export async function getMatches(
           }),
         };
       });
+      if (isMarketplace) {
+  results.sort(
+    (a, b) =>
+      ((b as { matchScore?: number | null }).matchScore ?? -1) -
+      ((a as { matchScore?: number | null }).matchScore ?? -1)
+  );
+}
+return results;
   } catch (err) {
     console.error("getMatches error:", err);
     return [];

@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CreateEventModal from "@/components/modals/create-event-modal";
 import { useUserStore } from "@/store/AuthStore";
+import dynamic from "next/dynamic";
 
+const PdfCarousel = dynamic(() => import("@/components/home/pdf-carousel"), { ssr: false });
+
+const MAX_PDF_BYTES = 20 * 1024 * 1024; 
 type MediaPreview = {
   file: File;
   previewUrl: string;
@@ -53,7 +57,28 @@ export default function CreatePostModal({
           e.target.value = "";
           return;
         }
+        if (selectedFiles.length > 1 || media.some((m) => m.type === "DOCUMENT")) {
+          setError("You can attach only one PDF per post.");
+          e.target.value = "";
+          return;
+        }
+        if (media.length > 0) {
+          setError("A document post can't include photos or videos. Remove them first.");
+          e.target.value = "";
+          return;
+        }
+        if (selectedFiles[0].size > MAX_PDF_BYTES) {
+          setError("PDF is too large. Maximum size is 20 MB.");
+          e.target.value = "";
+          return;
+        }
+      } else if (media.some((m) => m.type === "DOCUMENT")) {
+        setError("A document post can't include photos or videos. Remove the PDF first.");
+        e.target.value = "";
+        return;
       }
+
+      setError("");
 
       const newFiles = selectedFiles.map((file) => ({
         file,
@@ -200,7 +225,19 @@ export default function CreatePostModal({
             {/* Media Previews Container */}
             {media.length > 0 && (
               <div className={`mt-2 grid gap-2 ${media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                {media.map((item, index) => (
+                {media.map((item, index) => item.type === "DOCUMENT" ? (
+                  <div key={index} className="relative col-span-full">
+                    <button
+                      type="button"
+                      onClick={() => removeMedia(index)}
+                      aria-label="Remove document"
+                      className="absolute top-2 right-2 z-10 p-1.5 bg-black/60 text-white shadow-sm rounded-full hover:bg-black/80"
+                    >
+                      <X size={14} />
+                    </button>
+                    <PdfCarousel url={item.previewUrl} title={item.file.name.replace(/\.pdf$/i, "")} />
+                  </div>
+                ) : (
                   <div key={index} className="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50 aspect-video flex-shrink-0">
                     <button
                       onClick={() => removeMedia(index)}
@@ -210,12 +247,6 @@ export default function CreatePostModal({
                     </button>
                     {item.type === "IMAGE" && <img src={item.previewUrl} alt="preview" className="h-full w-full object-cover" />}
                     {item.type === "VIDEO" && <video src={item.previewUrl} className="h-full w-full object-cover" />}
-                    {item.type === "DOCUMENT" && (
-                      <div className="flex h-full w-full flex-col items-center justify-center p-4 text-center text-gray-500">
-                        <FileText size={32} className="mb-2 text-blue-500" />
-                        <span className="text-xs truncate w-full px-2">{item.file.name}</span>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -225,7 +256,7 @@ export default function CreatePostModal({
           {/* Hidden File Inputs */}
           <input type="file" multiple accept="image/*" className="hidden" ref={imageInputRef} onChange={(e) => handleFileChange(e, "IMAGE")} />
           <input type="file" multiple accept="video/*" className="hidden" ref={videoInputRef} onChange={(e) => handleFileChange(e, "VIDEO")} />
-          <input type="file" multiple accept="application/pdf" className="hidden" ref={docInputRef} onChange={(e) => handleFileChange(e, "DOCUMENT")} />
+          <input type="file" accept="application/pdf" className="hidden" ref={docInputRef} onChange={(e) => handleFileChange(e, "DOCUMENT")} />
 
           {/* Footer Actions */}
           <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 bg-gray-50/50">

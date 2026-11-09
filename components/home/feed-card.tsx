@@ -43,9 +43,8 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const [showUndoRepost, setShowUndoRepost] = useState(false);
   const [isFollowingAuthor, setIsFollowingAuthor] = useState<boolean>(currentPost?.isFollowingAuthor || false);
   const [isHidden, setIsHidden] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isUndoing, setIsUndoing] = useState(false);
-
-  const [latestComment, setLatestComment] = useState<any>(null);
 
   const isAuthor = currentUser?.id === currentPost?.authorId;
   const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || "Independent Professional";
@@ -65,22 +64,6 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
     ? "Connections-only posts can't be reposted"
     : "Repost";
   const canComment = currentPost?.canComment !== false;
-
-  useEffect(() => {
-    const fetchLatestComment = async () => {
-      try {
-        const res = await fetch(`/api/comments?postId=${currentPost.id}&limit=1`);
-        const json = await res.json();
-        if (json.success && json.data.length > 0) {
-          setLatestComment(json.data[json.data.length - 1]);
-        }
-      } catch (error) {
-      }
-    };
-    if (currentPost._count?.comments > 0) {
-      fetchLatestComment();
-    }
-  }, [currentPost.id, currentPost._count?.comments]);
 
   // Optimistically moves the viewer's reaction from `from` to `to` (either can be null).
   const applyReaction = (from: PostReactionType | null, to: PostReactionType | null) => {
@@ -242,8 +225,16 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
     );
   } 
 
+  // Collapse comments and bring the viewer back to this post
+  const handleHideComments = () => {
+    setShowComments(false);
+    requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg mb-4 flex flex-col">
+    <div ref={cardRef} className="bg-white border border-gray-200 rounded-lg mb-4 flex flex-col scroll-mt-20">
       {isRepost && (
         <div className="px-4 pt-3 flex items-center gap-1.5 text-xs text-gray-500">
           <Repeat2 size={14} />
@@ -379,18 +370,9 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         </button>
       </div>
 
-      {/* Latest Comment Showcase */}
-      {!showComments && latestComment && (
-        <LatestCommentPreview
-          comment={latestComment}
-          currentUser={currentUser}
-          onExpandComments={() => setShowComments(true)}
-        />
-      )}
-
       {showComments && (
         <div className="bg-gray-50 border-t border-gray-100 rounded-b-lg">
-          <PostComments postId={currentPost.id} currentUser={currentUser} canComment={canComment} />
+          <PostComments postId={currentPost.id} currentUser={currentUser} canComment={canComment} onHide={handleHideComments} />
         </div>
       )}
 
@@ -459,133 +441,6 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         onConfirm={handleDeletePost}
         onCancel={() => setShowDeleteConfirm(false)}
       />
-    </div>
-  );
-}
-
-/* ──────────────── Latest Comment Preview with Dots Menu ──────────────── */
-function LatestCommentPreview({ comment, currentUser, onExpandComments }: { comment: any; currentUser: any; onExpandComments: () => void }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(comment.content);
-  const [displayContent, setDisplayContent] = useState(comment.content);
-  const [isDeleted, setIsDeleted] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const isOwner = currentUser?.id === comment.authorId;
-  const authorName = comment.author?.company?.companyName || comment.author?.name || "User";
-  const avatarSrc = comment.author?.company?.logoUrl || comment.author?.image;
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleDelete = async () => {
-    if (!confirm("Delete this comment?")) return;
-    const res = await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
-    if (res.ok) setIsDeleted(true);
-    setShowMenu(false);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editContent.trim() || editContent === displayContent) return setIsEditing(false);
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/comments/${comment.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: editContent }),
-      });
-      if (res.ok) {
-        setDisplayContent(editContent);
-        setIsEditing(false);
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (isDeleted) return null;
-
-  return (
-    <div className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 text-sm">
-      <div className="flex items-start gap-2 group">
-        {/* Avatar */}
-        {avatarSrc ? (
-          <img src={avatarSrc} className="w-7 h-7 rounded-full object-cover shrink-0 border border-gray-100" alt={authorName} />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
-            {authorName.charAt(0).toUpperCase()}
-          </div>
-        )}
-
-        {/* Bubble */}
-        <div className="flex-1 min-w-0">
-          {isEditing ? (
-            <div className="space-y-2">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                rows={2}
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-full transition">Cancel</button>
-                <button onClick={handleSaveEdit} disabled={isSaving} className="px-3 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-full transition disabled:opacity-50">
-                  {isSaving ? "Saving…" : "Save"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gray-100 rounded-xl px-3 py-2">
-              <span className="font-semibold text-gray-900 text-xs">{authorName} </span>
-              <span className="text-gray-700 text-xs line-clamp-2">{displayContent}</span>
-            </div>
-          )}
-
-          <button onClick={onExpandComments} className="mt-1 text-[11px] font-semibold text-blue-600 hover:underline pl-1">
-            View all comments
-          </button>
-        </div>
-
-        {/* Three-dot menu — only for comment owner */}
-        {isOwner && !isEditing && (
-          <div className="relative shrink-0" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className={`p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition ${
-                showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}
-            >
-              <MoreVertical size={14} />
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 top-6 w-32 bg-white border border-gray-200 shadow-lg rounded-xl z-20 overflow-hidden py-1">
-                <button
-                  onClick={() => { setIsEditing(true); setShowMenu(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
-                >
-                  <Edit2 size={12} /> Edit
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition"
-                >
-                  <Trash2 size={12} /> Delete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

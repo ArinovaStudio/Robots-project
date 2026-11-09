@@ -87,9 +87,9 @@ export async function GET(req: NextRequest) {
       where: { postId: { in: postIds } },
       _count: { type: true }
     }) : [];
-    const activityByPost = new Map<string, { type: "COMMENTED" | "REACTED"; name: string }>();
+    const activityByPost = new Map<string, { type: "COMMENTED" | "REACTED"; name: string; image: string | null }>();
     if (!targetUserId && tab === "foryou" && postIds.length > 0 && connectionIds.length > 0) {
-      const nameSelect = { select: { name: true, company: { select: { companyName: true } } } };
+      const nameSelect = { select: { name: true, image: true, company: { select: { companyName: true } } } };
       const [connComments, connReactions] = await Promise.all([
         prisma.comment.findMany({
           where: { postId: { in: postIds }, authorId: { in: connectionIds } },
@@ -106,12 +106,12 @@ export async function GET(req: NextRequest) {
         u.company?.companyName || u.name || "A connection";
 
       connReactions.forEach((r) => {
-        if (!activityByPost.has(r.postId)) activityByPost.set(r.postId, { type: "REACTED", name: displayName(r.user) });
+        if (!activityByPost.has(r.postId)) activityByPost.set(r.postId, { type: "REACTED", name: displayName(r.user), image: r.user.image ?? null });
       });
       // comments win over reactions when both exist
       connComments.forEach((c) => {
         if (activityByPost.get(c.postId)?.type !== "COMMENTED") {
-          activityByPost.set(c.postId, { type: "COMMENTED", name: displayName(c.author) });
+          activityByPost.set(c.postId, { type: "COMMENTED", name: displayName(c.author), image: c.author.image ?? null });
         }
       });
     }

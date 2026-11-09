@@ -159,16 +159,31 @@ const showNewPosts = () => {
         <>
           {posts.map((post) => (
             <ScrollReveal key={post.id} direction="up" delay={0.1}>
-              {post.connectionActivity && (
-                <p className="mb-1.5 px-2 text-xs font-medium text-slate-500">
-                  <span className="font-semibold text-slate-700">{post.connectionActivity.name}</span>{" "}
-                  {post.connectionActivity.type === "COMMENTED" ? "commented on this" : "reacted to this"}
-                </p>
+              {post.connectionActivity ? (
+                <div className="mb-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <div className="mx-4 flex items-center gap-2.5 border-b border-gray-200 bg-white py-2.5 text-sm text-gray-600">
+                    <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-blue-100">
+                      {post.connectionActivity.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={post.connectionActivity.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-blue-600">
+                          {post.connectionActivity.name?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </div>
+                    <p className="min-w-0 truncate">
+                      <span className="font-semibold text-gray-900">{post.connectionActivity.name}</span>{" "}
+                      {post.connectionActivity.type === "COMMENTED" ? "commented on this" : "reacted to this"}
+                    </p>
+                  </div>
+                  <div className="[&>div]:mb-0 [&>div]:rounded-none [&>div]:border-0">
+  <FeedCard post={post} currentUser={user} />
+</div>
+</div>
+) : (
+                <FeedCard post={post} currentUser={user} />
               )}
-              <FeedCard 
-                post={post} 
-                currentUser={user} 
-              />
             </ScrollReveal>
           ))}
 

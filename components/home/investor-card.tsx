@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { CheckCircle2, MapPin, Send } from "lucide-react";
 import VerificationBadge from "@/components/ui/VerificationBadge";
+import SendPitchRequestModal from "@/components/modals/send-pitch-request-modal";
 
 export interface InvestorCardData {
   id: string;
@@ -21,6 +23,8 @@ export interface InvestorCardData {
 }
 
 export default function InvestorCard({ investor }: { investor: InvestorCardData }) {
+  const [showPitchForm, setShowPitchForm] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
   const subtitle = investor.firmName
     ? `${investor.investorType} · ${investor.firmName}`
     : investor.investorType;
@@ -87,14 +91,35 @@ export default function InvestorCard({ investor }: { investor: InvestorCardData 
           )}
         </div>
 
-        <Link
-          href={`/profile/${investor.id}`}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-        >
-          View investor profile
-          <ArrowUpRight size={16} />
-        </Link>
+        {requestSent ? (
+          <button
+            type="button"
+            disabled
+            className="mt-4 inline-flex w-full cursor-default items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700"
+          >
+            <CheckCircle2 size={16} />
+            Pitch request sent
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowPitchForm(true)}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+          >
+            Send pitch request
+            <Send size={16} />
+          </button>
+        )}
       </div>
+
+      {showPitchForm && (
+        <SendPitchRequestModal
+          investorId={investor.id}
+          investorName={investor.name}
+          onClose={() => setShowPitchForm(false)}
+          onSuccess={() => setRequestSent(true)}
+        />
+      )}
     </article>
   );
 }
