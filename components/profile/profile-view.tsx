@@ -7,12 +7,13 @@ import Link from "next/link";
 import {
   MapPin, Link as LinkIcon, Users, Building2, UserPlus,
   CheckCircle, Clock, Navigation, Loader2, UserMinus, Layers, Bookmark, ShieldCheck, Settings, Landmark,
-  MessageSquare, X
+  MessageSquare, X, Send, Handshake
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
-import ConnectModal from "../modals/connect-modal";
+import CollaborateModal from "../modals/collaborate-modal";
+import SendPitchRequestModal from "../modals/send-pitch-request-modal";
 import EditProfileModal from "../modals/edit-profile-modal";
 import RecordInvestmentModal from "../modals/record-investment-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
@@ -29,7 +30,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const { user } = useUserStore();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showCollaborateModal, setShowCollaborateModal] = useState(false);
+  const [showPitchModal, setShowPitchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRecordInvestmentModal, setShowRecordInvestmentModal] = useState(false);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
@@ -151,7 +153,11 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       await handleCancelRequest();
     }
     else if (!connectionStatus) {
-      setShowConnectModal(true);
+      if (profile?.accountType === "INVESTOR" || profile?.investor) {
+        setShowPitchModal(true);
+      } else {
+        setShowCollaborateModal(true);
+      }
     }
   };
 
@@ -281,8 +287,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                           disabled={isConnectLoading}
                           className="flex min-w-[130px] items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
                         >
-                          {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
-                          Connect
+                          {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                          Send pitch request
                         </button>
                       )}
                     </div>
@@ -405,14 +411,13 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           </section>
         </ScrollReveal>
 
-        {showConnectModal && (
-          <ConnectModal
-            receiverId={userId}
-            companyName={displayName}
-            onClose={() => setShowConnectModal(false)}
-            onSuccess={(message) => {
+        {showPitchModal && (
+          <SendPitchRequestModal
+            investorId={userId}
+            investorName={displayName}
+            onClose={() => setShowPitchModal(false)}
+            onSuccess={() => {
               setConnectionStatus("PENDING");
-              toast.success(message);
             }}
           />
         )}
@@ -604,21 +609,20 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                       disabled={isConnectLoading}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition border min-w-[130px] justify-center bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
                     >
-                      {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
-                      Connect
+                      {isConnectLoading ? <Loader2 size={16} className="animate-spin" /> : <Handshake size={16} />}
+                      Collaborate
                     </button>
                   )}
                 </div>
               )}
 
-              {showConnectModal && profile?.company && (
-                <ConnectModal
-                  receiverId={userId}
-                  companyName={profile.company.companyName}
-                  onClose={() => setShowConnectModal(false)}
-                  onSuccess={(message) => {
+              {showCollaborateModal && (
+                <CollaborateModal
+                  recipientId={userId}
+                  companyName={profile?.company?.companyName || profile?.name || "Business"}
+                  onClose={() => setShowCollaborateModal(false)}
+                  onSuccess={() => {
                     setConnectionStatus("PENDING");
-                    toast.success(message);
                   }}
                 />
               )}

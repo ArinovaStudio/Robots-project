@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect, useRef } from "react";
-import { Send, X, Edit2, ImagePlus, Loader2 } from "lucide-react";
+import { Send, X, Edit2, ImagePlus, Loader2, FileText, Video, Image as ImageIcon } from "lucide-react";
 import { globalSocket } from "@/components/SocketAnnouncer";
 import { toast } from "sonner";
 
@@ -11,12 +13,34 @@ interface ChatInputProps {
   onSendMessage: (text: string, media?: { url: string; type: "IMAGE" | "VIDEO" | "PDF" }) => Promise<void>;
 }
 
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export default function ChatInput({ currentUserId, targetUserId, editingMessage, onCancelEdit, onSendMessage }: ChatInputProps) {
   const [text, setText] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!mediaFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    if (mediaFile.type.startsWith("image/")) {
+      const url = URL.createObjectURL(mediaFile);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    }
+    setPreviewUrl(null);
+  }, [mediaFile]);
 
   useEffect(() => {
     if (editingMessage && !editingMessage.isDeleted) {
@@ -116,6 +140,53 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
         </div>
       )}
 
+      {/* Media Attachment Preview (Above text box, matching reference image) */}
+      {mediaFile && (
+        <div className="mb-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-xs transition-all">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Media presence thumbnail / icon */}
+            <div className="relative h-11 w-14 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center">
+              {previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewUrl}
+                  alt={mediaFile.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : mediaFile.type === "application/pdf" ? (
+                <FileText className="h-5 w-5 text-red-500" />
+              ) : mediaFile.type.startsWith("video/") ? (
+                <Video className="h-5 w-5 text-blue-500" />
+              ) : (
+                <ImageIcon className="h-5 w-5 text-slate-500" />
+              )}
+            </div>
+
+            {/* Media Details: Name + Size, and 'Attached' */}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-800 truncate">
+                {mediaFile.name}{" "}
+                <span className="text-slate-400 font-normal">• {formatFileSize(mediaFile.size)}</span>
+              </p>
+              <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                Attached
+              </p>
+            </div>
+          </div>
+
+          {/* Remove attachment button */}
+          <button
+            type="button"
+            onClick={() => setMediaFile(null)}
+            disabled={sending}
+            aria-label="Remove attachment"
+            className="ml-3 shrink-0 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Input Form */}
       <form onSubmit={handleSend} className="flex items-center gap-3">
         <input
@@ -154,20 +225,6 @@ export default function ChatInput({ currentUserId, targetUserId, editingMessage,
           {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className={text.trim() || mediaFile ? "ml-0.5" : ""} />}
         </button>
       </form>
-      {mediaFile && (
-        <div className="mt-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          <span className="truncate">{mediaFile.name}</span>
-          <button
-            type="button"
-            onClick={() => setMediaFile(null)}
-            disabled={sending}
-            aria-label="Remove attachment"
-            className="ml-3 shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

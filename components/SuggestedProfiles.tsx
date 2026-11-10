@@ -5,9 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import ConnectModal from "./modals/connect-modal";
+import CollaborateModal from "./modals/collaborate-modal";
 import { toast } from "sonner"; 
-import { Plus } from "lucide-react";
+import { Handshake } from "lucide-react";
 
 import VerificationBadge from "./ui/VerificationBadge";
 
@@ -43,8 +43,8 @@ export default function SuggestedProfiles() {
     fetchMatches();
   }, []);
 
-  const handleSuccess = (msg: string) => {
-    toast.success(msg);
+  const handleSuccess = (msg?: string) => {
+    if (msg) toast.success(msg);
 
     if (selectedCompany) {
       setMatches((prev) => prev.filter((c) => c.userId !== selectedCompany.userId));
@@ -112,9 +112,9 @@ export default function SuggestedProfiles() {
                 
                 <button
                   onClick={() => setSelectedCompany(company)}
-                  className="inline-flex items-center justify-center gap-1 px-3.5 py-1.5 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-xs transition"
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-xs transition"
                 >
-                  <Plus size={14} /> Connect
+                  <Handshake size={14} /> Collaborate
                 </button>
               </div>
             </div>
@@ -129,8 +129,8 @@ export default function SuggestedProfiles() {
       )}
 
       {selectedCompany && (
-        <ConnectModal
-          receiverId={selectedCompany.userId}
+        <CollaborateModal
+          recipientId={selectedCompany.userId}
           companyName={selectedCompany.companyName}
           onClose={() => setSelectedCompany(null)}
           onSuccess={handleSuccess}

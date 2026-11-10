@@ -42,6 +42,7 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
     hour: '2-digit', 
     minute: '2-digit' 
   });
+  const isOwnFileMessage = isOwn && Boolean(message.mediaUrl);
 
   return (
     <div className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
@@ -95,13 +96,17 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
 
             {/* The Actual Bubble */}
             <div 
-              className={`px-4 py-2.5 rounded-[20px] text-[15px] leading-relaxed shadow-sm ${
+              className={
                 message.isDeleted
-                  ? "bg-slate-100 text-slate-500 italic border border-slate-200" 
-                  : isOwn 
-                    ? "bg-blue-600 text-white rounded-br-[4px]" 
-                    : "bg-white text-slate-800 border border-slate-100 rounded-bl-[4px]"
-              }`}
+                  ? "px-4 py-2.5 rounded-[20px] text-[15px] leading-relaxed shadow-sm bg-slate-100 text-slate-500 italic border border-slate-200"
+                  : isOwnFileMessage
+                    ? "text-[15px] leading-relaxed text-slate-800"
+                    : `px-4 py-2.5 rounded-[20px] text-[15px] leading-relaxed shadow-sm ${
+                        isOwn
+                          ? "bg-blue-600 text-white rounded-br-[4px]"
+                          : "bg-white text-slate-800 border border-slate-100 rounded-bl-[4px]"
+                      }`
+              }
             >
               {message.isDeleted ? (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -144,7 +149,9 @@ export default function MessageBubble({ message, isOwn, onEditInit }: MessageBub
                     </a>
                   )}
                   {message.content && (
-                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    <p className={`whitespace-pre-wrap break-words ${isOwnFileMessage ? "rounded-[16px] bg-blue-600 px-4 py-2.5 text-white" : ""}`}>
+                      {message.content}
+                    </p>
                   )}
                 </div>
               )}

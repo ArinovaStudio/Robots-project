@@ -172,21 +172,6 @@ export default function MarketplaceClient() {
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       
-      {/* Sticky header: sits under the navbar (h-16); the wrapper repaints the page background so content never shows in the gap above the card */}
-      <div className="sticky top-16 z-20 -mt-5 bg-[#F3F2EF] pt-5">
-        <div className="bg-[#1E3A5F] rounded-2xl p-8 text-white shadow-xs border border-[#1E3A5F] relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <Target className="w-48 h-48" />
-          </div>
-          <div className="relative z-10">
-            <h1 className="text-3xl font-bold mb-2">B2B Collaboration</h1>
-            <p className="text-blue-100 max-w-2xl">
-              We use AI vector matching to pair what you offer with companies who need it, and match what you need with companies who supply it.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Primary Section Tabs */}
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1">
         <button
@@ -361,16 +346,12 @@ export default function MarketplaceClient() {
           <div className="text-center py-16 text-gray-500">
             <Target className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-semibold text-gray-700">
-              {secondaryTab === "posts"
-                ? "No post-based commercial intent matches found yet."
-                : secondaryTab === "profile"
+              {secondaryTab === "profile"
                 ? "No profile matches found for your current services or requirements."
                 : "No collaboration recommendations found yet."}
             </p>
             <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
-              {secondaryTab === "posts"
-                ? "Publish a post explicitly describing what your business is looking for or offering to generate AI intent matches!"
-                : "Try adding more keywords, services offered, and requirements to your company profile!"}
+              Try adding more keywords, services offered, and requirements to your company profile!
             </p>
           </div>
         )}

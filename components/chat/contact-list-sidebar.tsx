@@ -10,11 +10,35 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { globalSocket } from "@/components/SocketAnnouncer";
 import { mutate } from "swr";
 
+function formatMessageTime(dateInput?: string | Date | null) {
+  if (!dateInput) return "";
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+
+  const isThisYear = date.getFullYear() === now.getFullYear();
+  if (isThisYear) {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
+}
+
 export default function ContactListSidebar() {
   const pathname = usePathname();
   
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -30,21 +54,41 @@ export default function ContactListSidebar() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Real-time unread count updates via socket
+  // Real-time unread count and lastMessage updates via socket
   useEffect(() => {
     const handleReceiveDm = (newMsg: any) => {
-      setContacts((prev) =>
-        prev.map((c) => {
-          if (c.userId === newMsg.senderId) {
+      setContacts((prev) => {
+        const updated = prev.map((c) => {
+          if (c.userId === newMsg.senderId || c.userId === newMsg.receiverId) {
             const isCurrentChat = pathname.includes(c.userId);
+            const isFromContact = c.userId === newMsg.senderId;
+            const prefix = isFromContact
+              ? (c.name ? c.name.split(" ")[0] : "Contact")
+              : "You";
+            const messageBody =
+              newMsg.content ||
+              (newMsg.mediaType === "VIDEO"
+                ? "Video"
+                : newMsg.mediaType === "PDF"
+                ? "Document"
+                : "Photo");
             return {
               ...c,
-              unreadCount: isCurrentChat ? 0 : (c.unreadCount || 0) + 1,
+              unreadCount: isFromContact && !isCurrentChat ? (c.unreadCount || 0) + 1 : c.unreadCount,
+              lastMessage: `${prefix}: ${messageBody}`,
+              lastMessageAt: newMsg.createdAt || new Date().toISOString(),
             };
           }
           return c;
-        })
-      );
+        });
+
+        // Float most recently updated conversation to top
+        return [...updated].sort((a, b) => {
+          const timeA = new Date(a.lastMessageAt || a.connectedAt || 0).getTime();
+          const timeB = new Date(b.lastMessageAt || b.connectedAt || 0).getTime();
+          return timeB - timeA;
+        });
+      });
       mutate("/api/user/counts");
     };
 
@@ -53,6 +97,41 @@ export default function ContactListSidebar() {
       globalSocket.off("receive_dm", handleReceiveDm);
     };
   }, [pathname]);
+
+  // Real-time online status tracking
+  useEffect(() => {
+    if (contacts.length === 0) return;
+    const userIds = contacts.map((c) => c.userId);
+    globalSocket.emit("check_multiple_users_status", userIds);
+
+    const handleMultipleStatus = (statuses: Record<string, boolean>) => {
+      setOnlineUserIds((prev) => {
+        const next = new Set(prev);
+        Object.entries(statuses).forEach(([id, isOnline]) => {
+          if (isOnline) next.add(id);
+          else next.delete(id);
+        });
+        return next;
+      });
+    };
+
+    const handleSingleStatus = (data: { userId: string; isOnline: boolean }) => {
+      setOnlineUserIds((prev) => {
+        const next = new Set(prev);
+        if (data.isOnline) next.add(data.userId);
+        else next.delete(data.userId);
+        return next;
+      });
+    };
+
+    globalSocket.on("multiple_users_status_result", handleMultipleStatus);
+    globalSocket.on("user_status_change", handleSingleStatus);
+
+    return () => {
+      globalSocket.off("multiple_users_status_result", handleMultipleStatus);
+      globalSocket.off("user_status_change", handleSingleStatus);
+    };
+  }, [contacts]);
 
   // Clear unread count when user views this chat
   useEffect(() => {
@@ -75,10 +154,18 @@ export default function ContactListSidebar() {
       const json = await res.json();
       
       if (json.success) {
+        const sortContacts = (list: any[]) => {
+          return [...list].sort((a, b) => {
+            const timeA = new Date(a.lastMessageAt || a.connectedAt || 0).getTime();
+            const timeB = new Date(b.lastMessageAt || b.connectedAt || 0).getTime();
+            return timeB - timeA;
+          });
+        };
+
         if (page === 1) {
-          setContacts(json.data);
+          setContacts(sortContacts(json.data));
         } else {
-          setContacts((prev) => [...prev, ...json.data]);
+          setContacts((prev) => sortContacts([...prev, ...json.data]));
         }
         setHasMore(page < json.pagination.totalPages);
       }
@@ -122,44 +209,71 @@ export default function ContactListSidebar() {
       >
         {contacts.map((contact) => {
           const isActive = pathname.includes(contact.userId);
+          const hasUnread = (contact.unreadCount || 0) > 0;
+          const isOnline = onlineUserIds.has(contact.userId);
+          const formattedTime = formatMessageTime(contact.lastMessageAt);
           
           return (
             <Link 
               href={`/messages/${contact.userId}`} 
               key={contact.connectionId}
-              className={`flex items-center gap-3 p-3 rounded-xl transition cursor-pointer mb-1 ${
+              className={`flex items-start gap-3 p-3 rounded-2xl transition cursor-pointer mb-1.5 ${
                 isActive ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-100 text-slate-700"
               }`}
             >
-              {/* Avatar */}
-              <div className="size-10 rounded-full bg-white border border-slate-200 overflow-hidden flex-shrink-0 relative flex items-center justify-center font-bold text-sm text-slate-400">
-                {contact.image ? (
-                  <Image src={contact.image} alt="Logo" fill className="object-cover" />
-                ) : (
-                  contact.name?.charAt(0) || "?"
+              {/* Avatar with online status */}
+              <div className="relative shrink-0 mt-0.5">
+                <div className="size-11 rounded-full bg-white border border-slate-200 overflow-hidden relative flex items-center justify-center font-bold text-sm text-slate-400">
+                  {contact.image ? (
+                    <Image src={contact.image} alt={contact.name || "User"} fill className="object-cover" />
+                  ) : (
+                    contact.name?.charAt(0) || "?"
+                  )}
+                </div>
+                {isOnline && (
+                  <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-600/20" />
                 )}
               </div>
               
               {/* Info */}
               <div className="overflow-hidden flex-1 min-w-0">
+                {/* Top line: Name and Timestamp */}
                 <div className="flex items-center justify-between gap-2">
                   <h3 className={`font-semibold text-sm truncate ${isActive ? "text-white" : "text-slate-900"}`}>
                     {contact.name || "Unknown User"}
                   </h3>
-                  {contact.unreadCount > 0 && (
-                    <span
-                      className={`inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold rounded-full shrink-0 min-w-[20px] shadow-2xs ${
-                        isActive
-                          ? "bg-white text-blue-600"
-                          : "bg-blue-600 text-white"
-                      }`}
-                    >
-                      {contact.unreadCount}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {formattedTime && (
+                      <span className={`text-[11px] font-normal whitespace-nowrap ${isActive ? "text-blue-100" : "text-slate-400"}`}>
+                        {formattedTime}
+                      </span>
+                    )}
+                    {hasUnread && (
+                      <span
+                        className={`inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold rounded-full shrink-0 min-w-[20px] shadow-2xs ${
+                          isActive
+                            ? "bg-white text-blue-600"
+                            : "bg-blue-600 text-white"
+                        }`}
+                      >
+                        {contact.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className={`text-xs truncate ${isActive ? "text-indigo-100" : "text-slate-500"}`}>
-                  {contact.company?.type || "Connection"}
+
+                {/* Downside of the name: Last Chat preview (uses ... if too long) */}
+                <p 
+                  className={`text-xs line-clamp-2 leading-relaxed mt-0.5 break-words ${
+                    isActive 
+                      ? "text-blue-100" 
+                      : hasUnread 
+                        ? "text-slate-800 font-medium" 
+                        : "text-slate-500"
+                  }`}
+                  title={contact.lastMessage || ""}
+                >
+                  {contact.lastMessage || contact.company?.type || "Connection"}
                 </p>
               </div>
             </Link>

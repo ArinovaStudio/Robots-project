@@ -149,8 +149,6 @@ function BusinessCollaborationClient() {
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
       <h1 className="sr-only">Business Collaboration</h1>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1"></div>
-
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1">
         <button
           type="button"

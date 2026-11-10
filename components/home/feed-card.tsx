@@ -409,7 +409,13 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
       )}
 
       {/* Modals */}
-      {showShare && <ShareModal postId={currentPost.id} onClose={() => setShowShare(false)} />}
+      {showShare && (
+        <ShareModal
+          postId={currentPost.id}
+          authorName={authorName}
+          onClose={() => setShowShare(false)}
+        />
+      )}
       {showReactions && (
         <ReactionsModal
           postId={currentPost.id}

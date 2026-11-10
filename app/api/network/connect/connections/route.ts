@@ -51,33 +51,83 @@ export async function GET(req: NextRequest) {
 
     const otherUserIds = connections.map(conn => conn.senderId === user.id ? conn.receiverId : conn.senderId);
 
-    const unreadCounts = otherUserIds.length > 0 ? await prisma.directMessage.groupBy({
-      by: ['senderId'],
-      where: {
-        senderId: { in: otherUserIds },
-        isRead: false,
-        isDeleted: false,
-        conversation: {
-          OR: [
-            { user1Id: user.id },
-            { user2Id: user.id }
-          ]
+    const getRoomId = (id1: string, id2: string) => [id1, id2].sort().join("_");
+
+    const [unreadCounts, conversations] = await Promise.all([
+      otherUserIds.length > 0 ? prisma.directMessage.groupBy({
+        by: ['senderId'],
+        where: {
+          senderId: { in: otherUserIds },
+          isRead: false,
+          isDeleted: false,
+          conversation: {
+            OR: [
+              { user1Id: user.id },
+              { user2Id: user.id }
+            ]
+          }
+        },
+        _count: {
+          _all: true
         }
-      },
-      _count: {
-        _all: true
-      }
-    }) : [];
+      }) : [],
+      otherUserIds.length > 0 ? prisma.conversation.findMany({
+        where: {
+          OR: [
+            { user1Id: user.id, user2Id: { in: otherUserIds } },
+            { user2Id: user.id, user1Id: { in: otherUserIds } },
+          ]
+        },
+        select: {
+          user1Id: true,
+          user2Id: true,
+          lastMessage: true,
+          lastMessageAt: true,
+          messages: {
+            take: 1,
+            orderBy: { createdAt: "desc" },
+            select: {
+              senderId: true,
+              content: true,
+              mediaType: true,
+              createdAt: true,
+            }
+          }
+        }
+      }) : []
+    ]);
 
     const unreadCountMap = new Map<string, number>();
     unreadCounts.forEach(u => {
       unreadCountMap.set(u.senderId, u._count._all);
     });
 
+    const conversationMap = new Map<string, { lastMessage: string | null; lastMessageAt: Date | null; lastSenderId: string | null }>();
+    conversations.forEach(conv => {
+      const latest = conv.messages?.[0];
+      const messageText = latest
+        ? (latest.content || (latest.mediaType === "VIDEO" ? "Video" : latest.mediaType === "PDF" ? "Document" : "Photo"))
+        : conv.lastMessage;
+      conversationMap.set(getRoomId(conv.user1Id, conv.user2Id), {
+        lastMessage: messageText || null,
+        lastMessageAt: latest?.createdAt || conv.lastMessageAt || null,
+        lastSenderId: latest?.senderId || null,
+      });
+    });
+
     const formattedConnections = connections.map(conn => {
       const isSender = conn.senderId === user.id;
       const otherUser = isSender ? conn.receiver : conn.sender;
       const isOtherInvestor = otherUser.accountType === "INVESTOR";
+      const conv = conversationMap.get(getRoomId(user.id, otherUser.id));
+
+      const isLastSenderMe = conv?.lastSenderId === user.id;
+      const otherFirstName = otherUser.name ? otherUser.name.split(" ")[0] : otherUser.company?.companyName || "Contact";
+      let displayLastMessage = conv?.lastMessage || null;
+      if (displayLastMessage && conv?.lastSenderId) {
+        const prefix = isLastSenderMe ? "You" : otherFirstName;
+        displayLastMessage = `${prefix}: ${displayLastMessage}`;
+      }
 
       return {
         id: conn.id,
@@ -92,6 +142,8 @@ export async function GET(req: NextRequest) {
         image: otherUser.image || otherUser.company?.logoUrl || null,
         userId: otherUser.id,
         unreadCount: unreadCountMap.get(otherUser.id) || 0,
+        lastMessage: displayLastMessage,
+        lastMessageAt: conv?.lastMessageAt || null,
       };
     });
 
