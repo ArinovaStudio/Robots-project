@@ -5,7 +5,7 @@ import CompanyCard from "@/components/home/search/company-card";
 import InvestorCard, { type InvestorCardData } from "@/components/home/investor-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Users, Briefcase, Target } from "lucide-react";
+import { Users, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useUserStore } from "@/store/AuthStore";
@@ -147,17 +147,9 @@ function BusinessCollaborationClient() {
 
   return (
     <section className="mx-auto max-w-6xl space-y-6 pb-20">
-      <div className="bg-[#1E3A5F] rounded-2xl p-8 text-white shadow-xs border border-[#1E3A5F] relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <Target className="w-48 h-48" />
-        </div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">Business Collaboration</h1>
-          <p className="text-blue-100 max-w-2xl">
-            Explore investor profiles and decide who may be a fit for your business.
-          </p>
-        </div>
-      </div>
+      <h1 className="sr-only">Business Collaboration</h1>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1"></div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 shadow-xs flex items-center gap-1">
         <button
@@ -182,7 +174,7 @@ function BusinessCollaborationClient() {
           }`}
         >
           <Briefcase className="w-5 h-5" />
-          <span>Suggested in Similar Businesses</span>
+          <span>Invested in Similar Businesses</span>
         </button>
       </div>
 

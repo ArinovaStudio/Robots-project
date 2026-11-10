@@ -5,9 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Plus, TrendingUp, Sparkles } from "lucide-react";
+import { Plus, Check, Loader2, TrendingUp, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import ConnectModal from "@/components/modals/connect-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 
 interface TopInvestor {
@@ -28,12 +27,13 @@ interface TopInvestor {
 export default function TopInvestors() {
   const [investors, setInvestors] = useState<TopInvestor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInvestor, setSelectedInvestor] = useState<TopInvestor | null>(null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set()); // requests in flight
 
   useEffect(() => {
     const fetchTopInvestors = async () => {
       try {
-        const res = await fetch("/api/investor/top");
+        const res = await fetch("/api/investor/top?limit=5");
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           setInvestors(json.data);
@@ -48,30 +48,38 @@ export default function TopInvestors() {
     fetchTopInvestors();
   }, []);
 
-  // Fetch one replacement profile that isn't already shown / already requested
-  const fetchReplacement = async (excludeIds: string[]) => {
+  // Follow stays on the card as "Followed". On the next refresh the API no longer
+  // returns followed investors, so that card is replaced by a new one.
+  const handleFollow = async (investorId: string) => {
+    if (followedIds.has(investorId) || followingIds.has(investorId)) return;
+    setFollowingIds((prev) => new Set(prev).add(investorId));
     try {
-      const res = await fetch(`/api/investor/top?limit=1&exclude=${excludeIds.join(",")}`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        setInvestors((prev) =>
-          prev.some((inv) => inv.id === json.data[0].id) ? prev : [...prev, json.data[0]]
-        );
-      }
-    } catch (error) {
-      console.error("Failed to fetch replacement investor:", error);
-    }
-  };
+      const post = () =>
+        fetch("/api/network/follow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetUserId: investorId }),
+        }).then((res) => res.json());
 
-  const handleConnectSuccess = (msg: string) => {
-    toast.success(msg);
-    if (!selectedInvestor) return;
-    const sentId = selectedInvestor.id;
-    const shownIds = investors.map((inv) => inv.id);
-    // request sent -> hide this profile and bring in another one
-    setInvestors((prev) => prev.filter((inv) => inv.id !== sentId));
-    setSelectedInvestor(null);
-    fetchReplacement(shownIds);
+      let json = await post();
+      // the endpoint toggles; if we were already following, it just unfollowed, so follow again
+      if (json.success && json.isFollowing === false) json = await post();
+
+      if (json.success && json.isFollowing) {
+        setFollowedIds((prev) => new Set(prev).add(investorId));
+        toast.success("Followed successfully");
+      } else {
+        toast.error(json.message || "Failed to follow");
+      }
+    } catch {
+      toast.error("An error occurred");
+    } finally {
+      setFollowingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(investorId);
+        return next;
+      });
+    }
   };
 
   return (
@@ -91,7 +99,7 @@ export default function TopInvestors() {
       <div className="space-y-3.5">
         {loading ? (
           <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex gap-3">
                 <Skeleton circle width={44} height={44} />
                 <div className="flex-1">
@@ -156,12 +164,19 @@ export default function TopInvestors() {
                 </div>
 
                 <div className="shrink-0">
-                  <button
-                    onClick={() => setSelectedInvestor(investor)}
-                    className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors"
-                  >
-                    <Plus size={14} /> Connect
-                  </button>
+                  {followedIds.has(investor.id) ? (
+                    <span className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500 font-medium text-xs whitespace-nowrap">
+                      <Check size={14} /> Followed
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleFollow(investor.id)}
+                      disabled={followingIds.has(investor.id)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors disabled:opacity-60"
+                    >
+                      {followingIds.has(investor.id) ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Follow
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -178,14 +193,6 @@ export default function TopInvestors() {
         </Link>
       )}
 
-      {selectedInvestor && (
-        <ConnectModal
-          receiverId={selectedInvestor.id}
-          companyName={selectedInvestor.name}
-          onClose={() => setSelectedInvestor(null)}
-          onSuccess={handleConnectSuccess}
-        />
-      )}
     </div>
   );
 }

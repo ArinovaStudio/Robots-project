@@ -62,6 +62,7 @@ export function EventCard({ event }: { event: any }) {
     </div>
   );
 }
+
 export default function EmbeddedPost({ post, compact = false }: { post: any; compact?: boolean }) {
   if (!post) {
     return (
@@ -73,6 +74,7 @@ export default function EmbeddedPost({ post, compact = false }: { post: any; com
 
   const name = post.author?.company?.companyName || post.author?.name || "Independent Professional";
   const image = post.author?.company?.logoUrl || post.author?.image;
+  const hasMedia = Array.isArray(post.media) && post.media.length > 0;
 
   const body = (
     <>
@@ -104,10 +106,10 @@ export default function EmbeddedPost({ post, compact = false }: { post: any; com
         </div>
       )}
 
-      {!compact && post.event && <EventCard event={post.event} />}
+      {post.event && <EventCard event={post.event} />}
 
-      {!compact && post.media?.length > 0 && (
-        <div className="mt-3">
+      {hasMedia && (
+        <div className={`mt-3 ${compact ? "max-h-72 overflow-hidden rounded-lg" : ""}`}>
           <MediaSlider key={post.media.map((m: any) => m.id).join("-")} media={post.media} />
         </div>
       )}

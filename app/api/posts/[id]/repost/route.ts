@@ -69,14 +69,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           { status: 400 }
         );
       }
-    } else {
-      const existing = await prisma.post.findFirst({
-        where: { authorId: user.id, repostOfId: original.id, content: null, status: "ACTIVE" },
-        select: { id: true },
-      });
-      if (existing) {
-        return NextResponse.json({ success: false, message: "You've already reposted this" }, { status: 409 });
-      }
+    }
+
+    // One repost per user per post (instant or with thoughts)
+    const existing = await prisma.post.findFirst({
+      where: { authorId: user.id, repostOfId: original.id, status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json({ success: false, message: "This post has already been reposted" }, { status: 409 });
     }
 
     await prisma.post.create({

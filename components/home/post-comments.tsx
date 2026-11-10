@@ -7,9 +7,22 @@ import { CommentThread } from "./CommentThread";
 const INITIAL_COUNT = 3; // comments shown when the section is first opened
 const LOAD_MORE_COUNT = 10; // comments added on every "Show more comments" click
 
-export default function PostComments({ postId, currentUser, canComment = true, onHide }: { postId: string, currentUser: any, canComment?: boolean, onHide?: () => void }) {
+export default function PostComments({
+  postId,
+  currentUser,
+  canComment = true,
+  onHide,
+  onTotalChange,
+}: {
+  postId: string;
+  currentUser: any;
+  canComment?: boolean;
+  onHide?: () => void;
+  onTotalChange?: (total: number) => void; // lets the parent post card show the live count
+}) {
   const [comments, setComments] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(0); // top-level comments only (drives "Show more")
+  const [totalAll, setTotalAll] = useState(0); // top-level + replies (shown in header)
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -34,6 +47,7 @@ export default function PostComments({ postId, currentUser, canComment = true, o
           setComments(json.data);
         }
         setTotal(json.pagination.total);
+        setTotalAll(json.pagination.totalWithReplies ?? json.pagination.total);
       }
     } catch (error) {
       console.error("Failed to load comments", error);
@@ -46,9 +60,17 @@ export default function PostComments({ postId, currentUser, canComment = true, o
   useEffect(() => {
     setLoading(true);
     setComments([]);
+    setTotal(0);
+    setTotalAll(0);
     fetchComments(0, INITIAL_COUNT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
+
+  // Keep the parent (post card) in sync with the full count (comments + replies)
+  useEffect(() => {
+    if (!loading) onTotalChange?.(totalAll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAll, loading]);
 
   const handleShowMore = () => {
     if (loadingMore) return;
@@ -74,6 +96,7 @@ export default function PostComments({ postId, currentUser, canComment = true, o
         if (json.data) {
           setComments(prev => [json.data, ...prev]);
           setTotal(prev => prev + 1);
+          setTotalAll(prev => prev + 1);
         } else {
           fetchComments(0, Math.max(comments.length + 1, INITIAL_COUNT));
         }
@@ -86,12 +109,23 @@ export default function PostComments({ postId, currentUser, canComment = true, o
   };
 
   const removeCommentFromState = (commentId: string) => {
+    // deleting a top-level comment also removes its replies from the full count
+    const removed = comments.find(c => c.id === commentId);
+    const removedCount = 1 + (removed?._count?.replies ?? 0);
     setComments(prev => prev.filter(c => c.id !== commentId));
     setTotal(prev => Math.max(0, prev - 1));
+    setTotalAll(prev => Math.max(0, prev - removedCount));
   };
 
   return (
     <div className="bg-white border-t border-slate-100 p-4 rounded-b-2xl">
+      {/* Total comment count (LinkedIn-style, includes replies) */}
+      {!loading && totalAll > 0 && (
+        <h3 className="mb-4 text-sm font-semibold text-slate-700">
+          {totalAll.toLocaleString()} {totalAll === 1 ? "comment" : "comments"}
+        </h3>
+      )}
+
       {/* Top Input Section */}
       {!canComment && (
         <div className="mb-6 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-500">

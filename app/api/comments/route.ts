@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
 
     const whereClause = {
       postId,
-      parentId: parentId || null, 
+      parentId: parentId || null,
     };
 
-    const [comments, totalCount] = await Promise.all([
+    const [comments, totalCount, totalWithReplies] = await Promise.all([
       prisma.comment.findMany({
         where: whereClause,
         skip,
@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
           ...(user?.id ? { reactions: { where: { userId: user.id }, select: { type: true } } } : {})
         }
       }),
-      prisma.comment.count({ where: whereClause })
+      prisma.comment.count({ where: whereClause }),
+      // every comment on the post (top-level + replies), only needed for the top-level list
+      parentId ? Promise.resolve(null) : prisma.comment.count({ where: { postId } }),
     ]);
 
     const commentIds = comments.map(c => c.id);
@@ -67,8 +69,8 @@ export async function GET(req: NextRequest) {
         dislikesCount: dislikes,
         userReaction: (comment as any).reactions?.[0]?.type || null
       };
-      
-      delete (formatted as any).reactions; 
+
+      delete (formatted as any).reactions;
       return formatted;
     });
 
@@ -79,6 +81,7 @@ export async function GET(req: NextRequest) {
       data: formattedComments,
       pagination: {
         total: totalCount,
+        totalWithReplies: totalWithReplies ?? totalCount,
         page,
         limit,
         totalPages: Math.ceil(totalCount / limit),
@@ -139,11 +142,11 @@ export async function POST(req: NextRequest) {
 
     if (content){
       const textValidation = validateTextContent(content);
-            
+
       if (!textValidation.isValid) {
-        return NextResponse.json({ 
-          success: false, 
-          message: "Your comment contains inappropriate language that violates our community guidelines" 
+        return NextResponse.json({
+          success: false,
+          message: "Your comment contains inappropriate language that violates our community guidelines"
         }, { status: 400 });
       }
     }

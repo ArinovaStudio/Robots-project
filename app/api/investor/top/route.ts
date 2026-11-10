@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const { user: currentUser } = await getUser().catch(() => ({ user: null }));
 
     const { searchParams } = new URL(req.url);
-    const take = Math.min(Math.max(parseInt(searchParams.get("limit") || "4", 10) || 4, 1), 10);
+    const take = Math.min(Math.max(parseInt(searchParams.get("limit") || "5", 10) || 5, 1), 10);
     const excludeIds = (searchParams.get("exclude") || "").split(",").filter(Boolean);
 
     const investors = await prisma.user.findMany({
@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
           ? {
               AND: [
                 { id: { not: currentUser.id } },
-                { receivedConnections: { none: { senderId: currentUser.id } } },
-                { sentConnections: { none: { receiverId: currentUser.id } } },
+                // hide investors the viewer already follows, so a refresh swaps them for new ones
+                { followers: { none: { followerId: currentUser.id } } },
               ],
             }
           : {}),

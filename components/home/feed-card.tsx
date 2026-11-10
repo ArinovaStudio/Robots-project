@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bookmark, Repeat2, Check, Link2, UserMinus, EyeOff, MessageCircle, MoreVertical, Share2, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
+import { Bookmark, Repeat2, Link2, UserMinus, EyeOff, MessageCircle, MoreVertical, Share2, Flag, Edit2, Trash2, Send, CalendarDays, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import ShareModal from "../modals/share-modal";
 import ReportModal from "../modals/report-modal";
 import ConfirmModal from "../modals/confirm-modal";
-import RepostModal from "../modals/repost-modal";
+import RepostMenu from "../modals/repost-menu";
 import EmbeddedPost, { EventCard } from "./embedded-post";
 import EditPostModal from "../modals/edit-post-modal";
 import PostComments from "./post-comments";
@@ -27,6 +27,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const [reaction, setReaction] = useState<PostReactionType | null>(isPostReactionType(currentPost?.userReaction) ? currentPost.userReaction : null);
   const [reactionCounts, setReactionCounts] = useState<ReactionCounts>(currentPost?.reactionCounts || {});
   const [likesCount, setLikesCount] = useState<number>(currentPost?.likesCount || 0);
+  const [commentCount, setCommentCount] = useState<number>(currentPost?._count?.comments || 0);
   const [showReactions, setShowReactions] = useState(false);
   const [isSaved, setIsSaved] = useState(currentPost?.isSaved || false);
   
@@ -38,13 +39,12 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showRepost, setShowRepost] = useState(false);
   const [hasReposted, setHasReposted] = useState<boolean>(currentPost?.hasReposted || false);
-  const [showUndoRepost, setShowUndoRepost] = useState(false);
   const [isFollowingAuthor, setIsFollowingAuthor] = useState<boolean>(currentPost?.isFollowingAuthor || false);
   const [isHidden, setIsHidden] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [showUndoRepost, setShowUndoRepost] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const isAuthor = currentUser?.id === currentPost?.authorId;
   const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || "Independent Professional";
@@ -55,6 +55,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const repostTarget = isRepost ? currentPost?.repostOf : currentPost;
   const targetIsOwn = repostTarget?.authorId === currentUser?.id;
   const targetConnectionsOnly = !isRepost && currentPost?.visibility === "CONNECTIONS";
+  // stays clickable when already reposted, so the "already reposted" error can show
   const repostDisabled = !repostTarget || targetIsOwn || (targetConnectionsOnly && !hasReposted);
   const repostTitle = !repostTarget
     ? "Original post is unavailable"
@@ -129,7 +130,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         setHasReposted(false);
         toast.success("Repost removed");
       } else {
-        toast.error(data.message || "Failed to undo repost");
+        toast.error(data.message || "Failed to remove repost");
       }
     } catch {
       toast.error("An error occurred");
@@ -287,6 +288,11 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
                 <button onClick={() => { handleCopyLink(); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   <Link2 size={14} /> Copy link to post
                 </button>
+                {hasReposted && (
+                  <button onClick={() => { setShowUndoRepost(true); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Repeat2 size={14} /> Remove repost
+                  </button>
+                )}
                 {!isAuthor && isFollowingAuthor && (
                   <button onClick={() => { handleUnfollow(); setShowDropdown(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     <UserMinus size={14} /> <span className="truncate">Unfollow {authorName}</span>
@@ -341,13 +347,17 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
           />
         </div>
       )}
-      {(likesCount > 0 || currentPost._count?.comments > 0) && (
+      {(likesCount > 0 || commentCount > 0) && (
         <div className="px-4 py-2 border-t border-b border-gray-100 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-1">
             <ReactionSummary counts={reactionCounts} total={likesCount} userReaction={reaction} onOpen={() => setShowReactions(true)} />
           </div>
           <div>
-            {currentPost._count?.comments > 0 && <span className="cursor-pointer hover:underline" onClick={() => setShowComments(true)}>{currentPost._count.comments} comments</span>}
+            {commentCount > 0 && (
+              <span className="cursor-pointer hover:underline" onClick={() => setShowComments(true)}>
+                {commentCount.toLocaleString()} {commentCount === 1 ? "comment" : "comments"}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -357,14 +367,30 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         <button onClick={() => setShowComments(!showComments)} className="flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900">
           <MessageCircle size={18} /> Comment
         </button>
-        <button
-          onClick={() => (hasReposted ? setShowUndoRepost(true) : setShowRepost(true))}
-          disabled={repostDisabled}
-          title={hasReposted ? "You reposted this" : repostTitle}
-          className={`flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent ${hasReposted ? "text-green-600 hover:bg-green-50" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"}`}
-        >
-          {hasReposted ? <Check size={18} /> : <Repeat2 size={18} />} {hasReposted ? "Reposted" : "Repost"}
-        </button>
+
+        {/* Repost: popover with "Repost with thoughts" / "Repost instantly" */}
+        <RepostMenu
+          post={repostTarget}
+          currentUser={currentUser}
+          onSuccess={() => setHasReposted(true)}
+          className="flex flex-1"
+          trigger={({ onClick, open, submitting }) => (
+            <button
+              onClick={
+                hasReposted
+                  ? () => toast.error("This post has already been reposted")
+                  : onClick
+              }
+              disabled={repostDisabled || submitting}
+              aria-expanded={open}
+              title={repostTitle}
+              className="flex w-full flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              <Repeat2 size={18} /> Repost
+            </button>
+          )}
+        />
+
         <button onClick={() => setShowShare(true)} className="flex flex-1 items-center justify-center gap-2 px-2 py-3 rounded-md text-gray-500 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900">
           <Send size={18} /> Send
         </button>
@@ -372,7 +398,13 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
 
       {showComments && (
         <div className="bg-gray-50 border-t border-gray-100 rounded-b-lg">
-          <PostComments postId={currentPost.id} currentUser={currentUser} canComment={canComment} onHide={handleHideComments} />
+          <PostComments
+            postId={currentPost.id}
+            currentUser={currentUser}
+            canComment={canComment}
+            onHide={handleHideComments}
+            onTotalChange={setCommentCount}
+          />
         </div>
       )}
 
@@ -406,22 +438,12 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
         />
       )}
 
-      {/* Repost Modal */}
-      {showRepost && repostTarget && (
-        <RepostModal
-          post={repostTarget}
-          currentUser={currentUser}
-          onClose={() => setShowRepost(false)}
-          onSuccess={() => setHasReposted(true)}
-        />
-      )}
-
-      {/* Undo Repost Modal */}
+      {/* Remove Repost Modal (opened from the three-dot menu) */}
       <ConfirmModal
         isOpen={showUndoRepost}
-        title="Undo repost?"
+        title="Remove repost?"
         message="This will remove your repost from your profile and your followers' feeds."
-        confirmText="Undo repost"
+        confirmText="Remove repost"
         cancelText="Cancel"
         variant="danger"
         isLoading={isUndoing}
