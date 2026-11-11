@@ -199,6 +199,8 @@ model InvestorProfile {
   userId String @unique
   investorType String
   firmName String?
+  bannerUrl String?
+  openTo String[] @default([])
   phone String?
   country String?
   city String?

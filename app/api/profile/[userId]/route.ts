@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUser } from "@/lib/auth"; 
+import { getUser } from "@/lib/auth";
 
-export async function GET( req: NextRequest, { params }: { params: Promise<{ userId: string }> } ) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await params;
     const { user: currentUser } = await getUser();
@@ -12,11 +12,12 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
       select: {
         id: true,
         name: true,
+        email: true,
         image: true,
         accountType: true,
         verificationStatus: true,
         createdAt: true,
-        company: true, 
+        company: true,
         investor: true,
         _count: {
           select: {
@@ -34,9 +35,18 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
     }
 
     const totalConnections = targetUser._count.sentConnections + targetUser._count.receivedConnections;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Calculate dynamic Connected Investors (for companies) and Connected Companies (for investors)
-    const [connectedInvestorsCount, connectedCompaniesCount, recordedInvestments] = await Promise.all([
+    // Calculate dynamic Connected Investors (for companies), Connected Companies (for investors), and Dashboard analytics
+    const [
+      connectedInvestorsCount,
+      connectedCompaniesCount,
+      recordedInvestments,
+      profileViewsAgg,
+      searchImpressionsAgg,
+      recentPostsAgg,
+      recentComments,
+    ] = await Promise.all([
       prisma.connection.count({
         where: {
           status: "ACCEPTED",
@@ -60,8 +70,43 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         FROM "InvestorInvestment"
         WHERE "investorId" = ${userId}
         ORDER BY "createdAt" DESC
-      `.catch(() => [])
+      `.catch(() => []),
+      targetUser.company
+        ? prisma.profileViewStat.aggregate({
+          where: { companyId: targetUser.company.id },
+          _sum: { count: true },
+        }).catch(() => ({ _sum: { count: 0 } }))
+        : Promise.resolve({ _sum: { count: 0 } }),
+      targetUser.company
+        ? prisma.searchImpressionStat.aggregate({
+          where: { companyId: targetUser.company.id },
+          _sum: { count: true },
+        }).catch(() => ({ _sum: { count: 0 } }))
+        : Promise.resolve({ _sum: { count: 0 } }),
+      prisma.post.findMany({
+        where: { authorId: userId, status: "ACTIVE", createdAt: { gte: sevenDaysAgo } },
+        select: {
+          _count: { select: { reactions: true, comments: true, reposts: true } },
+        },
+      }).catch(() => []),
+      prisma.comment.findMany({
+        where: { authorId: userId, post: { status: "ACTIVE" } },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          postId: true,
+          post: { select: { id: true, content: true } },
+        },
+      }).catch(() => []),
     ]);
+
+    const postImpressions = recentPostsAgg.reduce(
+      (sum, p) => sum + (p._count?.reactions || 0) + (p._count?.comments || 0) + (p._count?.reposts || 0),
+      0
+    );
 
     const baseInvestedCount = targetUser.investor?.previousInvestmentCount || targetUser.investor?.previousStartups?.length || 0;
     const investedInCount = baseInvestedCount + recordedInvestments.length;
@@ -91,7 +136,7 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         connectionStatus = connectionRecord.status;
         connectionId = connectionRecord.id;
       }
-      
+
       if (targetUser.company) {
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
@@ -99,13 +144,14 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
           where: { companyId_date: { companyId: targetUser.company.id, date: today } },
           update: { count: { increment: 1 } },
           create: { companyId: targetUser.company.id, date: today }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
 
     const profileData = {
       userId: targetUser.id,
       name: targetUser.name,
+      email: currentUser ? targetUser.email : null,
       image: targetUser.image,
       accountType: targetUser.accountType,
       verificationStatus: targetUser.verificationStatus || "UNVERIFIED",
@@ -124,8 +170,12 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ use
         connections: totalConnections,
         connectedInvestors: connectedInvestorsCount,
         connectedCompanies: connectedCompaniesCount,
-        investedIn: investedInCount
+        investedIn: investedInCount,
+        profileViews: profileViewsAgg?._sum?.count || 0,
+        postImpressions,
+        searchAppearances: searchImpressionsAgg?._sum?.count || 0
       },
+      recentComments,
       viewerState: {
         isFollowing,
         connectionStatus,

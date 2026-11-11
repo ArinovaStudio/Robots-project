@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { uploadImage } from "@/lib/uploads";
+import { uploadImage, deleteFile } from "@/lib/uploads";
 import {
   CAPITAL_RANGES,
   ENTITY_TYPES,
@@ -395,5 +395,71 @@ export async function PUT(request: NextRequest) {
   } catch (err: any) {
     console.error("Failed to update investor profile:", err);
     return NextResponse.json({ success: false, message: err?.message || "Failed to update profile." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { user, error } = await getUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const existing = await prisma.investorProfile.findUnique({ where: { userId: user.id } });
+    if (!existing) {
+      return NextResponse.json({ success: false, message: "Investor profile not found." }, { status: 404 });
+    }
+
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const removeBanner = formData.get("removeBanner") === "true";
+      const newBanner = formData.get("banner") as File | null;
+
+      let bannerUrl = existing.bannerUrl;
+
+      if (removeBanner) {
+        if (existing.bannerUrl) await deleteFile(existing.bannerUrl);
+        bannerUrl = null;
+      } else if (newBanner && newBanner.size > 0) {
+        if (existing.bannerUrl) await deleteFile(existing.bannerUrl);
+        bannerUrl = await uploadImage(newBanner, "banners");
+      } else {
+        return NextResponse.json({ success: false, message: "No cover image provided." }, { status: 400 });
+      }
+
+      await prisma.investorProfile.update({
+        where: { userId: user.id },
+        data: { bannerUrl },
+      });
+
+      return NextResponse.json(
+        { success: true, message: "Cover photo updated successfully.", data: { bannerUrl } },
+        { status: 200 }
+      );
+    }
+
+    const body = await request.json().catch(() => null);
+    if (!body || !Array.isArray(body.openTo)) {
+      return NextResponse.json({ success: false, message: "Invalid update payload." }, { status: 400 });
+    }
+
+    const openTo = body.openTo
+      .filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+      .map((item: string) => item.trim());
+
+    await prisma.investorProfile.update({
+      where: { userId: user.id },
+      data: { openTo },
+    });
+
+    return NextResponse.json(
+      { success: true, message: "Open to preferences updated.", data: { openTo } },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    console.error("Failed to patch investor profile:", err);
+    return NextResponse.json({ success: false, message: err?.message || "Internal server error." }, { status: 500 });
   }
 }

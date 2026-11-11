@@ -249,3 +249,73 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, message: err?.message || "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { user, error } = await getUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const existing = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
+    if (!existing) {
+      return NextResponse.json({ success: false, message: "Company profile not found" }, { status: 404 });
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const removeBanner = formData.get("removeBanner") === "true";
+      const newBanner = formData.get("banner") as File | null;
+
+      let bannerUrl = existing.bannerUrl;
+
+      if (removeBanner) {
+        if (existing.bannerUrl) await deleteFile(existing.bannerUrl);
+        bannerUrl = null;
+      } else if (newBanner && newBanner.size > 0) {
+        if (existing.bannerUrl) await deleteFile(existing.bannerUrl);
+        bannerUrl = await uploadImage(newBanner, "banners");
+      } else {
+        return NextResponse.json({ success: false, message: "No cover image provided" }, { status: 400 });
+      }
+
+      await prisma.companyProfile.update({
+        where: { userId: user.id },
+        data: { bannerUrl }
+      });
+
+      return NextResponse.json(
+        { success: true, message: "Cover photo updated successfully", data: { bannerUrl } },
+        { status: 200 }
+      );
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body || !Array.isArray(body.lookingFor)) {
+      return NextResponse.json({ success: false, message: "Invalid update payload" }, { status: 400 });
+    }
+
+    const lookingFor = body.lookingFor
+      .filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+      .map((item: string) => item.trim());
+
+    await prisma.companyProfile.update({
+      where: { userId: user.id },
+      data: { lookingFor }
+    });
+
+    syncVectors(user.id, existing.description, existing.dealIn, lookingFor).catch((err) =>
+      console.error("Background vector sync error:", err)
+    );
+
+    return NextResponse.json(
+      { success: true, message: "Open to preferences updated", data: { lookingFor } },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    console.error("Error patching company profile:", err);
+    return NextResponse.json({ success: false, message: err?.message || "Internal server error" }, { status: 500 });
+  }
+}
