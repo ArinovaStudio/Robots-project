@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -457,12 +456,13 @@ export default function ProfileView({ userId }: ProfileViewProps) {
         </div>
 
         <div className="p-6 sm:p-8 pt-0 sm:pt-0 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative">
-          <div className="-mt-12 sm:-mt-16 h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-lg border-4 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center z-10 relative">
+          {/* Circular profile icon overlapping the banner */}
+          <div className="-mt-12 sm:-mt-16 h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-full border-[5px] border-white shadow-md overflow-hidden bg-gray-100 flex items-center justify-center z-10 relative">
             {company.logoUrl && company.logoUrl !== "null" ? (
               <img 
                 src={company.logoUrl} 
                 alt="Logo" 
-                className="h-full w-full object-cover" 
+                className="h-full w-full rounded-full object-cover" 
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.parentElement!.innerHTML = `<span class="text-5xl font-bold text-gray-300">${initial}</span>`;
