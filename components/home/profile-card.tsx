@@ -1,15 +1,9 @@
-
 "use client";
 
-import { useState } from "react";
-import { Pencil } from "lucide-react";
-import EditProfileModal from "../modals/edit-profile-modal";
 import Link from "next/link";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 
-export default function ProfileCard({ profile, refreshProfile }: any) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
+export default function ProfileCard({ profile }: any) {
   return (
     <>
       <div className="rounded-xl bg-white border border-gray-200 overflow-hidden relative">
@@ -77,29 +71,7 @@ export default function ProfileCard({ profile, refreshProfile }: any) {
             <span className="text-blue-600 font-semibold">{profile.connectionsCount}</span>
           </div>
         </div>
-
-        {/* Edit Button */}
-        <button
-          onClick={() => setIsEditModalOpen(true)}
-          className="
-            absolute top-3 right-3 rounded-full p-1.5
-            bg-white/20 hover:bg-white/40 transition text-white backdrop-blur-sm
-          "
-        >
-          <Pencil size={14} />
-        </button>
       </div>
-
-      {isEditModalOpen && (
-        <EditProfileModal
-          profile={profile}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            refreshProfile();
-          }}
-        />
-      )}
     </>
   );
 }

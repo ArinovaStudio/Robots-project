@@ -3,9 +3,9 @@ import { z } from "zod";
 import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
+  email: z.string().email("Invalid email address"),
+  otp: z.string().length(6, "Verification code must be 6 digits"),
   newPassword: z
     .string()
     .min(8, "New password must be at least 8 characters")
@@ -20,8 +20,6 @@ export async function POST(req: Request) {
     if (error || !user) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
-
-    // Users who signed up via Google/Facebook have no password to change
     if (!user.password) {
       return NextResponse.json(
         {
@@ -42,7 +40,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const { currentPassword, newPassword, confirmPassword } = validation.data;
+    const { email: rawEmail, otp, newPassword, confirmPassword } = validation.data;
+    const email = rawEmail.trim().toLowerCase();
+    if (email !== user.email.trim().toLowerCase()) {
+      return NextResponse.json(
+        { success: false, message: "Please enter the email address of your account" },
+        { status: 400 }
+      );
+    }
 
     if (newPassword !== confirmPassword) {
       return NextResponse.json(
@@ -51,15 +56,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
+    const otpRecord = await prisma.otp.findUnique({
+      where: { email_type: { email, type: "RESET_PASSWORD" } },
+    });
+
+    if (!otpRecord || otpRecord.otp !== otp) {
       return NextResponse.json(
-        { success: false, message: "Current password is incorrect" },
+        { success: false, message: "Invalid verification code" },
         { status: 400 }
       );
     }
 
-    if (currentPassword === newPassword) {
+    if (new Date() > otpRecord.expiresAt) {
+      return NextResponse.json(
+        { success: false, message: "Verification code has expired. Please request a new one." },
+        { status: 400 }
+      );
+    }
+
+    if (await bcrypt.compare(newPassword, user.password)) {
       return NextResponse.json(
         { success: false, message: "New password must be different from current password" },
         { status: 400 }
@@ -67,10 +82,10 @@ export async function POST(req: Request) {
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashedNewPassword },
-    });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: user.id }, data: { password: hashedNewPassword } }),
+      prisma.otp.delete({ where: { email_type: { email, type: "RESET_PASSWORD" } } }),
+    ]);
 
     return NextResponse.json({ success: true, message: "Password changed successfully" });
   } catch {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OPEN_TO_LABELS } from "@/lib/open-to";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getUser } from "@/lib/auth";
@@ -21,6 +22,7 @@ export async function GET() {
       include: {
         user: {
           select: {
+            verificationStatus: true,
             _count: {
               select: {
                 followers: true,
@@ -58,6 +60,7 @@ export async function GET() {
       data: {
         ...company,
         logoUrl: company.logoUrl || user.image,
+        verificationStatus: company.user.verificationStatus,
         profileViewers,
         impressions,
         connectionsCount,
@@ -300,6 +303,13 @@ export async function PATCH(req: NextRequest) {
     const lookingFor = body.lookingFor
       .filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
       .map((item: string) => item.trim());
+
+    if (lookingFor.filter((item: string) => OPEN_TO_LABELS.has(item)).length > 1) {
+      return NextResponse.json(
+        { success: false, message: "Only one Open to option can be selected" },
+        { status: 400 }
+      );
+    }
 
     await prisma.companyProfile.update({
       where: { userId: user.id },

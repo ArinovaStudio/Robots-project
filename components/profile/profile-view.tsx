@@ -3,16 +3,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   MapPin, Link as LinkIcon, Users, Building2, Clock, Loader2,
-  Layers, ShieldCheck, Settings, Landmark, MessageSquare, X, Send,
+  Layers, ShieldCheck, MoreHorizontal, Landmark, MessageSquare, X, Send,
   Handshake, Pencil, PlusCircle, Briefcase, Eye, BarChart2, Search,
   Target, ChevronLeft, ChevronRight, ThumbsUp, Repeat2, Sparkles,
-  ArrowRight, Mail, Calendar, FileText, Video, UserCheck, Upload, Trash2, Check
+  ArrowRight, Mail, Calendar, FileText, Video, UserCheck, Upload, Trash2, Check,
+  FileDown, Bookmark, Info, Activity as ActivityIcon, KeyRound
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ShareModal from "../modals/share-modal";
 import CollaborateModal from "../modals/collaborate-modal";
 import SendPitchRequestModal from "../modals/send-pitch-request-modal";
 import EditProfileModal from "../modals/edit-profile-modal";
@@ -20,22 +30,13 @@ import RecordInvestmentModal from "../modals/record-investment-modal";
 import CreatePostModal from "@/components/modals/create-post-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
+import { OPEN_TO_OPTIONS, OPEN_TO_LABELS, getActiveOpenTo } from "@/lib/open-to";
 
 interface ProfileViewProps {
   userId: string;
 }
 
 type ActivityTab = "posts" | "comments" | "media" | "saved";
-
-const OPEN_TO_OPTIONS = [
-  { label: "Open to Projects", description: "Accepting new client projects." },
-  { label: "Open to Investment", description: "Seeking investors or funding." },
-  { label: "Open to Partnerships", description: "Looking for business or technology partners." },
-  { label: "Open to Hiring", description: "Recruiting employees or interns." },
-  { label: "Open to Collaborations", description: "Interested in B2B collaborations." }
-] as const;
-
-const OPEN_TO_LABELS = new Set<string>(OPEN_TO_OPTIONS.map((opt) => opt.label));
 
 export default function ProfileView({ userId }: ProfileViewProps) {
   const [profile, setProfile] = useState<any>(null);
@@ -46,6 +47,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [showRecordInvestmentModal, setShowRecordInvestmentModal] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showShareProfileModal, setShowShareProfileModal] = useState(false);
+  const router = useRouter();
   const [showOpenToModal, setShowOpenToModal] = useState(false);
   const [selectedOpenTo, setSelectedOpenTo] = useState<string[]>([]);
   const [isSavingOpenTo, setIsSavingOpenTo] = useState(false);
@@ -279,19 +283,21 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const secondPillItems = (isInvestorOnly ? investor.stages : company.lookingFor) || [];
 
   const isVerified = profile.verificationStatus === "VERIFIED";
+  const activeOpenTo = isInvestorOnly
+    ? getActiveOpenTo(investor.openTo)
+    : getActiveOpenTo(company.lookingFor);
 
   const openOpenToModal = () => {
     const existing = company
-      ? ((company.lookingFor || []) as string[]).filter((item) => OPEN_TO_LABELS.has(item))
-      : ((investor?.openTo || []) as string[]).filter((item) => OPEN_TO_LABELS.has(item));
-    setSelectedOpenTo(existing);
+      ? getActiveOpenTo(company.lookingFor)
+      : getActiveOpenTo(investor?.openTo);
+    setSelectedOpenTo(existing ? [existing] : []);
     setShowOpenToModal(true);
   };
 
   const toggleOpenToOption = (label: string) => {
-    setSelectedOpenTo((prev) =>
-      prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]
-    );
+    // Only one option can be active at a time; clicking the active one clears it
+    setSelectedOpenTo((prev) => (prev.includes(label) ? [] : [label]));
   };
 
   const handleSaveOpenTo = async () => {
@@ -400,6 +406,67 @@ export default function ProfileView({ userId }: ProfileViewProps) {
     }
   };
 
+  // "More" (three dots) menu shown on the profile hero
+  const renderMoreMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="More actions"
+          title="More"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer outline-none"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-200 p-1.5">
+        <DropdownMenuItem
+          onSelect={() => setShowShareProfileModal(true)}
+          className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+        >
+          <Send size={16} className="text-gray-600" /> Send profile in message
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => setTimeout(() => window.print(), 100)}
+          className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+        >
+          <FileDown size={16} className="text-gray-600" /> Save to PDF
+        </DropdownMenuItem>
+        {viewerState.isOwnProfile && (
+          <DropdownMenuItem
+            onSelect={() => router.push("/profile/saved-posts")}
+            className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+          >
+            <Bookmark size={16} className="text-gray-600" /> Saved items
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onSelect={() => router.push(`/profile/${userId}/posts`)}
+          className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+        >
+          <ActivityIcon size={16} className="text-gray-600" /> Activity
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => setShowAboutModal(true)}
+          className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+        >
+          <Info size={16} className="text-gray-600" /> About this member
+        </DropdownMenuItem>
+        {viewerState.isOwnProfile && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => router.push("/settings#change-password")}
+              className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+            >
+              <KeyRound size={16} className="text-gray-600" /> Change password
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const formatDate = (dateInput: string) => {
     try {
       return new Date(dateInput).toLocaleDateString("en-US", {
@@ -447,12 +514,36 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           <div className="px-6 pb-6 relative">
             {/* Avatar Overlapping Banner */}
             <div className="flex items-end justify-between -mt-16 sm:-mt-20 mb-3 relative z-10">
-              <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-white bg-white shadow-md overflow-hidden flex items-center justify-center shrink-0">
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt={displayName} width={144} height={144} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-bold text-slate-700 select-none">{initial}</span>
-                )}
+              <div className="relative shrink-0">
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-white bg-white shadow-md overflow-hidden flex items-center justify-center">
+                  {avatarUrl ? (
+                    <Image src={avatarUrl} alt={displayName} width={144} height={144} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl font-bold text-slate-700 select-none">{initial}</span>
+                  )}
+
+                  {activeOpenTo && (
+                    <svg
+                      viewBox="0 0 200 200"
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      aria-label={activeOpenTo}
+                    >
+                      <path
+                        fill="#059669"
+                        fillRule="evenodd"
+                        d="M0 100a100 100 0 1 0 200 0a100 100 0 1 0 -200 0 M18 94a88 88 0 1 0 176 0a88 88 0 1 0 -176 0"
+                      />
+                      <defs>
+                        <path id="open-to-arc" d="M8.35 108 A92 92 0 0 0 91.98 191.65" />
+                      </defs>
+                      <text fill="#fff" fontSize="14" fontWeight="700" letterSpacing="1.5">
+                        <textPath href="#open-to-arc" startOffset="50%" textAnchor="middle">
+                          {OPEN_TO_OPTIONS.find((o) => o.label === activeOpenTo)?.short}
+                        </textPath>
+                      </text>
+                    </svg>
+                  )}
+                </div>
               </div>
 
               {viewerState.isOwnProfile && (
@@ -516,7 +607,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             </div>
 
             {/* Action Pills Row */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
               {viewerState.isOwnProfile ? (
                 <>
                   <button
@@ -527,7 +618,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     Open to
                   </button>
 
-                  {isInvestorOnly ? (
+                  {isInvestorOnly && (
                     <button
                       type="button"
                       onClick={() => setShowRecordInvestmentModal(true)}
@@ -535,43 +626,26 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     >
                       <PlusCircle size={15} /> Record investment
                     </button>
-                  ) : (
-                    <Link
-                      href="/company/pitches"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70 px-4 py-1.5 text-sm font-semibold transition"
-                    >
-                      <Send size={14} /> Pitches &amp; Funding
-                    </Link>
                   )}
 
                   <Link
-                    href="/profile/followers"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 hover:border-gray-600 px-4 py-1.5 text-sm font-semibold transition"
-                  >
-                    Manage network
-                  </Link>
-
-                  <Link
                     href="/verification"
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${isVerified
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        : profile.verificationStatus === "PENDING"
-                          ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                          : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                    className={`inline-flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-sm font-semibold transition ${isVerified
+                      ? "border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70"
+                      : profile.verificationStatus === "PENDING"
+                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-red-500 text-red-600 hover:bg-red-50"
                       }`}
                   >
-                    <ShieldCheck size={15} />
-                    {isVerified ? "Verified" : profile.verificationStatus === "PENDING" ? "Pending Review" : "Verify"}
+                    {isVerified ? (
+                      <VerificationBadge status="VERIFIED" size="sm" showTooltip={false} />
+                    ) : (
+                      <ShieldCheck size={15} />
+                    )}
+                    {isVerified ? "Verified" : profile.verificationStatus === "PENDING" ? "Pending Review" : "Apply for verification"}
                   </Link>
 
-                  <Link
-                    href="/settings"
-                    aria-label="Settings"
-                    className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
-                    title="Settings"
-                  >
-                    <Settings size={16} />
-                  </Link>
+                  {renderMoreMenu()}
                 </>
               ) : (
                 <>
@@ -649,6 +723,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   >
                     Contact info
                   </button>
+
+                  {renderMoreMenu()}
                 </>
               )}
             </div>
@@ -1204,7 +1280,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {investor.openTo.map((item: string) => (
+              {investor.openTo.slice(0, 1).map((item: string) => (
                 <span
                   key={item}
                   className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-3.5 py-1.5 text-sm font-medium"
@@ -1279,6 +1355,103 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             )}
           </section>
         </ScrollReveal>
+      )}
+
+      {/* Print styles for "Save to PDF" (browser print dialog -> Save as PDF) */}
+      <style>{`
+        @media print {
+          nav, header, footer, aside { display: none !important; }
+          body { background: #fff !important; }
+        }
+      `}</style>
+
+      {/* About this member Modal */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 print:hidden">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-gray-200 shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-lg font-bold text-gray-900">About this member</h3>
+              <button
+                type="button"
+                onClick={() => setShowAboutModal(false)}
+                aria-label="Close about this member"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-base font-bold text-gray-900">{displayName}</p>
+                <p className="text-sm text-gray-600">{subtitle}</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Calendar size={18} className="text-gray-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">Member since</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {profile.joinedAt
+                      ? new Date(profile.joinedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <ShieldCheck size={18} className="text-gray-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">Verification</p>
+                  <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+                    {isVerified
+                      ? "Verified"
+                      : profile.verificationStatus === "PENDING"
+                        ? "Verification pending"
+                        : "Not verified"}
+                    {isVerified && <VerificationBadge status="VERIFIED" size="sm" showTooltip={false} />}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Briefcase size={18} className="text-gray-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">Account type</p>
+                  <p className="text-sm font-medium text-gray-800">{isInvestorOnly ? "Investor" : "Business"}</p>
+                </div>
+              </div>
+
+              {location && (
+                <div className="flex items-start gap-3">
+                  <MapPin size={18} className="text-gray-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500">Location</p>
+                    <p className="text-sm font-medium text-gray-800">{location}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3">
+                <Users size={18} className="text-gray-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">Network</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {stats.connections} {stats.connections === 1 ? "connection" : "connections"} · {stats.followers}{" "}
+                    {stats.followers === 1 ? "follower" : "followers"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShareProfileModal && (
+        <ShareModal
+          profileUserId={userId}
+          profileName={displayName}
+          onClose={() => setShowShareProfileModal(false)}
+        />
       )}
 
       {/* Contact Info Modal */}

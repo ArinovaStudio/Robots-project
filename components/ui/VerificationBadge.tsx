@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type VerificationStatus = "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED" | "MORE_INFO_REQUIRED";
@@ -54,11 +54,15 @@ export default function VerificationBadge({
         sizeClasses,
         isVerified
           ? "bg-blue-600 text-white shadow-sm"
-          : "bg-slate-300 text-slate-600 hover:bg-slate-400",
+          : "bg-white text-red-500 border-[1.5px] border-red-500",
         className
       )}
     >
-      <Check size={iconSizes} strokeWidth={3} />
+      {isVerified ? (
+        <Check size={iconSizes} strokeWidth={3} />
+      ) : (
+        <X size={iconSizes} strokeWidth={3} />
+      )}
     </span>
   );
 }

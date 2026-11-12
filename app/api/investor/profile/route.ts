@@ -449,6 +449,13 @@ export async function PATCH(request: NextRequest) {
       .filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
       .map((item: string) => item.trim());
 
+    if (openTo.length > 1) {
+      return NextResponse.json(
+        { success: false, message: "Only one Open to option can be selected." },
+        { status: 400 }
+      );
+    }
+
     await prisma.investorProfile.update({
       where: { userId: user.id },
       data: { openTo },

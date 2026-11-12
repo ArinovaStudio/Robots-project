@@ -24,12 +24,17 @@ interface ConnectionItem {
 }
 
 interface ShareModalProps {
-  postId: string;
+  /** Share a post (default) ... */
+  postId?: string;
   authorName?: string;
+  /** ...or share a member's profile instead */
+  profileUserId?: string;
+  profileName?: string;
   onClose: () => void;
 }
 
-export default function ShareModal({ postId, authorName, onClose }: ShareModalProps) {
+export default function ShareModal({ postId, authorName, profileUserId, profileName, onClose }: ShareModalProps) {
+  const isProfileShare = Boolean(profileUserId);
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,7 +43,10 @@ export default function ShareModal({ postId, authorName, onClose }: ShareModalPr
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const postLink = typeof window !== "undefined" ? `${window.location.origin}/post/${postId}` : "";
+  const postLink =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${isProfileShare ? `/profile/${profileUserId}` : `/post/${postId}`}`
+      : "";
 
   // Fetch accepted connections
   useEffect(() => {
@@ -109,7 +117,8 @@ export default function ShareModal({ postId, authorName, onClose }: ShareModalPr
     setSending(true);
 
     try {
-      const res = await fetch(`/api/posts/${postId}/share`, {
+      const endpoint = isProfileShare ? `/api/profile/${profileUserId}/share` : `/api/posts/${postId}/share`;
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,17 +130,17 @@ export default function ShareModal({ postId, authorName, onClose }: ShareModalPr
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to share post");
+        throw new Error(data.message || `Failed to share ${isProfileShare ? "profile" : "post"}`);
       }
 
       toast.success(
-        `Post sent to ${selectedUserIds.length} connection${
+        `${isProfileShare ? "Profile" : "Post"} sent to ${selectedUserIds.length} connection${
           selectedUserIds.length === 1 ? "" : "s"
         }!`
       );
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to send post. Please try again.");
+      toast.error(err.message || `Failed to send ${isProfileShare ? "profile" : "post"}. Please try again.`);
     } finally {
       setSending(false);
     }
@@ -152,7 +161,9 @@ export default function ShareModal({ postId, authorName, onClose }: ShareModalPr
     return "Connected Member";
   };
 
-  const modalTitle = authorName ? `Send ${authorName}'s Post` : "Send Post";
+  const modalTitle = isProfileShare
+    ? profileName ? `Send ${profileName}'s Profile` : "Send Profile"
+    : authorName ? `Send ${authorName}'s Post` : "Send Post";
 
   return (
     <div
@@ -301,7 +312,7 @@ export default function ShareModal({ postId, authorName, onClose }: ShareModalPr
             ) : (
               <>
                 <Link2 size={15} />
-                <span>Copy link to post</span>
+                <span>{isProfileShare ? "Copy link to profile" : "Copy link to post"}</span>
               </>
             )}
           </button>

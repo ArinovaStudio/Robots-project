@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import {
   Bell, MessageSquare, UserPlus, CheckCircle, Heart, FileText, AtSign, Users, Landmark,
 } from "lucide-react";
@@ -31,6 +30,32 @@ const TABS: { id: TabId; label: string; category: Category | "ALL"; empty: strin
   { id: "posts", label: "My posts", category: "MY_POSTS", empty: "No reactions or comments on your posts yet." },
   { id: "mentions", label: "Mentions", category: "MENTIONS", empty: "Nobody has mentioned you yet." },
 ];
+
+// "1h", "3d" style timestamps like the LinkedIn reference
+function shortTime(dateInput: string) {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(dateInput).getTime()) / 60000));
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
+  return `${Math.floor(days / 30)}mo`;
+}
+
+function renderContent(content: string, actorName?: string) {
+  if (actorName && content.startsWith(actorName)) {
+    return (
+      <>
+        <strong className="font-semibold text-gray-900">{actorName}</strong>
+        {content.slice(actorName.length)}
+      </>
+    );
+  }
+  return content;
+}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notif[]>([]);
@@ -150,7 +175,7 @@ export default function NotificationsPage() {
             <p>{tab.empty}</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div>
             {visible.map((notif) => {
               const unread = !notif.isRead;
               return (
@@ -158,12 +183,16 @@ export default function NotificationsPage() {
                   href={notif.link || "#"}
                   key={notif.id}
                   onClick={() => unread && markRead(notif.id)}
-                  className={`flex gap-4 p-5 items-start transition border-l-4 ${
+                  className={`relative flex items-start gap-3 py-3 pl-7 pr-4 transition ${
                     unread
-                      ? "bg-blue-50 hover:bg-blue-100/70 border-blue-600"
-                      : "hover:bg-gray-50 border-transparent"
+                      ? "bg-blue-50 hover:bg-blue-100/70"
+                      : "bg-white hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                   }`}
                 >
+                  {unread && (
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-blue-600" />
+                  )}
+
                   <div className="relative shrink-0">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                       {notif.actor?.image ? (
@@ -179,15 +208,12 @@ export default function NotificationsPage() {
                       {getIcon(notif)}
                     </div>
                   </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className={`text-sm ${unread ? "font-semibold text-gray-900" : "text-gray-600"}`}>
-                      {notif.content}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                    </p>
-                  </div>
-                  {unread && <div className="w-2 h-2 rounded-full bg-blue-600 mt-2" />}
+
+                  <p className={`flex-1 min-w-0 pt-2 text-sm leading-snug ${unread ? "text-gray-900" : "text-gray-700"}`}>
+                    {renderContent(notif.content, notif.actor?.name)}
+                  </p>
+
+                  <span className="shrink-0 pt-1 text-xs text-gray-500">{shortTime(notif.createdAt)}</span>
                 </Link>
               );
             })}
