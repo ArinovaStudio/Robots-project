@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     const { email: rawEmail, otp, newPassword, confirmPassword } = validation.data;
     const email = rawEmail.trim().toLowerCase();
-    if (email !== user.email.trim().toLowerCase()) {
+    if (!user.email || email !== user.email.trim().toLowerCase()) {
       return NextResponse.json(
         { success: false, message: "Please enter the email address of your account" },
         { status: 400 }
