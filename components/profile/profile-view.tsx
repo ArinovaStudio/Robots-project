@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,6 +32,11 @@ import CreatePostModal from "@/components/modals/create-post-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import { OPEN_TO_OPTIONS, OPEN_TO_LABELS, getActiveOpenTo } from "@/lib/open-to";
+
+const PdfCarousel = dynamic(() => import("@/components/home/pdf-carousel"), {
+  ssr: false,
+  loading: () => <div className="h-44 w-full animate-pulse rounded-lg bg-gray-100" />,
+});
 
 interface ProfileViewProps {
   userId: string;
@@ -913,9 +919,17 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                           targetPost.author?.company?.logoUrl || targetPost.author?.image;
                         const targetVerified = targetPost.author?.verificationStatus || "UNVERIFIED";
                         const firstMedia = targetPost.media?.[0];
-                        const likesCount = post.reactionCounts?.total ?? post._count?.reactions ?? 0;
-                        const commentsCount = post._count?.comments ?? 0;
-                        const repostsCount = post._count?.reposts ?? 0;
+                        const likesCount =
+                          post.likesCount ??
+                          post._count?.reactions ??
+                          (post.reactionCounts && typeof post.reactionCounts === "object"
+                            ? Object.values(post.reactionCounts).reduce<number>(
+                                (sum, val) => sum + (typeof val === "number" ? val : 0),
+                                0
+                              )
+                            : 0);
+                        const commentsCount = post._count?.comments ?? targetPost._count?.comments ?? 0;
+                        const repostsCount = post._count?.reposts ?? targetPost._count?.reposts ?? 0;
 
                         return (
                           <div
@@ -982,29 +996,39 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
                               {/* Media Preview */}
                               {firstMedia && (
-                                <Link
-                                  href={`/post/${post.id}`}
-                                  className="block mt-2.5 relative h-36 w-full rounded-lg overflow-hidden bg-slate-900 border border-gray-100"
-                                >
-                                  {firstMedia.type === "IMAGE" ? (
-                                    <Image
-                                      src={firstMedia.url}
-                                      alt="Post attachment"
-                                      fill
-                                      className="object-cover"
+                                firstMedia.type === "DOCUMENT" ? (
+                                  <div className="mt-2.5 rounded-lg overflow-hidden border border-gray-200 max-h-56">
+                                    <PdfCarousel
+                                      url={firstMedia.url}
+                                      title="Document"
                                     />
-                                  ) : firstMedia.type === "VIDEO" ? (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-white/90 gap-1.5 bg-slate-900">
-                                      <Video size={26} />
-                                      <span className="text-xs font-medium">Video attachment</span>
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-700 gap-1.5 bg-gray-100">
-                                      <FileText size={24} />
-                                      <span className="text-xs font-medium">Document attachment</span>
-                                    </div>
-                                  )}
-                                </Link>
+                                  </div>
+                                ) : (
+                                  <Link
+                                    href={`/post/${post.id}`}
+                                    className="block mt-2.5 relative h-36 w-full rounded-lg overflow-hidden bg-slate-900 border border-gray-100"
+                                  >
+                                    {firstMedia.type === "IMAGE" ? (
+                                      <Image
+                                        src={firstMedia.url}
+                                        alt="Post attachment"
+                                        fill
+                                        unoptimized
+                                        className="object-cover"
+                                      />
+                                    ) : firstMedia.type === "VIDEO" ? (
+                                      <div className="w-full h-full flex flex-col items-center justify-center text-white/90 gap-1.5 bg-slate-900">
+                                        <Video size={26} />
+                                        <span className="text-xs font-medium">Video attachment</span>
+                                      </div>
+                                    ) : (
+                                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-700 gap-1.5 bg-gray-100">
+                                        <FileText size={24} />
+                                        <span className="text-xs font-medium">Document attachment</span>
+                                      </div>
+                                    )}
+                                  </Link>
+                                )
                               )}
                             </div>
 

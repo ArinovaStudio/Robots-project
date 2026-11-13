@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
                 }
               }
             },
-            _count: { select: { comments: true } },
+            _count: { select: { comments: true, reposts: true } },
             reactions: { where: { userId: user.id }, select: { type: true } },
             savedBy: { where: { userId: user.id }, select: { id: true } }
           }
