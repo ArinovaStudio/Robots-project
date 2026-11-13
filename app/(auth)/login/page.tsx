@@ -67,7 +67,11 @@ export default function LoginPage() {
     setError("");
     const res = await signIn("credentials", { email: email.trim(), password, redirect: false });
     if (res?.error) {
-      setError("Invalid email, username, or password. Please try again.");
+      setError(
+        res.error === "TooManyAttempts"
+          ? "Too many login attempts. Please wait a few minutes and try again."
+          : "Invalid email, username, or password. Please try again."
+      );
       setLoading(false);
     } else {
       router.refresh();

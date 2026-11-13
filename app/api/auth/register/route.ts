@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { registerIpLimiter, registerEmailLimiter, getIP } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -10,8 +11,19 @@ const schema = z.object({
   accountType: z.enum(["BUSINESS", "INVESTOR"]).default("BUSINESS"),
 });
 
+function tooManyAttempts(retryAfterSec: number) {
+  return NextResponse.json(
+    { success: false, message: "Too many registration attempts. Please try again later." },
+    { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // 1. Per-IP limit, checked before doing any work.
+    const byIp = await registerIpLimiter.check(getIP(req));
+    if (!byIp.success) return tooManyAttempts(byIp.retryAfterSec);
+
     const body = await req.json();
     const validation = schema.safeParse(body);
 
@@ -21,6 +33,11 @@ export async function POST(req: NextRequest) {
 
     const { email: rawEmail, password, otp, accountType } = validation.data;
     const email = rawEmail.trim().toLowerCase();
+
+    // 2. Per-email limit: every call here is a guess at the 6-digit OTP for this address,
+    //    so cap how many guesses one email gets no matter how many IPs they come from.
+    const byEmail = await registerEmailLimiter.check(email);
+    if (!byEmail.success) return tooManyAttempts(byEmail.retryAfterSec);
 
     const otpRecord = await prisma.otp.findUnique({ where: { email_type: { email, type: "VERIFY_EMAIL" } } });
 
@@ -59,6 +76,9 @@ export async function POST(req: NextRequest) {
       }),
       prisma.otp.delete({ where: { email_type: { email, type: "VERIFY_EMAIL" } } }),
     ]);
+
+    // Registered: clear this email's counter. The IP counter is left alone on purpose.
+    await registerEmailLimiter.reset(email);
 
     return NextResponse.json({ success: true, message: "Registration successful" }, { status: 200 });
   } catch (error: any) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { authRateLimiter, getIP } from "@/lib/rate-limit";
+import { otpVerifyLimiter, otpVerifyEmailLimiter, getIP } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -12,12 +12,12 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const ip = getIP(req);
-    const rateLimit = authRateLimiter.check(ip);
+    const rateLimit = await otpVerifyLimiter.check(ip);
 
     if (!rateLimit.success) {
       return NextResponse.json(
-        { success: false, message: "Too many attempts. Please try again in 15 minutes." },
-        { status: 429 }
+        { success: false, message: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSec) } }
       );
     }
 
@@ -33,6 +33,17 @@ export async function POST(req: NextRequest) {
 
     const { email: rawEmail, otp, type } = validation.data;
     const email = rawEmail.trim().toLowerCase();
+
+    // Per-email limit (separately for each OTP type): caps guesses at one address's code
+    // no matter how many IPs they come from.
+    const guessKey = `${type}:${email}`;
+    const byEmail = await otpVerifyEmailLimiter.check(guessKey);
+    if (!byEmail.success) {
+      return NextResponse.json(
+        { success: false, message: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(byEmail.retryAfterSec) } }
+      );
+    }
 
     const record = await prisma.otp.findUnique({
       where: { email_type: { email, type } },
@@ -51,6 +62,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Correct code: clear this email's guess counter. The IP counter is left alone.
+    await otpVerifyEmailLimiter.reset(guessKey);
 
     return NextResponse.json(
       { success: true, message: "Verification code verified successfully." },

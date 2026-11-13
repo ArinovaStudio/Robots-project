@@ -12,7 +12,7 @@ type Step = "email" | "otp" | "password";
 const inputClass =
   "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
 const primaryBtn =
-  "w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed";
+  "w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#0a66c2] text-white text-sm font-semibold hover:bg-[#004182] transition disabled:opacity-50 disabled:cursor-not-allowed";
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "email", label: "Email" },
@@ -20,7 +20,14 @@ const STEPS: { id: Step; label: string }[] = [
   { id: "password", label: "New password" },
 ];
 
-export default function ChangePasswordSection() {
+interface ChangePasswordSectionProps {
+  /** Render without the outer card (border/shadow) — used inside a modal */
+  embedded?: boolean;
+  /** Called after the password has been changed successfully */
+  onSuccess?: () => void;
+}
+
+export default function ChangePasswordSection({ embedded = false, onSuccess }: ChangePasswordSectionProps = {}) {
   const accountEmail = useUserStore((state) => state.user?.email) || "";
 
   const [step, setStep] = useState<Step>("email");
@@ -142,6 +149,7 @@ export default function ChangePasswordSection() {
         toast.success("Password changed successfully!");
         reset();
         setSuccess(true);
+        onSuccess?.();
       } else {
         toast.error(data.message || "Failed to change password");
       }
@@ -155,9 +163,16 @@ export default function ChangePasswordSection() {
   const currentIndex = STEPS.findIndex((s) => s.id === step);
 
   return (
-    <div id="change-password" className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm scroll-mt-24">
+    <div
+      id="change-password"
+      className={
+        embedded
+          ? "scroll-mt-24"
+          : "bg-white border border-gray-200 rounded-2xl p-6 shadow-sm scroll-mt-24"
+      }
+    >
       <div className="flex items-center gap-3 mb-6">
-        <div className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl">
+        <div className="bg-blue-50 text-[#0a66c2] p-2.5 rounded-xl">
           <Lock className="w-5 h-5" />
         </div>
         <div>
@@ -172,7 +187,7 @@ export default function ChangePasswordSection() {
           <li key={s.id} className="flex items-center gap-2">
             <span
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                i <= currentIndex ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
+                i <= currentIndex ? "bg-[#0a66c2] text-white" : "bg-gray-200 text-gray-500"
               }`}
             >
               {i + 1}
@@ -276,7 +291,7 @@ export default function ChangePasswordSection() {
               type="button"
               onClick={sendOtp}
               disabled={loading || cooldown > 0}
-              className="font-medium text-emerald-600 hover:text-emerald-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+              className="font-medium text-[#0a66c2] hover:text-[#004182] disabled:text-gray-400 disabled:cursor-not-allowed"
             >
               {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
             </button>

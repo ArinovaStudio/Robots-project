@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { getOtpEmailTemplate } from "@/lib/template";
-import { authRateLimiter, getIP } from "@/lib/rate-limit";
+import { otpSendLimiter, otpSendEmailLimiter, getIP } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -13,12 +13,12 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const ip = getIP(req);
-    const rateLimit = authRateLimiter.check(ip);
+    const rateLimit = await otpSendLimiter.check(ip);
 
     if (!rateLimit.success) {
       return NextResponse.json(
-        { success: false, message: "Too many attempts. Please try again in 15 minutes." },
-        { status: 429 }
+        { success: false, message: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSec) } }
       );
     }
 
@@ -31,6 +31,17 @@ export async function POST(req: NextRequest) {
 
     const { email: rawEmail, type } = validation.data;
     const email = rawEmail.trim().toLowerCase();
+
+    // Per-email limit, checked before any DB lookup so the 429 looks the same whether or not
+    // an account exists (no account enumeration). Nothing is cleared on success: this budget
+    // is about how many emails one address receives.
+    const byEmail = await otpSendEmailLimiter.check(email);
+    if (!byEmail.success) {
+      return NextResponse.json(
+        { success: false, message: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(byEmail.retryAfterSec) } }
+      );
+    }
 
     if (type === "RESET_PASSWORD") {
       const user = await prisma.user.findUnique({ where: { email } });

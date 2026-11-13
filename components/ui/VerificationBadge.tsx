@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type VerificationStatus = "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED" | "MORE_INFO_REQUIRED";
@@ -45,6 +45,25 @@ export default function VerificationBadge({
     : status === "REJECTED"
     ? "Verification Declined"
     : "Unverified Profile";
+  if (!isVerified) {
+    return (
+      <span
+        title={showTooltip ? titleText : undefined}
+        className={cn(
+          "inline-flex items-center justify-center shrink-0 select-none",
+          sizeClasses,
+          className
+        )}
+      >
+        <img
+          src="/google-unverified.svg"
+          alt={titleText}
+          className="h-full w-full object-contain"
+          draggable={false}
+        />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -52,17 +71,11 @@ export default function VerificationBadge({
       className={cn(
         "inline-flex items-center justify-center rounded-full shrink-0 transition-all duration-200 select-none",
         sizeClasses,
-        isVerified
-          ? "bg-blue-600 text-white shadow-sm"
-          : "bg-white text-red-500 border-[1.5px] border-red-500",
+        "bg-blue-600 text-white shadow-sm",
         className
       )}
     >
-      {isVerified ? (
-        <Check size={iconSizes} strokeWidth={3} />
-      ) : (
-        <X size={iconSizes} strokeWidth={3} />
-      )}
+      <Check size={iconSizes} strokeWidth={3} />
     </span>
   );
 }

@@ -31,6 +31,7 @@ import RecordInvestmentModal from "../modals/record-investment-modal";
 import CreatePostModal from "@/components/modals/create-post-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
+import ChangePasswordSection from "@/components/settings/change-password-section";
 import { OPEN_TO_OPTIONS, OPEN_TO_LABELS, getActiveOpenTo } from "@/lib/open-to";
 
 const PdfCarousel = dynamic(() => import("@/components/home/pdf-carousel"), {
@@ -54,6 +55,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showShareProfileModal, setShowShareProfileModal] = useState(false);
   const router = useRouter();
   const [showOpenToModal, setShowOpenToModal] = useState(false);
@@ -420,7 +422,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           type="button"
           aria-label="More actions"
           title="More"
-          className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer outline-none"
+          className="ml-2 inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer outline-none"
         >
           <MoreHorizontal size={16} />
         </button>
@@ -462,7 +464,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={() => router.push("/settings#change-password")}
+              onSelect={() => setShowChangePasswordModal(true)}
               className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
             >
               <KeyRound size={16} className="text-gray-600" /> Change password
@@ -1388,6 +1390,27 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           body { background: #fff !important; }
         }
       `}</style>
+
+      {/* Change password Modal */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 print:hidden">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-gray-200 shadow-xl">
+            <div className="flex items-center justify-end px-3 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowChangePasswordModal(false)}
+                aria-label="Close change password"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-5 pb-5">
+              <ChangePasswordSection embedded onSuccess={() => setTimeout(() => setShowChangePasswordModal(false), 1500)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* About this member Modal */}
       {showAboutModal && (

@@ -5,6 +5,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { NextRequest, NextResponse } from "next/server";
+import { loginIpLimiter, loginAccountLimiter, getIP } from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
@@ -81,6 +83,10 @@ export const authOptions: NextAuthOptions = {
     if (!isPasswordValid) return null;
 
     console.log("[LOGIN] Authentication successful");
+
+    // Correct password: clear this account's failed-attempt counter.
+    // The per-IP counter is intentionally left alone so it cannot be reset by logging into your own account.
+    await loginAccountLimiter.reset(identifier.toLowerCase());
 
     return {
       id: user.id,
@@ -160,8 +166,6 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-import { NextRequest, NextResponse } from "next/server";
-import { authRateLimiter, getIP } from "@/lib/rate-limit";
 
 const handler = NextAuth(authOptions);
 console.log("[AUTH DEBUG] NextAuth v4 handler initialized");
@@ -182,12 +186,35 @@ async function rateLimitedPOST(req: NextRequest, ctx: any) {
   // Only apply rate limiting to credentials sign-in attempts, not signout or session sync
   if (pathname.includes("/callback/credentials")) {
     const ip = getIP(req);
-    const rateLimit = authRateLimiter.check(ip);
 
-    if (!rateLimit.success) {
+    // The identifier the user typed (email / username / company name) is in the form body.
+    let identifier = "";
+    try {
+      const form = await req.clone().formData();
+      identifier = String(form.get("email") ?? "").trim().toLowerCase();
+    } catch {
+      // Unreadable body: fall back to IP-only limiting.
+    }
+
+    // Check the IP first; a blocked IP should not keep counting against a victim's account.
+    const byIp = await loginIpLimiter.check(ip);
+    const byAccount =
+      byIp.success && identifier
+        ? await loginAccountLimiter.check(identifier)
+        : { success: true, retryAfterSec: 0 };
+
+    if (!byIp.success || !byAccount.success) {
+      const retryAfterSec = Math.max(byIp.retryAfterSec, byAccount.retryAfterSec);
+      // next-auth's client does `new URL(data.url)`, so the body must carry a `url`
+      // with an `error` param; signIn() then resolves with error = "TooManyAttempts".
       return NextResponse.json(
-        { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
-        { status: 429 }
+        {
+          url: `${req.nextUrl.origin}/login?error=TooManyAttempts`,
+          success: false,
+          message: "Too many login attempts. Please try again later.",
+          retryAfterSec,
+        },
+        { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
       );
     }
   }

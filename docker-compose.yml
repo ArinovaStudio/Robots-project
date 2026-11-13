@@ -21,6 +21,23 @@ services:
       retries: 5
 
   # ==========================================
+  # Redis (login / OTP rate limiting)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: connecto_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
   # Ollama LLM Server
   # ==========================================
   ollama:
@@ -64,9 +81,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       # Database (points to the postgres container)
       DATABASE_URL: postgresql://postgres:password@postgres:5432/robots_project?schema=public
+
+      # Redis (points to the redis container)
+      REDIS_URL: redis://redis:6379
 
       # NextAuth
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dGhpc2lzYW1vY2tuZXh0YXV0aHNlY3JldGtleWZvcmRlbW8xMjMh}
@@ -102,5 +124,6 @@ services:
 
 volumes:
   pgdata:
+  redisdata:
   ollama_storage:
   uploads:

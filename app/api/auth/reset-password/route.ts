@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { resetIpLimiter, resetEmailLimiter, getIP } from "@/lib/rate-limit";
 
 const resetSchema = z.object({
   email: z.string().email(),
@@ -9,8 +10,19 @@ const resetSchema = z.object({
   otp: z.string().length(6),
 });
 
+function tooManyAttempts(retryAfterSec: number) {
+  return NextResponse.json(
+    { success: false, message: "Too many attempts. Please try again later." },
+    { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+  );
+}
+
 export async function POST(req: Request) {
   try {
+    // 1. Per-IP limit, checked before doing any work.
+    const byIp = await resetIpLimiter.check(getIP(req));
+    if (!byIp.success) return tooManyAttempts(byIp.retryAfterSec);
+
     const body = await req.json();
     const validation = resetSchema.safeParse(body);
 
@@ -20,6 +32,10 @@ export async function POST(req: Request) {
 
     const { email: rawEmail, newPassword, otp } = validation.data;
     const email = rawEmail.trim().toLowerCase();
+
+    // 2. Per-email limit: every call here is a guess at the reset OTP for this address.
+    const byEmail = await resetEmailLimiter.check(email);
+    if (!byEmail.success) return tooManyAttempts(byEmail.retryAfterSec);
 
     const otpRecord = await prisma.otp.findUnique({ where: { email_type: { email, type: "RESET_PASSWORD" } } });
 
@@ -41,6 +57,9 @@ export async function POST(req: Request) {
     await prisma.user.update({ where: { email }, data: { password: hashedNewPassword } });
 
     await prisma.otp.delete({ where: { email_type: { email, type: "RESET_PASSWORD" } } });
+
+    // Password reset: clear this email's counter. The IP counter is left alone.
+    await resetEmailLimiter.reset(email);
 
     return NextResponse.json({ success: true, message: "Password updated successfully" });
 
