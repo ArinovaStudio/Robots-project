@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Bell, MessageSquare, UserPlus, CheckCircle, Heart, FileText, AtSign, Users, Landmark,
 } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { mutate as globalMutate } from "swr";
+import { toast } from "sonner";
+import ViewPitchModal, { PitchRequestData } from "@/components/modals/view-pitch-modal";
 
 type Actor = { id: string; name: string; image: string | null } | null;
 type Category = "INVESTORS" | "MY_POSTS" | "MENTIONS" | null;
@@ -20,6 +22,7 @@ type Notif = {
   createdAt: string;
   actor?: Actor;
   category?: Category;
+  pitchRequest?: PitchRequestData | null;
 };
 
 type TabId = "all" | "investors" | "posts" | "mentions";
@@ -58,9 +61,11 @@ function renderContent(content: string, actorName?: string) {
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notif[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("all");
+  const [selectedPitch, setSelectedPitch] = useState<PitchRequestData | null>(null);
   const knownIds = useRef<Set<string>>(new Set());
 
   // Opening the tab resets the navbar badge. It does NOT mark anything as read:
@@ -101,6 +106,36 @@ export default function NotificationsPage() {
   const markRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
     void fetch(`/api/notifications?id=${id}`, { method: "PATCH", keepalive: true });
+  };
+
+  const handleViewPitch = async (e: React.MouseEvent, notif: Notif) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!notif.isRead) markRead(notif.id);
+
+    if (notif.pitchRequest) {
+      setSelectedPitch(notif.pitchRequest);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/pitch-requests");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const match =
+          json.data.find(
+            (p: PitchRequestData) =>
+              p.senderId === notif.actor?.id || (notif.link && notif.link.includes(p.id))
+          ) || json.data[0];
+        if (match) {
+          setSelectedPitch(match);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load pitch:", err);
+    }
+    toast.error("Pitch details could not be found.");
   };
 
   const getIcon = (n: Notif) => {
@@ -178,12 +213,33 @@ export default function NotificationsPage() {
           <div>
             {visible.map((notif) => {
               const unread = !notif.isRead;
+              const isPitchNotif = Boolean(
+                notif.pitchRequest ||
+                notif.content.toLowerCase().includes("pitch request") ||
+                (notif.link && notif.link.includes("pitchRequestId"))
+              );
+
               return (
-                <Link
-                  href={notif.link || "#"}
+                <div
                   key={notif.id}
-                  onClick={() => unread && markRead(notif.id)}
-                  className={`relative flex items-start gap-3 py-3 pl-7 pr-4 transition ${
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (unread) markRead(notif.id);
+                    if (notif.link && notif.link !== "#") {
+                      router.push(notif.link);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (unread) markRead(notif.id);
+                      if (notif.link && notif.link !== "#") {
+                        router.push(notif.link);
+                      }
+                    }
+                  }}
+                  className={`relative flex items-start gap-3 py-3 pl-7 pr-4 transition cursor-pointer select-none ${
                     unread
                       ? "bg-blue-50 hover:bg-blue-100/70"
                       : "bg-white hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
@@ -209,17 +265,48 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  <p className={`flex-1 min-w-0 pt-2 text-sm leading-snug ${unread ? "text-gray-900" : "text-gray-700"}`}>
-                    {renderContent(notif.content, notif.actor?.name)}
-                  </p>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <p className={`text-sm leading-snug ${unread ? "text-gray-900" : "text-gray-700"}`}>
+                      {renderContent(notif.content, notif.actor?.name)}
+                    </p>
+
+                    {isPitchNotif && (
+                      <div className="mt-2.5">
+                        <button
+                          type="button"
+                          onClick={(e) => handleViewPitch(e, notif)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-blue-600 px-4 py-1 text-xs sm:text-sm font-semibold text-blue-600 transition hover:bg-blue-50 hover:border-blue-700 active:scale-95 shadow-sm"
+                        >
+                          View pitch
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   <span className="shrink-0 pt-1 text-xs text-gray-500">{shortTime(notif.createdAt)}</span>
-                </Link>
+                </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {selectedPitch && (
+        <ViewPitchModal
+          pitch={selectedPitch}
+          onClose={() => setSelectedPitch(null)}
+          onStatusChange={(newStatus) => {
+            setSelectedPitch((prev) => (prev ? { ...prev, status: newStatus } : null));
+            setNotifications((prev) =>
+              prev.map((n) =>
+                n.pitchRequest?.id === selectedPitch.id
+                  ? { ...n, pitchRequest: { ...n.pitchRequest, status: newStatus } }
+                  : n
+              )
+            );
+          }}
+        />
+      )}
     </section>
   );
 }

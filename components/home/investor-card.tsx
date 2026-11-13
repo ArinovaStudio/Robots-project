@@ -95,7 +95,7 @@ export default function InvestorCard({ investor }: { investor: InvestorCardData 
           <button
             type="button"
             disabled
-            className="mt-4 inline-flex w-full cursor-default items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700"
+            className="mt-4 inline-flex w-full cursor-default items-center justify-center gap-2 rounded-xl border border-emerald-500 bg-white px-4 py-2.5 text-sm font-bold text-emerald-600"
           >
             <CheckCircle2 size={16} />
             Pitch request sent

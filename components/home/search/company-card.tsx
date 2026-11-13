@@ -275,7 +275,7 @@ export default function CompanyCard({
                 type="button"
                 onClick={() => setShowCancelConfirm(true)}
                 title="Click to cancel this request"
-                className="group inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition shrink-0"
+                className="group inline-flex items-center gap-1.5 rounded-xl bg-white border border-amber-500 px-4 py-2 text-xs font-bold text-amber-600 hover:bg-red-50 hover:border-red-500 hover:text-red-600 transition shrink-0"
               >
                 <Clock size={14} className="group-hover:hidden" />
                 <X size={14} className="hidden group-hover:block" />

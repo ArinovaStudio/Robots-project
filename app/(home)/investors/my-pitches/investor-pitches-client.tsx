@@ -465,7 +465,7 @@ export default function InvestorPitchesClient() {
                               type="button"
                               onClick={() => setConfirmCancelOfferTarget(offer)}
                               disabled={cancellingOfferId === offer.id}
-                              className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 transition cursor-pointer disabled:opacity-50"
+                              className="inline-flex shrink-0 items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500 bg-white text-xs font-semibold text-amber-600 hover:bg-amber-50 transition cursor-pointer disabled:opacity-50"
                               title="Click to cancel pending investment offer"
                             >
                               {cancellingOfferId === offer.id ? (

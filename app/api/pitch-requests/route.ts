@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
           actorId: user.id,
           type: "SYSTEM",
           content: `${companyName} sent you a pitch request`,
-          link: `/profile/${user.id}`,
+          link: `/profile/${user.id}?pitchRequestId=${pitchRequest.id}`,
         },
       });
     } catch (notifyError) {
@@ -139,6 +139,99 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Failed to create pitch request:", error);
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = req.nextUrl;
+    const id = searchParams.get("id");
+
+    if (id) {
+      const pitch = await prisma.pitchRequest.findFirst({
+        where: {
+          id,
+          OR: [{ investorId: user.id }, { senderId: user.id }],
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              company: { select: { companyName: true, logoUrl: true } },
+            },
+          },
+        },
+      });
+
+      if (!pitch) {
+        return NextResponse.json({ success: false, message: "Pitch request not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, data: pitch });
+    }
+
+    const pitches = await prisma.pitchRequest.findMany({
+      where: {
+        OR: [{ investorId: user.id }, { senderId: user.id }],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            company: { select: { companyName: true, logoUrl: true } },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true, data: pitches });
+  } catch (error) {
+    console.error("Failed to fetch pitch requests:", error);
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id, status } = body;
+    if (!id || !["ACCEPTED", "DECLINED", "REVIEWED"].includes(status)) {
+      return NextResponse.json({ success: false, message: "Invalid status" }, { status: 400 });
+    }
+
+    const pitch = await prisma.pitchRequest.findFirst({
+      where: { id, investorId: user.id },
+    });
+
+    if (!pitch) {
+      return NextResponse.json({ success: false, message: "Pitch request not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.pitchRequest.update({
+      where: { id },
+      data: { status },
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error("Failed to update pitch request:", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }

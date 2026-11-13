@@ -257,7 +257,7 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
                         })
                       }
                       disabled={cancellingUserId === company.userId}
-                      className="inline-flex items-center gap-1 rounded-md bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-bold text-[#2563EB] border border-blue-200 hover:bg-blue-100 transition disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold text-amber-600 border border-amber-500 hover:bg-amber-50 transition disabled:opacity-50 cursor-pointer"
                       title="Connection request is pending. Click to cancel request."
                     >
                       {cancellingUserId === company.userId ? (
@@ -351,7 +351,7 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
                         });
                         setSelectedPerformer(null);
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50"
                     >
                       <Clock size={14} /> Cancel pending request
                     </button>
@@ -415,7 +415,7 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
               <button
                 type="button"
                 onClick={() => setConfirmCancelTarget(null)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                className="rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition"
               >
                 Keep Pending
               </button>
@@ -427,7 +427,7 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
                   setConfirmCancelTarget(null);
                   await handleCancelConnection(target.userId, target.connectionId);
                 }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
+                className="rounded-xl border border-red-500 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
               >
                 Yes, Cancel Request
               </button>

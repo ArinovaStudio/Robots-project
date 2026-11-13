@@ -234,7 +234,7 @@ export default function NetworkClient() {
                         {req.receiver?.name}
                       </Link>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-white px-2 py-0.5 rounded-full border border-amber-500">
                           <Clock size={11} /> Pending
                         </span>
                         {req.receiver?.type && (
@@ -247,7 +247,7 @@ export default function NetworkClient() {
                   <button
                     onClick={() => handleCancelRequest(req.id, req.receiver?.id)}
                     disabled={cancellingRequestId === req.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition disabled:opacity-50 shrink-0"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-red-600 bg-white border border-red-500 hover:bg-red-50 transition disabled:opacity-50 shrink-0"
                     title="Cancel connection request"
                   >
                     {cancellingRequestId === req.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}

@@ -10,29 +10,40 @@ export function formatTargetAmount(val: string | number | null | undefined): str
   const str = String(val).trim();
   if (!str) return "";
 
-  // If already formatted with k, K, m, M, b, B notation
-  if (/^[^\d]*\d+(\.\d+)?[kKmMbB]$/i.test(str)) {
-    const clean = str.replace(/^[$₹€£]\s*/, "");
-    return `₹${clean}`;
+  const curMatch = str.match(/^([$₹€£])/);
+  const currency = curMatch ? curMatch[1] : "₹";
+  const withoutCurrency = str.replace(/^[$₹€£]\s*/, "").trim();
+
+  // If formatted with Cr / Crore notation (e.g. "1Cr", "1 Cr", "2.5 Crore")
+  const crMatch = withoutCurrency.match(/^([\d,]+(?:\.\d+)?)\s*(cr|crore|crores)\.?$/i);
+  if (crMatch) {
+    return `${currency}${crMatch[1]} Cr`;
   }
 
-  // Match optional currency prefix, comma-separated numeric part, and any trailing text
-  const match = str.match(/^([^\d]*)([\d,]+(?:\.\d+)?)(.*)$/);
-  if (!match) return str;
+  // If formatted with L / Lakh / Lac notation (e.g. "50L", "50 Lakh", "25 Lacs")
+  const lakhMatch = withoutCurrency.match(/^([\d,]+(?:\.\d+)?)\s*(l|lac|lakh|lakhs|lacs)\.?$/i);
+  if (lakhMatch) {
+    return `${currency}${lakhMatch[1]} L`;
+  }
 
-  const rawNum = match[2].replace(/,/g, "");
-  const remaining = match[4] || "";
-  const num = parseFloat(rawNum);
+  // If already formatted with k, K, m, M, b, B notation (e.g. "500k", "2M")
+  const suffixMatch = withoutCurrency.match(/^([\d,]+(?:\.\d+)?)\s*([kKmMbB])$/);
+  if (suffixMatch) {
+    return `${currency}${suffixMatch[1]}${suffixMatch[2]}`;
+  }
+
+  const cleanNumeric = withoutCurrency.replace(/,/g, "");
+  const num = parseFloat(cleanNumeric);
 
   if (isNaN(num)) return str;
 
   let formatted = "";
-  if (num >= 1_000_000_000) {
-    const v = num / 1_000_000_000;
-    formatted = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + "B";
-  } else if (num >= 1_000_000) {
-    const v = num / 1_000_000;
-    formatted = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + "M";
+  if (num >= 10_000_000) {
+    const v = num / 10_000_000;
+    formatted = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/\.?0+$/, "")) + " Cr";
+  } else if (num >= 100_000) {
+    const v = num / 100_000;
+    formatted = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/\.?0+$/, "")) + " L";
   } else if (num >= 1_000) {
     const v = num / 1_000;
     formatted = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + "k";
@@ -40,7 +51,7 @@ export function formatTargetAmount(val: string | number | null | undefined): str
     formatted = num.toString();
   }
 
-  return `₹${formatted}${remaining}`.trim();
+  return `${currency}${formatted}`.trim();
 }
 
 

@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { user, error } = await getUser();
     if (error || !user) {
@@ -12,18 +12,32 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Investor account required" }, { status: 403 });
     }
 
-    const connections = await prisma.connection.findMany({
-      where: {
-        OR: [
-          { senderId: user.id },
-          { receiverId: user.id },
-        ],
-      },
-      select: { senderId: true, receiverId: true },
-    });
-    const excludedIds = new Set([user.id]);
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "4", 10) || 4, 1), 10);
+    const excludeParam = (searchParams.get("exclude") || "").split(",").filter(Boolean);
+
+    const [connections, follows] = await Promise.all([
+      prisma.connection.findMany({
+        where: {
+          OR: [
+            { senderId: user.id },
+            { receiverId: user.id },
+          ],
+        },
+        select: { senderId: true, receiverId: true },
+      }),
+      prisma.follow.findMany({
+        where: { followerId: user.id },
+        select: { followingId: true },
+      }),
+    ]);
+
+    const excludedIds = new Set<string>([user.id, ...excludeParam]);
     for (const connection of connections) {
       excludedIds.add(connection.senderId === user.id ? connection.receiverId : connection.senderId);
+    }
+    for (const follow of follows) {
+      excludedIds.add(follow.followingId);
     }
 
     const businesses = await prisma.user.findMany({
@@ -33,7 +47,7 @@ export async function GET() {
         company: { isNot: null },
         id: { notIn: [...excludedIds] },
       },
-      take: 4,
+      take: limit,
       orderBy: [
         { verificationStatus: "desc" },
         { createdAt: "desc" },

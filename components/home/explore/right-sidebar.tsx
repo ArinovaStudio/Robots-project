@@ -12,6 +12,7 @@ export default function RightSidebar() {
 
   return (
     <div className="space-y-4">
+      {/* Top Businesses / Top Investors Panel */}
       {accountType === "INVESTOR" ? <TopBusinesses /> : accountType === "BUSINESS" ? <TopInvestors /> : null}
 
       {/* Pending Connection Requests */}

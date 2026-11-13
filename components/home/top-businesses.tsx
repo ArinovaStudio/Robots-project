@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, MapPin, Sparkles } from "lucide-react";
+import { Building2, MapPin, Sparkles, Check, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import ConnectModal from "@/components/modals/connect-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 
 interface Business {
@@ -19,8 +18,9 @@ interface Business {
   connectedCount: number;
 }
 
-async function loadTopBusinesses(): Promise<Business[]> {
-  const res = await fetch("/api/investor/top-businesses");
+async function loadTopBusinesses(excludeIds?: string[]): Promise<Business[]> {
+  const query = excludeIds && excludeIds.length > 0 ? `?exclude=${excludeIds.join(",")}` : "";
+  const res = await fetch(`/api/investor/top-businesses${query}`);
   const json = await res.json();
   if (!res.ok || !json.success || !Array.isArray(json.data)) {
     throw new Error(json.message || "Failed to fetch businesses");
@@ -31,7 +31,8 @@ async function loadTopBusinesses(): Promise<Business[]> {
 export default function TopBusinesses() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -52,17 +53,64 @@ export default function TopBusinesses() {
     };
   }, []);
 
-  const handleConnectSuccess = (message: string) => {
-    toast.success(message);
-    if (selectedBusiness) {
-      setBusinesses((current) => current.filter((business) => business.id !== selectedBusiness.id));
-      setSelectedBusiness(null);
-      loadTopBusinesses()
-        .then(setBusinesses)
-        .catch((error) => {
-          console.error("Failed to refresh top businesses:", error);
-          toast.error("Couldn't refresh suggested businesses.");
-        });
+  const handleFollow = async (businessId: string) => {
+    if (followedIds.has(businessId) || followingIds.has(businessId)) return;
+    setFollowingIds((prev) => new Set(prev).add(businessId));
+    try {
+      const post = () =>
+        fetch("/api/network/follow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetUserId: businessId }),
+        }).then((res) => res.json());
+
+      let json = await post();
+      if (json.success && json.isFollowing === false) json = await post();
+
+      if (json.success && json.isFollowing) {
+        setFollowedIds((prev) => new Set(prev).add(businessId));
+        toast.success("Followed successfully");
+
+        // After a brief moment showing "Followed", remove this card and bring in another business
+        setTimeout(() => {
+          setBusinesses((current) => {
+            const currentIds = current.map((b) => b.id);
+            const remaining = current.filter((b) => b.id !== businessId);
+
+            fetch(`/api/investor/top-businesses?limit=1&exclude=${currentIds.join(",")}`)
+              .then((res) => res.json())
+              .then((newJson) => {
+                if (newJson.success && Array.isArray(newJson.data) && newJson.data.length > 0) {
+                  const candidate = newJson.data[0];
+                  setBusinesses((prev) => {
+                    const filtered = prev.filter((b) => b.id !== businessId);
+                    if (!filtered.some((b) => b.id === candidate.id)) {
+                      return [...filtered, candidate];
+                    }
+                    return filtered;
+                  });
+                } else {
+                  setBusinesses((prev) => prev.filter((b) => b.id !== businessId));
+                }
+              })
+              .catch(() => {
+                setBusinesses((prev) => prev.filter((b) => b.id !== businessId));
+              });
+
+            return remaining;
+          });
+        }, 500);
+      } else {
+        toast.error(json.message || "Failed to follow");
+      }
+    } catch {
+      toast.error("An error occurred");
+    } finally {
+      setFollowingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(businessId);
+        return next;
+      });
     }
   };
 
@@ -85,9 +133,9 @@ export default function TopBusinesses() {
         ) : businesses.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-4 text-center">
             <Sparkles className="mx-auto mb-2 h-5 w-5 text-blue-600" />
-            <p className="text-xs font-semibold text-gray-800">No businesses to connect with yet</p>
+            <p className="text-xs font-semibold text-gray-800">No businesses to follow yet</p>
             <p className="mt-1 text-[11px] text-gray-500">
-              Businesses you have a connection request with are excluded.
+              Businesses you follow will show up in your network feed.
             </p>
           </div>
         ) : (
@@ -122,26 +170,26 @@ export default function TopBusinesses() {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedBusiness(business)}
-                className="shrink-0 rounded-full border border-gray-300 px-2.5 py-1 text-[11px] font-medium text-gray-700 transition hover:border-gray-900 hover:bg-gray-100"
-              >
-                Connect
-              </button>
+              <div className="shrink-0">
+                {followedIds.has(business.id) ? (
+                  <span className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500 font-medium text-xs whitespace-nowrap">
+                    <Check size={14} /> Followed
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleFollow(business.id)}
+                    disabled={followingIds.has(business.id)}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 font-medium text-xs whitespace-nowrap hover:bg-gray-100 hover:text-gray-900 hover:border-gray-900 transition-colors disabled:opacity-60 cursor-pointer"
+                  >
+                    {followingIds.has(business.id) ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Follow
+                  </button>
+                )}
+              </div>
             </div>
           ))
         )}
       </div>
-
-      {selectedBusiness && (
-        <ConnectModal
-          receiverId={selectedBusiness.id}
-          companyName={selectedBusiness.name}
-          onClose={() => setSelectedBusiness(null)}
-          onSuccess={handleConnectSuccess}
-        />
-      )}
     </section>
   );
 }

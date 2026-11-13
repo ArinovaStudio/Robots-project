@@ -42,22 +42,24 @@ export default function PendingCard({ item, actionLoading, onRespond }: PendingC
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center mt-2 sm:mt-0">
           <button 
             onClick={() => onRespond(item.connectionId, "REJECTED")}
             disabled={actionLoading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold text-slate-500 bg-slate-50 border border-slate-100 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition disabled:opacity-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-gray-400 text-gray-700 hover:bg-gray-100 hover:border-gray-600 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            title="Ignore invitation"
+            aria-label="Ignore invitation"
           >
-            {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
-            Decline
+            {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <X size={18} strokeWidth={2} />}
           </button>
           <button 
             onClick={() => onRespond(item.connectionId, "ACCEPTED")}
             disabled={actionLoading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-slate-900 hover:bg-emerald-600 transition shadow-sm disabled:opacity-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50 hover:border-blue-700 hover:text-[#004182] transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            title="Accept invitation"
+            aria-label="Accept invitation"
           >
-            {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Accept
+            {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} strokeWidth={2.2} />}
           </button>
         </div>
       </div>

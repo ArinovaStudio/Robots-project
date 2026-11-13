@@ -641,8 +641,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     className={`inline-flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-sm font-semibold transition ${isVerified
                       ? "border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70"
                       : profile.verificationStatus === "PENDING"
-                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                        : "border-red-500 text-red-600 hover:bg-red-50"
+                        ? "border-amber-500 bg-white text-amber-600 hover:bg-amber-50/50"
+                        : "border-red-500 bg-white text-red-600 hover:bg-red-50"
                       }`}
                   >
                     {isVerified ? (
@@ -663,7 +663,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                         type="button"
                         onClick={toggleConnect}
                         disabled={isConnectLoading}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 text-sm font-semibold transition"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600 bg-white text-emerald-600 hover:bg-emerald-50 px-4 py-1.5 text-sm font-semibold transition"
                       >
                         {isConnectLoading ? <Loader2 size={15} className="animate-spin" /> : <UserCheck size={15} />}
                         Connected
@@ -680,7 +680,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                       <button
                         type="button"
                         disabled
-                        className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700 px-4 py-1.5 text-sm font-semibold"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white border border-amber-500 text-amber-600 px-4 py-1.5 text-sm font-semibold"
                       >
                         <Clock size={15} /> Pending
                       </button>
@@ -688,7 +688,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                         type="button"
                         onClick={handleCancelRequest}
                         disabled={isConnectLoading}
-                        className="inline-flex items-center gap-1 rounded-full border border-gray-300 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3.5 py-1.5 text-sm font-semibold transition"
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-500 px-3.5 py-1.5 text-sm font-semibold transition"
                       >
                         <X size={15} /> Cancel
                       </button>

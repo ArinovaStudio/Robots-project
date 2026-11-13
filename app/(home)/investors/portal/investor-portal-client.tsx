@@ -540,7 +540,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                                 })
                               }
                               disabled={cancellingUserId === pitch.userId}
-                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
+                              className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-amber-600 border border-amber-500 hover:bg-amber-50 hover:border-amber-600 transition disabled:opacity-50 cursor-pointer"
                               title="Connection request is pending. Click to cancel request."
                             >
                               {cancellingUserId === pitch.userId ? (
@@ -572,7 +572,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                                 companyName: pitch.company.companyName,
                               });
                             }}
-                            className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
+                            className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-emerald-600 border border-emerald-500 hover:bg-emerald-50 transition"
                             title="Make Investment Offer"
                           >
                             <DollarSign size={13} />
@@ -588,7 +588,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                                   pitchTitle: pitch.title,
                                 });
                               }}
-                              className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 transition"
+                              className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-amber-600 border border-amber-500 hover:bg-amber-50 transition"
                               title="Rate Idea (1-5 Stars)"
                             >
                               <Star size={13} />
@@ -763,7 +763,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                               })
                             }
                             disabled={cancellingUserId === company.userId}
-                            className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition disabled:opacity-50 cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-amber-600 border border-amber-500 hover:bg-amber-50 hover:border-amber-600 transition disabled:opacity-50 cursor-pointer"
                             title="Connection request is pending. Click to cancel request."
                           >
                             {cancellingUserId === company.userId ? (
@@ -866,7 +866,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                     });
                     setSelectedPerformer(null);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50"
                 >
                   <Clock size={14} /> Cancel pending request
                 </button>
@@ -973,7 +973,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                     });
                     setSelectedPitch(null);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50"
                 >
                   <Clock size={14} /> Cancel pending request
                 </button>
@@ -1002,7 +1002,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                   });
                   setSelectedPitch(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500 bg-white px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50"
               >
                 <DollarSign size={14} /> Make an offer
               </button>
@@ -1013,7 +1013,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                     setRateTarget({ pitchId: selectedPitch.id, pitchTitle: selectedPitch.title });
                     setSelectedPitch(null);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50"
                 >
                   <Star size={14} /> Rate
                 </button>
@@ -1092,7 +1092,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
               <button
                 type="button"
                 onClick={() => setConfirmCancelTarget(null)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                className="rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition"
               >
                 Keep Pending
               </button>
@@ -1104,7 +1104,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                   setConfirmCancelTarget(null);
                   await handleCancelConnection(target.userId, target.connectionId);
                 }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
+                className="rounded-xl border border-red-500 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
               >
                 Yes, Cancel Request
               </button>
