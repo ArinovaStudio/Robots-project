@@ -54,6 +54,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [showRecordInvestmentModal, setShowRecordInvestmentModal] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showUnfollowModal, setShowUnfollowModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showShareProfileModal, setShowShareProfileModal] = useState(false);
@@ -241,7 +242,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-3 pb-16">
+      <div className="w-full space-y-3 pb-16">
         <SkeletonTheme baseColor="#f1f5f9" highlightColor="#ffffff">
           <Skeleton height={260} borderRadius={12} />
           <Skeleton height={140} borderRadius={12} />
@@ -428,6 +429,25 @@ export default function ProfileView({ userId }: ProfileViewProps) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-200 p-1.5">
+        {!viewerState.isOwnProfile && (
+          <>
+            {isFollowing && (
+              <DropdownMenuItem
+                onSelect={() => setShowUnfollowModal(true)}
+                className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+              >
+                <UserCheck size={16} className="text-gray-600" /> Following
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onSelect={() => setShowContactModal(true)}
+              className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+            >
+              <Mail size={16} className="text-gray-600" /> Contact info
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem
           onSelect={() => setShowShareProfileModal(true)}
           className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
@@ -475,6 +495,23 @@ export default function ProfileView({ userId }: ProfileViewProps) {
     </DropdownMenu>
   );
 
+  // "today", "3 days ago", "2 weeks ago", "5 months ago", "1 year ago"
+  const formatTimeAgo = (dateInput: string) => {
+    const days = Math.floor((Date.now() - new Date(dateInput).getTime()) / (24 * 60 * 60 * 1000));
+    if (days < 1) return "today";
+    if (days < 7) return days === 1 ? "1 day ago" : `${days} days ago`;
+    if (days < 30) {
+      const w = Math.floor(days / 7);
+      return w === 1 ? "1 week ago" : `${w} weeks ago`;
+    }
+    if (days < 365) {
+      const m = Math.floor(days / 30);
+      return m === 1 ? "1 month ago" : `${m} months ago`;
+    }
+    const y = Math.floor(days / 365);
+    return y === 1 ? "1 year ago" : `${y} years ago`;
+  };
+
   const formatDate = (dateInput: string) => {
     try {
       return new Date(dateInput).toLocaleDateString("en-US", {
@@ -488,12 +525,12 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-2.5 pb-20">
+    <div className="w-full space-y-3 pb-20">
       {/* 1. Top Hero Card */}
       <ScrollReveal direction="down">
-        <section className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           {/* Cover Banner */}
-          <div className="h-36 sm:h-48 w-full relative overflow-hidden bg-linear-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81]">
+          <div className="h-36 sm:h-52 w-full relative overflow-hidden bg-linear-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81]">
             {bannerUrl ? (
               <Image src={bannerUrl} alt={`${displayName} cover banner`} fill className="object-cover" />
             ) : (
@@ -516,6 +553,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 <Pencil size={15} />
               </button>
             )}
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/25 to-transparent" />
           </div>
 
           {/* Card Content */}
@@ -659,15 +698,6 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 <>
                   {connectionStatus === "ACCEPTED" ? (
                     <>
-                      <button
-                        type="button"
-                        onClick={toggleConnect}
-                        disabled={isConnectLoading}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600 bg-white text-emerald-600 hover:bg-emerald-50 px-4 py-1.5 text-sm font-semibold transition"
-                      >
-                        {isConnectLoading ? <Loader2 size={15} className="animate-spin" /> : <UserCheck size={15} />}
-                        Connected
-                      </button>
                       <Link
                         href={`/messages/${userId}`}
                         className="inline-flex items-center gap-1.5 rounded-full bg-[#0a66c2] hover:bg-[#004182] text-white px-4 py-1.5 text-sm font-semibold transition"
@@ -711,26 +741,18 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={toggleFollow}
-                    disabled={isFollowLoading}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-semibold transition cursor-pointer ${isFollowing
-                        ? "border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        : "border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70"
-                      }`}
-                  >
-                    {isFollowLoading && <Loader2 size={14} className="animate-spin" />}
-                    {isFollowing ? "Following" : "+ Follow"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowContactModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-1.5 text-sm font-semibold transition"
-                  >
-                    Contact info
-                  </button>
+                  {/* When already following, "Following" lives in the three-dots menu */}
+                  {!isFollowing && (
+                    <button
+                      type="button"
+                      onClick={toggleFollow}
+                      disabled={isFollowLoading}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70 px-4 py-1.5 text-sm font-semibold transition cursor-pointer"
+                    >
+                      {isFollowLoading && <Loader2 size={14} className="animate-spin" />}
+                      + Follow
+                    </button>
+                  )}
 
                   {renderMoreMenu()}
                 </>
@@ -743,7 +765,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       {/* 2. Dashboard / Analytics Card (Own Profile Only) */}
       {viewerState.isOwnProfile && (
         <ScrollReveal direction="up" delay={0.08}>
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+          <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="p-5 pb-4">
               <h2 className="text-lg font-bold text-gray-900 leading-snug">Dashboard</h2>
               <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
@@ -752,8 +774,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                <Link href="/profile/connections" className="group flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-gray-50 transition">
-                  <Users size={19} className="text-gray-700 mt-0.5 shrink-0" />
+                <Link href="/profile/connections" className="group flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 hover:border-blue-200 hover:bg-blue-50/40 transition">
+                  <Users size={19} className="text-[#0a66c2] mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-gray-900 group-hover:text-[#0a66c2] transition">
                       {stats.profileViews ?? 0} profile views
@@ -764,8 +786,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   </div>
                 </Link>
 
-                <Link href={`/profile/${userId}/posts`} className="group flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-gray-50 transition">
-                  <BarChart2 size={19} className="text-gray-700 mt-0.5 shrink-0" />
+                <Link href={`/profile/${userId}/posts`} className="group flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 hover:border-blue-200 hover:bg-blue-50/40 transition">
+                  <BarChart2 size={19} className="text-[#0a66c2] mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-gray-900 group-hover:text-[#0a66c2] transition">
                       {stats.postImpressions ?? 0} post impressions
@@ -777,8 +799,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   </div>
                 </Link>
 
-                <Link href="/explore" className="group flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-gray-50 transition">
-                  <Search size={19} className="text-gray-700 mt-0.5 shrink-0" />
+                <Link href="/explore" className="group flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 hover:border-blue-200 hover:bg-blue-50/40 transition">
+                  <Search size={19} className="text-[#0a66c2] mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-gray-900 group-hover:text-[#0a66c2] transition">
                       {stats.searchAppearances ?? 0} search appearances
@@ -803,7 +825,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 4. Activity Card */}
       <ScrollReveal direction="up" delay={0.1}>
-        <section className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-5 pb-4">
             {/* Header Row */}
             <div className="flex items-start justify-between gap-3">
@@ -1092,7 +1114,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 5. About Card */}
       <ScrollReveal direction="up" delay={0.12}>
-        <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-lg font-bold text-gray-900">About</h2>
             {viewerState.isOwnProfile && (
@@ -1114,7 +1136,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 6. Details Card */}
       <ScrollReveal direction="up" delay={0.14}>
-        <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3.5">
             <h2 className="text-lg font-bold text-gray-900">Details</h2>
             {viewerState.isOwnProfile && (
@@ -1209,7 +1231,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 7. Services & Offerings / Focus Sectors */}
       <ScrollReveal direction="up" delay={0.16}>
-        <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Layers size={18} className="text-gray-800" />
@@ -1248,7 +1270,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 8. Looking For / Target Investment Stages */}
       <ScrollReveal direction="up" delay={0.18}>
-        <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+        <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Target size={18} className="text-gray-800" />
@@ -1288,7 +1310,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       {/* 9. Investor Open To & Portfolio Cards (Investor Profiles Only) */}
       {isInvestorOnly && investor.openTo?.length > 0 && (
         <ScrollReveal direction="up" delay={0.19}>
-          <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+          <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Target size={18} className="text-gray-800" />
@@ -1321,7 +1343,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {isInvestorOnly && (
         <ScrollReveal direction="up" delay={0.2}>
-          <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+          <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <Briefcase size={18} className="text-emerald-600" />
@@ -1456,6 +1478,11 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                         ? "Verification pending"
                         : "Not verified"}
                     {isVerified && <VerificationBadge status="VERIFIED" size="sm" showTooltip={false} />}
+                    {isVerified && profile.verifiedAt && (
+                      <span className="text-xs font-normal text-gray-500">
+                        (since {formatTimeAgo(profile.verifiedAt)})
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1499,6 +1526,42 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           profileName={displayName}
           onClose={() => setShowShareProfileModal(false)}
         />
+      )}
+
+      {/* Unfollow confirmation popup */}
+      {showUnfollowModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white border border-gray-200 shadow-xl overflow-hidden">
+            <div className="p-5">
+              <h3 className="text-lg font-bold text-gray-900">Unfollow {displayName}?</h3>
+              <p className="mt-1.5 text-sm text-gray-600">
+                You will stop seeing their updates in your feed.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-200 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setShowUnfollowModal(false)}
+                disabled={isFollowLoading}
+                className="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await toggleFollow();
+                  setShowUnfollowModal(false);
+                }}
+                disabled={isFollowLoading}
+                className="inline-flex items-center gap-1.5 rounded-full bg-red-600 hover:bg-red-700 px-4 py-1.5 text-sm font-semibold text-white transition cursor-pointer disabled:opacity-60"
+              >
+                {isFollowLoading && <Loader2 size={14} className="animate-spin" />}
+                Unfollow
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Contact Info Modal */}

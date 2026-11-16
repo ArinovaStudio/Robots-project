@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThumbsUp, Loader2, MoreVertical, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 export function CommentThread({ comment, postId, currentUser, onDelete }: { comment: any, postId: string, currentUser: any, onDelete: (id: string) => void }) {
@@ -15,6 +15,26 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
   
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the three-dots menu when clicking/tapping outside it or pressing Escape
+  useEffect(() => {
+    if (!showMenu) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowMenu(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showMenu]);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const [timeDisplay, setTimeDisplay] = useState("");
@@ -171,7 +191,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
           
           {/* Options Menu (Edit/Delete) */}
           {isOwner && (
-            <div className="relative ml-auto">
+            <div className="relative ml-auto" ref={menuRef}>
               <button onClick={() => setShowMenu(!showMenu)} className="text-slate-400 hover:text-slate-600 p-1">
                 <MoreVertical size={14} />
               </button>

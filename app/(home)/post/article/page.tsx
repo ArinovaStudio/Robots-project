@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Image as ImageIcon, Loader2, X, ArrowLeft } from "lucide-react";
 
+const TITLE_MAX = 150;
 export default function WriteArticlePage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -13,6 +13,18 @@ export default function WriteArticlePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Why Publish is disabled (empty string = enabled)
+  const disabledReason = loading
+    ? "Publishing..."
+    : !title.trim() && !content.trim()
+    ? "Add a title and some text to publish"
+    : !title.trim()
+    ? "Add a title to publish"
+    : !content.trim()
+    ? "Write your article to publish"
+    : "";
+  const canPublish = disabledReason === "";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -41,7 +53,7 @@ export default function WriteArticlePage() {
     setError("");
 
     const formData = new FormData();
-    const finalContent = `# ${title}\n\n${content}`;
+    const finalContent = `# ${title.trim()}\n\n${content}`;
     formData.append("content", finalContent);
 
     if (coverImage) {
@@ -70,25 +82,34 @@ export default function WriteArticlePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="w-full pb-16">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
+              aria-label="Go back"
               className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">Write an Article</h1>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !title.trim() || !content.trim()}
-            className="flex items-center justify-center px-6 py-2 rounded-full bg-blue-600 text-sm font-semibold text-white transition-all hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}
-          </button>
+
+          <div className="flex items-center gap-3">
+            {!canPublish && !loading && (
+              <span className="hidden sm:inline text-xs text-gray-500">{disabledReason}</span>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={!canPublish}
+              title={disabledReason || "Publish article"}
+              className="flex items-center justify-center px-6 py-2 rounded-full bg-blue-600 text-sm font-semibold text-white transition-all hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -99,20 +120,22 @@ export default function WriteArticlePage() {
           )}
 
           <div className="space-y-6">
+            {/* Cover image (optional) */}
             {!coverImage ? (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                className="w-full h-40 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
               >
-                <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-gray-600 font-medium">Add a cover image</span>
+                <ImageIcon className="w-7 h-7 text-gray-400 mb-2" />
+                <span className="text-gray-600 font-medium">Add a cover image (optional)</span>
                 <span className="text-sm text-gray-400 mt-1">Recommended size: 1200 x 630 pixels</span>
               </div>
             ) : (
-              <div className="relative w-full h-64 rounded-lg overflow-hidden border border-gray-200 group">
+              <div className="relative w-full h-64 rounded-xl overflow-hidden border border-gray-200 group">
                 <img src={coverImage.preview} alt="Cover" className="w-full h-full object-cover" />
                 <button
                   onClick={removeImage}
+                  aria-label="Remove cover image"
                   className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
                 >
                   <X className="w-5 h-5" />
@@ -121,20 +144,46 @@ export default function WriteArticlePage() {
             )}
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
 
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Article Title"
-              className="w-full text-4xl font-bold text-gray-900 placeholder:text-gray-300 border-none outline-none focus:ring-0 px-0 bg-transparent"
-            />
+            {/* Title */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="article-title" className="text-sm font-semibold text-gray-800">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <span className="text-xs text-gray-400">
+                  {title.length}/{TITLE_MAX}
+                </span>
+              </div>
+              <input
+                id="article-title"
+                type="text"
+                value={title}
+                maxLength={TITLE_MAX}
+                autoFocus
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter your article title"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-2xl font-bold text-gray-900 placeholder:font-medium placeholder:text-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
 
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your article here..."
-              className="w-full min-h-[400px] text-lg text-gray-700 placeholder:text-gray-400 border-none outline-none focus:ring-0 px-0 bg-transparent resize-none leading-relaxed"
-            />
+            {/* Body */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="article-body" className="text-sm font-semibold text-gray-800">
+                  Article <span className="text-red-500">*</span>
+                </label>
+                <span className="text-xs text-gray-400">
+                  {content.trim() ? content.trim().split(/\s+/).length : 0} words
+                </span>
+              </div>
+              <textarea
+                id="article-body"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your article here..."
+                className="w-full min-h-[360px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-lg leading-relaxed text-gray-800 placeholder:text-gray-400 outline-none resize-y transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
           </div>
         </div>
       </div>

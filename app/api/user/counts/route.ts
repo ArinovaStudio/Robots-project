@@ -2,31 +2,28 @@ import { NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const NO_STORE = { "Cache-Control": "no-store" };
+
 export async function GET() {
   try {
     const { user, error } = await getOnboardedUser();
-    
+
     if (error || !user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+      const dbProblem = error === "Internal server error";
+      return NextResponse.json(
+        { success: false, message: dbProblem ? "Service temporarily unavailable" : "Unauthorized" },
+        { status: dbProblem ? 503 : 401, headers: NO_STORE }
+      );
     }
-
-    // Badge counts only notifications that arrived since the notifications tab was last opened.
-    // Their highlight (isRead) is separate and persists until the user opens them.
-    const seenRow = await prisma.user.findUnique({ where: { id: user.id }, select: { notificationsSeenAt: true } });
-    const seenAt = seenRow?.notificationsSeenAt ?? new Date(0);
-
-    const [unreadNotifications, pendingRequests, requestNotifications, unreadMessages] = await Promise.all([
-      prisma.notification.count({
-        where: {
-          userId: user.id,
-          isRead: false,
-          createdAt: { gt: seenAt },
-        }
+    const [seenRow, pendingRequests, requestNotifications, unreadMessages] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { notificationsSeenAt: true },
       }),
       prisma.connection.findMany({
         where: {
           receiverId: user.id,
-          status: "PENDING"
+          status: "PENDING",
         },
         select: { senderId: true },
       }),
@@ -43,38 +40,52 @@ export async function GET() {
           isDeleted: false,
           senderId: { not: user.id },
           conversation: {
-            OR: [
-              { user1Id: user.id },
-              { user2Id: user.id }
-            ]
-          }
-        }
+            OR: [{ user1Id: user.id }, { user2Id: user.id }],
+          },
+        },
       }),
     ]);
+
+    const seenAt = seenRow?.notificationsSeenAt ?? new Date(0);
+
+    const unreadNotifications = await prisma.notification.count({
+      where: {
+        userId: user.id,
+        isRead: false,
+        createdAt: { gt: seenAt },
+      },
+    });
 
     const notifiedSenders = new Set(
       requestNotifications.map((notification) => notification.actorId)
     );
     const pendingSenders = new Set(pendingRequests.map((request) => request.senderId));
 
-    const unreadConnectionRequests = requestNotifications.filter(
-      (notification) =>
-        !notification.isRead && pendingSenders.has(notification.actorId || "")
-    ).length + pendingRequests.filter(
-      (request) => !notifiedSenders.has(request.senderId)
-    ).length;
+    const unreadConnectionRequests =
+      requestNotifications.filter(
+        (notification) =>
+          !notification.isRead && pendingSenders.has(notification.actorId || "")
+      ).length +
+      pendingRequests.filter((request) => !notifiedSenders.has(request.senderId)).length;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        unreadNotifications,
-        pendingConnections: pendingRequests.length,
-        unreadConnectionRequests,
-        unreadMessages,
-      }
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          unreadNotifications,
+          pendingConnections: pendingRequests.length,
+          unreadConnectionRequests,
+          unreadMessages,
+        },
+      },
+      { headers: NO_STORE }
+    );
   } catch (err) {
     console.error("Failed to fetch user counts", err);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    // Every query here is a DB read, so a failure is a temporary outage, not a bug in the request.
+    return NextResponse.json(
+      { success: false, message: "Service temporarily unavailable" },
+      { status: 503, headers: { ...NO_STORE, "Retry-After": "5" } }
+    );
   }
 }

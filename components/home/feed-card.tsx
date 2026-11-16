@@ -45,6 +45,26 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   const [showUndoRepost, setShowUndoRepost] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the three-dots menu when clicking/tapping outside it or pressing Escape
+  useEffect(() => {
+    if (!showDropdown) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowDropdown(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showDropdown]);
 
   const isAuthor = currentUser?.id === currentPost?.authorId;
   const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || "Independent Professional";
@@ -275,7 +295,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
               </div>
             </div>
           </div>
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button onClick={() => setShowDropdown(!showDropdown)} className="text-gray-500 hover:bg-gray-100 p-1.5 rounded-full transition">
               <MoreVertical size={18} />
             </button>

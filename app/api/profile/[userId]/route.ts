@@ -16,6 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
         image: true,
         accountType: true,
         verificationStatus: true,
+        verificationApplication: { select: { status: true, reviewedAt: true } },
         createdAt: true,
         company: true,
         investor: true,
@@ -155,6 +156,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       image: targetUser.image,
       accountType: targetUser.accountType,
       verificationStatus: targetUser.verificationStatus || "UNVERIFIED",
+      // When the admin approved verification (null if verified without an application)
+      verifiedAt:
+        targetUser.verificationStatus === "VERIFIED" &&
+        targetUser.verificationApplication?.status === "VERIFIED"
+          ? targetUser.verificationApplication.reviewedAt
+          : null,
       joinedAt: targetUser.createdAt,
       company: targetUser.company ? {
         ...targetUser.company,

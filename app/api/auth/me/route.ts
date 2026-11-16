@@ -7,7 +7,11 @@ export async function GET() {
     const { user, error } = await getUser();
 
     if (error || !user) {
-      return NextResponse.json( { success: false, message: error || "Unauthorized" }, { status: 401 } );
+      const dbProblem = error === "Internal server error";
+      return NextResponse.json(
+        { success: false, message: error || "Unauthorized" },
+        { status: dbProblem ? 503 : 401 }
+      );
     }
 
     const existingUser = await prisma.user.findUnique({

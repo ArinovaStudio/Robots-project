@@ -25,30 +25,28 @@ class FakeStore implements RateLimitStore {
   private guard() {
     if (this.fail) throw new Error("redis down");
   }
-  async incr(key: string) {
-    this.guard();
+  private incr(key: string) {
     const e = this.live(key);
     if (e) return ++e.value;
     this.data.set(key, { value: 1, expiresAt: Infinity });
     return 1;
   }
-  async decr(key: string) {
+  // Emulates CHECK_SCRIPT in JS (the whole call is synchronous, like Lua in Redis).
+  async eval(_script: string, _n: number, ...args: (string | number)[]) {
     this.guard();
-    const e = this.live(key);
-    if (!e) return -1;
-    return --e.value;
+    const [currKey, prevKey, prevWeight, limit, ttl, eps] = args as [string, string, number, number, number, number];
+    const curr = this.incr(currKey);
+    if (curr === 1) this.live(currKey)!.expiresAt = Date.now() + ttl;
+    const prev = Number(this.live(prevKey)?.value ?? 0);
+    if (prev * prevWeight + curr > limit + eps) {
+      this.live(currKey)!.value--;
+      return [0, prev, curr];
+    }
+    return [1, prev, curr];
   }
   async get(key: string) {
-    this.guard();
     const e = this.live(key);
     return e ? String(e.value) : null;
-  }
-  async pexpire(key: string, ms: number) {
-    this.guard();
-    const e = this.live(key);
-    if (!e) return 0;
-    e.expiresAt = Date.now() + ms;
-    return 1;
   }
   async del(...keys: string[]) {
     this.guard();

@@ -6,6 +6,24 @@ import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import ErrorScreen from "./FullPageErrorScreen";
 
+// After idle time the database can take a few seconds to wake up. Retry transient
+// failures quietly instead of showing the full-page error screen.
+async function fetchMeWithRetry() {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const req = await fetch("/api/auth/me");
+      if (req.status >= 500) throw new Error("Server is waking up. Please try again.");
+      const res = await req.json();
+      return { req, res };
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export function SessionSync({ children }: { children: React.ReactNode }) {
   const { setUser, clearUser } = useUserStore();
   const { data: session, status, update } = useSession();
@@ -21,8 +39,7 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
           clearUser();
         } else if (status === "authenticated") {
           // Fetch real user data from DB to get the true onboarding status
-          const req = await fetch("/api/auth/me");
-          const res = await req.json();
+          const { req, res } = await fetchMeWithRetry();
           if (!res.success) {
             if (req.status === 401 || res.message === "Unauthorized") {
               clearUser();
