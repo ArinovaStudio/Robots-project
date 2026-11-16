@@ -11,7 +11,7 @@ import {
   Handshake, Pencil, PlusCircle, Briefcase, Eye, BarChart2, Search,
   Target, ChevronLeft, ChevronRight, ThumbsUp, Repeat2, Sparkles,
   ArrowRight, Mail, Calendar, FileText, Video, UserCheck, Upload, Trash2, Check,
-  FileDown, Bookmark, Info, Activity as ActivityIcon, KeyRound
+  FileDown, Bookmark, Info, Activity as ActivityIcon, KeyRound, UserPlus, UserMinus
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ShareModal from "../modals/share-modal";
+import ConnectModal from "../modals/connect-modal";
 import CollaborateModal from "../modals/collaborate-modal";
 import SendPitchRequestModal from "../modals/send-pitch-request-modal";
 import EditProfileModal from "../modals/edit-profile-modal";
@@ -48,6 +49,7 @@ type ActivityTab = "posts" | "comments" | "media" | "saved";
 export default function ProfileView({ userId }: ProfileViewProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const [showCollaborateModal, setShowCollaborateModal] = useState(false);
   const [showPitchModal, setShowPitchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -92,7 +94,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       if (json.success) {
         setProfile(json.data);
-        setIsFollowing(json.data.viewerState.isFollowing);
+        const isConnected = json.data.viewerState.connectionStatus === "ACCEPTED";
+        setIsFollowing(isConnected ? true : json.data.viewerState.isFollowing);
         setConnectionStatus(json.data.viewerState.connectionStatus);
       }
 
@@ -208,12 +211,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           }));
         }
       } else if (!connectionStatus) {
-        const isInvestorProfile = Boolean(profile.investor && !profile.company);
-        if (isInvestorProfile) {
-          setShowPitchModal(true);
-        } else {
-          setShowCollaborateModal(true);
-        }
+        setShowConnectModal(true);
       }
     } catch {
       toast.error("Failed to update connection.");
@@ -431,7 +429,34 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-200 p-1.5">
         {!viewerState.isOwnProfile && (
           <>
-            {isFollowing && (
+            {connectionStatus === "ACCEPTED" && (
+              <>
+                {isInvestorOnly ? (
+                  <DropdownMenuItem
+                    onSelect={() => setShowPitchModal(true)}
+                    className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+                  >
+                    <Send size={16} className="text-gray-600" /> Send pitch request
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onSelect={() => setShowCollaborateModal(true)}
+                    className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+                  >
+                    <Handshake size={16} className="text-gray-600" /> Collaborate
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onSelect={toggleConnect}
+                  className="gap-2.5 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 cursor-pointer"
+                >
+                  <UserMinus size={16} className="text-red-500" /> Remove connection
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            {(isFollowing || connectionStatus === "ACCEPTED") && (
               <DropdownMenuItem
                 onSelect={() => setShowUnfollowModal(true)}
                 className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
@@ -732,17 +757,15 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     >
                       {isConnectLoading ? (
                         <Loader2 size={15} className="animate-spin" />
-                      ) : isInvestorOnly ? (
-                        <Send size={15} />
                       ) : (
-                        <Handshake size={15} />
+                        <UserPlus size={15} />
                       )}
-                      {isInvestorOnly ? "Send pitch request" : "Collaborate"}
+                      Connect
                     </button>
                   )}
 
-                  {/* When already following, "Following" lives in the three-dots menu */}
-                  {!isFollowing && (
+                  {/* When already following or connected, "Following" lives in the three-dots menu */}
+                  {!isFollowing && connectionStatus !== "ACCEPTED" && (
                     <button
                       type="button"
                       onClick={toggleFollow}
@@ -1809,12 +1832,23 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       )}
 
       {/* Modals */}
+      {showConnectModal && (
+        <ConnectModal
+          receiverId={userId}
+          companyName={displayName}
+          onClose={() => setShowConnectModal(false)}
+          onSuccess={(message) => {
+            setConnectionStatus("PENDING");
+            toast.success(message);
+          }}
+        />
+      )}
+
       {showCollaborateModal && (
         <CollaborateModal
           recipientId={userId}
           companyName={displayName}
           onClose={() => setShowCollaborateModal(false)}
-          onSuccess={() => setConnectionStatus("PENDING")}
         />
       )}
 
@@ -1823,7 +1857,6 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           investorId={userId}
           investorName={displayName}
           onClose={() => setShowPitchModal(false)}
-          onSuccess={() => setConnectionStatus("PENDING")}
         />
       )}
 

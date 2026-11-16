@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUserStore } from "@/store/AuthStore";
@@ -12,6 +13,7 @@ import {
   Bookmark,
   Sparkles,
   TrendingUp,
+  Inbox,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +29,24 @@ export default function MenuCard() {
   const pathname = usePathname();
   const { user } = useUserStore();
   const isInvestor = user?.accountType === "INVESTOR";
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isInvestor || !user?.id) return;
+    let active = true;
+    fetch("/api/pitch-requests")
+      .then((res) => res.json())
+      .then((json) => {
+        if (active && json.success && Array.isArray(json.data)) {
+          const count = json.data.filter((p: any) => p.status === "PENDING" && p.investorId === user.id).length;
+          setPendingRequestsCount(count);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isInvestor, user?.id]);
 
   const companyMenu: MenuItem[] = [
     {
@@ -51,6 +71,12 @@ export default function MenuCard() {
       icon: Compass,
       label: "Explore",
       href: "/explore",
+    },
+    {
+      icon: Inbox,
+      label: "Investment Requests",
+      href: "/investors/requests",
+      badge: pendingRequestsCount && pendingRequestsCount > 0 ? String(pendingRequestsCount) : undefined,
     },
     {
       icon: Sparkles,

@@ -136,6 +136,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       if (connectionRecord) {
         connectionStatus = connectionRecord.status;
         connectionId = connectionRecord.id;
+        if (connectionStatus === "ACCEPTED") {
+          isFollowing = true;
+          // Ensure mutual follow in database if not already present
+          prisma.follow.createMany({
+            data: [
+              { followerId: currentUser.id, followingId: userId },
+              { followerId: userId, followingId: currentUser.id }
+            ],
+            skipDuplicates: true
+          }).catch(() => {});
+        }
       }
 
       if (targetUser.company) {

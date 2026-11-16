@@ -6,10 +6,12 @@ import { toast } from "sonner";
 export default function ReportCompanyModal({
   companyUserId,
   companyName,
+  pitchRequestId,
   onClose,
 }: {
   companyUserId: string;
   companyName: string;
+  pitchRequestId?: string;
   onClose: () => void;
 }) {
   const [reason, setReason] = useState("");
@@ -23,7 +25,7 @@ export default function ReportCompanyModal({
       const res = await fetch(`/api/company/${companyUserId}/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, details }),
+        body: JSON.stringify({ reason, details, remark: details, pitchRequestId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -47,7 +49,9 @@ export default function ReportCompanyModal({
         </button>
         <div className="flex items-center gap-2 mb-1 text-red-500">
           <AlertTriangle size={20} />
-          <h3 className="text-lg font-bold text-slate-900">Report Business</h3>
+          <h3 className="text-lg font-bold text-slate-900">
+            {pitchRequestId ? "Report Pitch Request" : "Report Business"}
+          </h3>
         </div>
         <p className="text-sm text-slate-500 mb-4 truncate">{companyName}</p>
         <div className="space-y-4">
@@ -68,7 +72,7 @@ export default function ReportCompanyModal({
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700">Details (Optional)</label>
+            <label className="text-sm font-medium text-slate-700">Remark (Optional)</label>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin, MessageSquare, Clock, X, Loader2, Landmark } from "lucide-react";
+import { Sparkles, TrendingUp, ArrowRight, Building2, CheckCircle2, ChevronRight, Send, MapPin, MessageSquare, Clock, X, Loader2, Landmark, Inbox } from "lucide-react";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
 import { toast } from "sonner";
@@ -163,6 +163,12 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
               <span className="block text-base font-extrabold text-white">{stats?.investedIn ?? 0}</span>
               <span className="text-[10px] text-blue-200 font-semibold block">invested in</span>
             </div>
+            <Link
+              href="/investors/requests"
+              className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/20 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/20 transition"
+            >
+              <Inbox size={14} /> Requests
+            </Link>
             <Link
               href="/investors/portal"
               className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition"
@@ -384,13 +390,22 @@ export default function InvestorDashboardWidget({ user }: { user: { id: string; 
             <span className="text-xs text-[#64748B] font-medium">
               Want to see and manage your submitted pitches and investment offers?
             </span>
-            <Link
-              href="/investors/my-pitches"
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-[#E5E7EB] px-3.5 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-gray-50 transition shrink-0"
-            >
-              <Landmark size={13} />
-              My Pitches
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/investors/requests"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-[#E5E7EB] px-3.5 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition shrink-0"
+              >
+                <Inbox size={13} />
+                Investment Requests
+              </Link>
+              <Link
+                href="/investors/my-pitches"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-[#E5E7EB] px-3.5 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-gray-50 transition shrink-0"
+              >
+                <Landmark size={13} />
+                My Pitches
+              </Link>
+            </div>
           </div>
         </div>
       )}

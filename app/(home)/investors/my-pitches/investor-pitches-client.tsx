@@ -21,6 +21,7 @@ import {
   Layers,
   ChevronRight,
   Loader2,
+  Inbox,
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -184,6 +185,13 @@ export default function InvestorPitchesClient() {
               <PlusCircle className="w-4 h-4" />
               Publish Pitch / Idea
             </button>
+            <Link
+              href="/investors/requests"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition"
+            >
+              <Inbox className="w-3.5 h-3.5" />
+              Investment Requests
+            </Link>
             <Link
               href="/investors/portal"
               className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FileText, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUserStore } from "@/store/AuthStore";
@@ -32,6 +32,7 @@ export default function SendPitchRequestModal({
   const [message, setMessage] = useState("");
   const [pitchDeck, setPitchDeck] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleDeckChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -52,6 +53,8 @@ export default function SendPitchRequestModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (loading || isSubmittingRef.current) return;
+
     if (
       !companyName.trim() ||
       !problemStatement.trim() ||
@@ -67,6 +70,7 @@ export default function SendPitchRequestModal({
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       const formData = new FormData();
@@ -93,6 +97,7 @@ export default function SendPitchRequestModal({
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };

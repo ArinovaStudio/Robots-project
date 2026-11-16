@@ -273,17 +273,17 @@ export default function ViewPitchModal({
                 type="button"
                 disabled={updating}
                 onClick={() => handleUpdateStatus("DECLINED")}
-                className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
+                className="rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer"
               >
-                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Decline"}
+                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" /> : "Decline"}
               </button>
               <button
                 type="button"
                 disabled={updating}
                 onClick={() => handleUpdateStatus("ACCEPTED")}
-                className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 shadow-xs"
+                className="rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-xs"
               >
-                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Accept Collaboration"}
+                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" /> : "Accept Collaboration"}
               </button>
             </div>
           )}
