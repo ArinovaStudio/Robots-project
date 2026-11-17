@@ -36,6 +36,8 @@ interface RequestsBoardProps {
   sortOptions: BoardSortOption[];
   sortBy: string;
   onSortChange: (key: string) => void;
+  direction?: "received" | "sent";
+  onDirectionChange?: (dir: "received" | "sent") => void;
   loading: boolean;
   isEmpty: boolean;
   emptyTitle: string;
@@ -55,6 +57,8 @@ export default function RequestsBoard({
   sortOptions,
   sortBy,
   onSortChange,
+  direction = "received",
+  onDirectionChange,
   loading,
   isEmpty,
   emptyTitle,
@@ -113,6 +117,7 @@ export default function RequestsBoard({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {/* Adjacent Left: Sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -135,6 +140,37 @@ export default function RequestsBoard({
                     {o.label}
                   </DropdownMenuItem>
                 ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Most Right: Direction filter dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
+                >
+                  <span>{direction === "sent" ? "Request sent" : "Request received"}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                <DropdownMenuItem
+                  onSelect={() => onDirectionChange?.("received")}
+                  className={`px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                    direction !== "sent" ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                  }`}
+                >
+                  Request received
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => onDirectionChange?.("sent")}
+                  className={`px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                    direction === "sent" ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                  }`}
+                >
+                  Request sent
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -20,6 +20,8 @@ import {
   ChevronDown,
   Building2,
   Sparkles,
+  ArrowLeftRight,
+  Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUserStore } from "@/store/AuthStore";
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface PitchRequestItem extends PitchRequestData {
+  investorId?: string;
   sender?: {
     id: string;
     name: string | null;
@@ -90,7 +93,10 @@ function parseAmountValue(str: string): number {
 export default function InvestorRequestsClient() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const [division, setDivision] = useState<"business" | "investor">("business");
+  const [direction, setDirection] = useState<"received" | "sent">("received");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
+  const [investorOffers, setInvestorOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("PENDING");
   const [sortBy, setSortBy] = useState<SortOption>("NEWEST");
@@ -102,14 +108,19 @@ export default function InvestorRequestsClient() {
     let active = true;
     const fetchRequests = async () => {
       try {
-        const res = await fetch("/api/pitch-requests");
-        const json = await res.json();
+        const [pitchRes, myPitchesRes] = await Promise.all([
+          fetch("/api/pitch-requests"),
+          fetch("/api/investor/my-pitches").catch(() => null),
+        ]);
+        const json = await pitchRes.json();
         if (active && json.success && Array.isArray(json.data)) {
-          // Filter to requests sent to this investor
-          const relevant = user?.id
-            ? json.data.filter((r: any) => r.investorId === user.id)
-            : json.data;
-          setRequests(relevant);
+          setRequests(json.data);
+        }
+        if (myPitchesRes && myPitchesRes.ok) {
+          const myPitchesJson = await myPitchesRes.json();
+          if (active && myPitchesJson.success && Array.isArray(myPitchesJson.data?.offers)) {
+            setInvestorOffers(myPitchesJson.data.offers);
+          }
         }
       } catch (err) {
         console.error("Failed to load investment requests:", err);
@@ -125,20 +136,75 @@ export default function InvestorRequestsClient() {
     };
   }, [user?.id]);
 
+  const businessPending = useMemo(
+    () => requests.filter((r) => r.investorId === user?.id && r.status === "PENDING").length,
+    [requests, user?.id]
+  );
+  const investorPending = useMemo(
+    () => investorOffers.filter((o) => o.status === "PENDING").length,
+    [investorOffers]
+  );
+
+  const tabs: { key: "business" | "investor"; label: string; icon: typeof ArrowLeftRight; pending: number }[] = [
+    { key: "business", label: "Business", icon: ArrowLeftRight, pending: businessPending },
+    { key: "investor", label: "Investor", icon: Landmark, pending: investorPending },
+  ];
+
+  // Active requests depending on division (Business vs Investor) & direction (received vs sent)
+  const activeRequests = useMemo(() => {
+    if (division === "business") {
+      if (direction === "received") {
+        return user?.id ? requests.filter((r) => r.investorId === user.id) : requests;
+      }
+      return user?.id ? requests.filter((r) => r.senderId === user.id) : [];
+    }
+    // Investor division
+    if (direction === "sent") {
+      return investorOffers.map((o) => ({
+        id: o.id,
+        senderId: o.founderId || "",
+        investorId: user?.id || "",
+        companyName: o.companyName || o.pitchTitle || "Company",
+        problemStatement: o.pitchTitle ? `Investment offer on "${o.pitchTitle}"` : "Investment offer",
+        proposedSolution: o.terms || o.message || "Terms not specified",
+        fundingRequirement: o.amount || "$0",
+        equityOffered: o.terms || null,
+        message: o.message || "",
+        pitchDeckUrl: "",
+        status: o.status,
+        createdAt: o.createdAt,
+        updatedAt: o.createdAt,
+        sender: {
+          id: o.founderId || "",
+          name: o.founderName || "Founder",
+          image: null,
+          verificationStatus: "VERIFIED",
+          company: {
+            companyName: o.companyName || null,
+            logoUrl: o.logoUrl || null,
+            type: o.pitchType || o.stage || "Startup",
+            location: o.location || null,
+          },
+        },
+      })) as PitchRequestItem[];
+    }
+    return [];
+  }, [division, direction, requests, investorOffers, user?.id]);
+
   // Compute stat counts
   const stats = useMemo(() => {
-    const pending = requests.filter((r) => r.status === "PENDING").length;
-    const accepted = requests.filter((r) => r.status === "ACCEPTED").length;
-    const reviewed = requests.filter((r) => r.status === "REVIEWED").length;
+    const pending = activeRequests.filter((r) => r.status === "PENDING").length;
+    const accepted = activeRequests.filter((r) => r.status === "ACCEPTED").length;
+    const reviewed = activeRequests.filter((r) => r.status === "REVIEWED" || r.status === "DECLINED").length;
     return { pending, accepted, reviewed };
-  }, [requests]);
+  }, [activeRequests]);
 
   // Filter & sort
   const filteredRequests = useMemo(() => {
-    const list = requests.filter((r) => {
+    const list = activeRequests.filter((r) => {
       if (activeTab === "PENDING") return r.status === "PENDING";
       if (activeTab === "ACCEPTED") return r.status === "ACCEPTED";
-      if (activeTab === "REVIEWED") return r.status === "REVIEWED";
+      if (activeTab === "REVIEWED") return r.status === "REVIEWED" || r.status === "DECLINED";
       return true;
     });
 
@@ -157,7 +223,7 @@ export default function InvestorRequestsClient() {
       }
       return 0;
     });
-  }, [requests, activeTab, sortBy]);
+  }, [activeRequests, activeTab, sortBy]);
 
   const handleUpdateStatus = async (id: string, newStatus: "ACCEPTED" | "DECLINED" | "REVIEWED") => {
     setProcessingId(id);
@@ -252,6 +318,33 @@ export default function InvestorRequestsClient() {
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Top Navigation: Business / Investor */}
+      <div className="bg-white rounded-xl border border-gray-200 p-1 shadow-xs flex items-center" role="tablist">
+        {tabs.map(({ key, label, icon: Icon, pending }) => {
+          const active = division === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setDivision(key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                active ? "bg-blue-50 text-blue-700 shadow-xs" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+              {pending > 0 && (
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  {pending}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* 3 STATS CARDS ABOVE (No upper headings as requested) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Card 1: Awaiting review */}
@@ -372,8 +465,9 @@ export default function InvestorRequestsClient() {
             </button>
           </div>
 
-          {/* Recently received sort dropdown */}
+          {/* 2 Dropdowns on right */}
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {/* Adjacent Left: Sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -419,6 +513,37 @@ export default function InvestorRequestsClient() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Most Right: Direction dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
+                >
+                  <span>{direction === "sent" ? "Request sent" : "Request received"}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                <DropdownMenuItem
+                  onSelect={() => setDirection("received")}
+                  className={`px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                    direction !== "sent" ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                  }`}
+                >
+                  Request received
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setDirection("sent")}
+                  className={`px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                    direction === "sent" ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                  }`}
+                >
+                  Request sent
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -434,7 +559,11 @@ export default function InvestorRequestsClient() {
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500 space-y-3">
           <Sparkles className="mx-auto h-12 w-12 text-gray-300" />
           <h3 className="text-base font-bold text-gray-800">
-            {activeTab === "PENDING"
+            {direction === "sent"
+              ? division === "business"
+                ? "No sent pitch requests"
+                : "No sent investment offers"
+              : activeTab === "PENDING"
               ? "No pending investment requests"
               : activeTab === "ACCEPTED"
               ? "No accepted investment requests"
@@ -443,7 +572,9 @@ export default function InvestorRequestsClient() {
               : "No investment requests found"}
           </h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto">
-            When startups and businesses send you pitch requests, they will appear here for your review and evaluation.
+            {direction === "sent"
+              ? "When you send pitch requests or investment offers, they will appear here."
+              : "When startups and businesses send you pitch requests, they will appear here for your review and evaluation."}
           </p>
         </div>
       ) : (
@@ -639,41 +770,53 @@ export default function InvestorRequestsClient() {
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     {req.status === "PENDING" && (
-                      <>
+                      direction === "sent" ? (
                         <button
                           type="button"
                           disabled={isProcessing}
-                          onClick={() => handleUpdateStatus(req.id, "DECLINED")}
+                          onClick={() => handleDelete(req.id)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                         >
                           <X size={13} className="text-red-500" />
-                          <span>Reject</span>
+                          <span>Cancel Request</span>
                         </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => handleUpdateStatus(req.id, "DECLINED")}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                          >
+                            <X size={13} className="text-red-500" />
+                            <span>Reject</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          disabled={isProcessing}
-                          onClick={() => handleUpdateStatus(req.id, "REVIEWED")}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-                        >
-                          <MessageSquare size={13} />
-                          <span>Ask for info</span>
-                        </button>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => handleUpdateStatus(req.id, "REVIEWED")}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                          >
+                            <MessageSquare size={13} />
+                            <span>Ask for info</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          disabled={isProcessing}
-                          onClick={() => handleUpdateStatus(req.id, "ACCEPTED")}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-                        >
-                          {isProcessing ? (
-                            <Loader2 size={13} className="animate-spin text-emerald-600" />
-                          ) : (
-                            <Check size={13} strokeWidth={2.5} className="text-emerald-500" />
-                          )}
-                          <span>Accept</span>
-                        </button>
-                      </>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => handleUpdateStatus(req.id, "ACCEPTED")}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                          >
+                            {isProcessing ? (
+                              <Loader2 size={13} className="animate-spin text-emerald-600" />
+                            ) : (
+                              <Check size={13} strokeWidth={2.5} className="text-emerald-500" />
+                            )}
+                            <span>Accept</span>
+                          </button>
+                        </>
+                      )
                     )}
 
                     {req.status === "ACCEPTED" && (

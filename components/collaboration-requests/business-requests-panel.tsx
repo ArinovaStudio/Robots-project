@@ -32,6 +32,7 @@ import { formatRelativeTime } from "./utils";
 export interface B2BRequest {
   id: string;
   requesterId: string;
+  recipientId?: string;
   expectations: string[];
   offerings: string[];
   contributionDesc: string | null;
@@ -53,10 +54,29 @@ export interface B2BRequest {
       location: string | null;
     } | null;
   } | null;
+  recipient?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    verificationStatus?: string;
+    company?: {
+      companyName: string | null;
+      logoUrl: string | null;
+      type: string | null;
+      location: string | null;
+    } | null;
+  } | null;
 }
 
 type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "ALL";
-type SortKey = "NEWEST" | "OLDEST";
+type SortKey = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
+
+const SORT_OPTIONS = [
+  { key: "NEWEST", label: "Recently received" },
+  { key: "OLDEST", label: "Oldest first" },
+  { key: "HIGH_FUNDING", label: "Highest seeking amount" },
+  { key: "LOW_FUNDING", label: "Lowest seeking amount" },
+];
 
 interface BusinessRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
@@ -68,6 +88,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
+  const [direction, setDirection] = useState<"received" | "sent">("received");
   const [selected, setSelected] = useState<B2BRequest | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -75,8 +96,9 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
   useEffect(() => {
     let active = true;
     (async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/marketplace/collaborate?direction=received");
+        const res = await fetch(`/api/marketplace/collaborate?direction=${direction}`);
         const json = res.ok ? await res.json() : null;
         if (active && json?.success && Array.isArray(json.data)) {
           setRequests(json.data);
@@ -93,7 +115,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     return () => {
       active = false;
     };
-  }, []);
+  }, [direction]);
 
   const stats = useMemo(
     () => ({
@@ -111,10 +133,44 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
   const visible = useMemo(() => {
     const list = requests.filter((r) => activeFilter === "ALL" || r.status === activeFilter);
     return [...list].sort((a, b) => {
-      const diff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      return sortBy === "NEWEST" ? diff : -diff;
+      switch (sortBy) {
+        case "OLDEST":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "HIGH_FUNDING":
+          return (b.offerings?.length || 0) - (a.offerings?.length || 0);
+        case "LOW_FUNDING":
+          return (a.offerings?.length || 0) - (b.offerings?.length || 0);
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
     });
   }, [requests, activeFilter, sortBy]);
+
+  const partnerOf = (req: B2BRequest) => (direction === "sent" ? req.recipient : req.requester);
+  const partnerIdOf = (req: B2BRequest) =>
+    direction === "sent" ? req.recipientId || req.recipient?.id || "" : req.requesterId;
+  const nameOf = (req: B2BRequest) => {
+    const p = partnerOf(req);
+    return p?.company?.companyName || p?.name || "Business";
+  };
+
+  const cancelProposal = async (id: string) => {
+    setProcessingId(id);
+    try {
+      const res = await fetch(`/api/marketplace/collaborate?id=${id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        setRequests((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Collaboration proposal cancelled.");
+      } else {
+        toast.error(json.message || "Failed to cancel proposal.");
+      }
+    } catch {
+      toast.error("Failed to cancel proposal.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const updateStatus = async (id: string, status: "ACCEPTED" | "DECLINED" | "INFO_REQUESTED") => {
     setProcessingId(id);
@@ -163,10 +219,49 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     }
   };
 
-  const nameOf = (r: B2BRequest) => r.requester?.company?.companyName || r.requester?.name || "Business";
-
   const actionButtons = (req: B2BRequest) => {
     const busy = processingId === req.id;
+    const partnerId = partnerIdOf(req);
+
+    if (direction === "sent") {
+      if (req.status === "PENDING") {
+        return (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => cancelProposal(req.id)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            {busy ? <Loader2 size={13} className="animate-spin text-red-500" /> : <X size={13} className="text-red-500" />}
+            <span>Cancel Request</span>
+          </button>
+        );
+      }
+      if (req.status === "ACCEPTED") {
+        return (
+          <Link
+            href={`/messages/${partnerId}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-2xs"
+          >
+            <MessageSquare size={13} />
+            <span>Message Business</span>
+          </Link>
+        );
+      }
+      if (req.status === "INFO_REQUESTED") {
+        return (
+          <Link
+            href={`/messages/${partnerId}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
+          >
+            <MessageSquare size={13} />
+            <span>Continue Conversation</span>
+          </Link>
+        );
+      }
+      return null;
+    }
+
     if (req.status === "PENDING") {
       return (
         <>
@@ -194,7 +289,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             onClick={() => updateStatus(req.id, "ACCEPTED")}
             className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+            {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
             <span>Accept</span>
           </button>
         </>
@@ -203,7 +298,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     if (req.status === "ACCEPTED") {
       return (
         <Link
-          href={`/messages/${req.requesterId}`}
+          href={`/messages/${partnerId}`}
           className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-2xs"
         >
           <MessageSquare size={13} />
@@ -224,7 +319,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             <span>Reject</span>
           </button>
           <Link
-            href={`/messages/${req.requesterId}`}
+            href={`/messages/${partnerId}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
           >
             <MessageSquare size={13} />
@@ -236,7 +331,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             onClick={() => updateStatus(req.id, "ACCEPTED")}
             className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+            {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
             <span>Accept</span>
           </button>
         </>
@@ -261,16 +356,17 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
         ]}
         activeFilter={activeFilter}
         onFilterChange={(k) => setActiveFilter(k as FilterKey)}
-        sortOptions={[
-          { key: "NEWEST", label: "Recently received" },
-          { key: "OLDEST", label: "Oldest first" },
-        ]}
+        sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
         onSortChange={(k) => setSortBy(k as SortKey)}
+        direction={direction}
+        onDirectionChange={(d) => setDirection(d)}
         loading={loading}
         isEmpty={visible.length === 0}
         emptyTitle={
-          activeFilter === "PENDING"
+          direction === "sent"
+            ? "No sent collaboration requests"
+            : activeFilter === "PENDING"
             ? "No pending collaboration requests"
             : activeFilter === "ACCEPTED"
             ? "No accepted collaboration requests"
@@ -278,14 +374,20 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             ? "No info-requested collaboration requests"
             : "No collaboration requests found"
         }
-        emptyDescription="When other businesses send you a B2B collaboration proposal, it will appear here for your review."
+        emptyDescription={
+          direction === "sent"
+            ? "You have not sent any collaboration proposals to other businesses yet."
+            : "When other businesses send you a B2B collaboration proposal, it will appear here for your review."
+        }
       >
         {visible.map((req) => {
+          const partner = partnerOf(req);
+          const partnerId = partnerIdOf(req);
           const name = nameOf(req);
-          const avatar = req.requester?.company?.logoUrl || req.requester?.image;
-          const ownerName = req.requester?.name || "Founder";
-          const companyType = req.requester?.company?.type;
-          const location = req.requester?.company?.location;
+          const avatar = partner?.company?.logoUrl || partner?.image;
+          const ownerName = partner?.name || "Business";
+          const companyType = partner?.company?.type;
+          const location = partner?.company?.location;
 
           return (
             <div
@@ -295,7 +397,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Link
-                    href={`/profile/${req.requesterId}`}
+                    href={`/profile/${partnerId}`}
                     className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 overflow-hidden text-blue-700 font-bold text-base hover:opacity-90 transition"
                   >
                     {avatar ? (
@@ -308,12 +410,12 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <Link
-                        href={`/profile/${req.requesterId}`}
+                        href={`/profile/${partnerId}`}
                         className="text-base font-bold text-gray-900 truncate hover:text-blue-600 hover:underline"
                       >
                         {name}
                       </Link>
-                      <VerificationBadge status={req.requester?.verificationStatus || "UNVERIFIED"} size="xs" />
+                      <VerificationBadge status={partner?.verificationStatus || "UNVERIFIED"} size="xs" />
                     </div>
                     <p className="text-xs text-gray-500 truncate mt-0.5">
                       {ownerName}
@@ -336,14 +438,14 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
                       <DropdownMenuItem
-                        onSelect={() => blockBusiness(req.id, req.requesterId, name)}
+                        onSelect={() => blockBusiness(req.id, partnerId, name)}
                         className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
                       >
                         <Ban size={14} className="text-gray-500" />
                         <span>Block business</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onSelect={() => setReportTarget({ userId: req.requesterId, name })}
+                        onSelect={() => setReportTarget({ userId: partnerId, name })}
                         className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
                       >
                         <Flag size={14} className="text-gray-500" />

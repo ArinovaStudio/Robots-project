@@ -34,7 +34,14 @@ interface ReceivedOffer {
 }
 
 type FilterKey = "PENDING" | "ACCEPTED" | "DECLINED" | "ALL";
-type SortKey = "NEWEST" | "OLDEST" | "HIGH_AMOUNT" | "LOW_AMOUNT";
+type SortKey = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
+
+const SORT_OPTIONS = [
+  { key: "NEWEST", label: "Recently received" },
+  { key: "OLDEST", label: "Oldest first" },
+  { key: "HIGH_FUNDING", label: "Highest seeking amount" },
+  { key: "LOW_FUNDING", label: "Lowest seeking amount" },
+];
 
 interface InvestorRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
@@ -45,16 +52,48 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
+  const [direction, setDirection] = useState<"received" | "sent">("received");
   const [selected, setSelected] = useState<ReceivedOffer | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/company/pitches/offers");
-        const json = res.ok ? await res.json() : null;
-        if (active && json?.success && Array.isArray(json.data)) setOffers(json.data);
+        if (direction === "sent") {
+          const res = await fetch("/api/pitch-requests");
+          const json = res.ok ? await res.json() : null;
+          if (active && json?.success && Array.isArray(json.data)) {
+            // Map sent pitch requests into displayable offers format
+            const mapped: ReceivedOffer[] = json.data.map((p: any) => ({
+              id: p.id,
+              pitchId: p.id,
+              pitchTitle: p.companyName || "Pitch Request",
+              pitchSector: p.problemStatement ? p.problemStatement.slice(0, 50) : null,
+              pitchStage: "Seed",
+              pitchTargetAmount: p.fundingRequirement,
+              amount: p.fundingRequirement,
+              amountValue: parseFloat(String(p.fundingRequirement).replace(/[^0-9.]/g, "")) || 0,
+              terms: p.equityOffered ? `${p.equityOffered} equity` : null,
+              message: p.message,
+              status: p.status,
+              createdAt: p.createdAt,
+              investorId: p.investorId,
+              name: p.investor?.name || "Investor",
+              image: p.investor?.image || null,
+              verificationStatus: p.investor?.verificationStatus || null,
+              firmName: p.investor?.firmName || null,
+              investorType: p.investor?.investorType || "Investor",
+              location: p.investor?.location || null,
+            }));
+            setOffers(mapped);
+          }
+        } else {
+          const res = await fetch("/api/company/pitches/offers");
+          const json = res.ok ? await res.json() : null;
+          if (active && json?.success && Array.isArray(json.data)) setOffers(json.data);
+        }
       } catch (err) {
         console.error("Failed to load investor requests:", err);
         if (active) toast.error("Could not load investor requests.");
@@ -65,7 +104,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
     return () => {
       active = false;
     };
-  }, []);
+  }, [direction]);
 
   const stats = useMemo(
     () => ({
@@ -86,9 +125,9 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       switch (sortBy) {
         case "OLDEST":
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "HIGH_AMOUNT":
+        case "HIGH_FUNDING":
           return b.amountValue - a.amountValue;
-        case "LOW_AMOUNT":
+        case "LOW_FUNDING":
           return a.amountValue - b.amountValue;
         default:
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -183,18 +222,25 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         ]}
         activeFilter={activeFilter}
         onFilterChange={(k) => setActiveFilter(k as FilterKey)}
-        sortOptions={[
-          { key: "NEWEST", label: "Recently received" },
-          { key: "OLDEST", label: "Oldest first" },
-          { key: "HIGH_AMOUNT", label: "Highest offer" },
-          { key: "LOW_AMOUNT", label: "Lowest offer" },
-        ]}
+        sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
         onSortChange={(k) => setSortBy(k as SortKey)}
+        direction={direction}
+        onDirectionChange={(d) => setDirection(d)}
         loading={loading}
         isEmpty={visible.length === 0}
-        emptyTitle={activeFilter === "ALL" ? "No investor requests yet" : `No ${activeFilter.toLowerCase()} investor requests`}
-        emptyDescription="When an investor sends an investment offer on one of your pitches, it will appear here for your review."
+        emptyTitle={
+          direction === "sent"
+            ? "No sent pitch requests"
+            : activeFilter === "ALL"
+            ? "No investor requests yet"
+            : `No ${activeFilter.toLowerCase()} investor requests`
+        }
+        emptyDescription={
+          direction === "sent"
+            ? "When you send pitch requests to investors, they will appear here."
+            : "When an investor sends an investment offer on one of your pitches, it will appear here for your review."
+        }
       >
         {visible.map((o) => {
           const name = nameOf(o);
