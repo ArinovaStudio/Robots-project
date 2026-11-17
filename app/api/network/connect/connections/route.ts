@@ -136,6 +136,18 @@ export async function GET(req: NextRequest) {
         name: isOtherInvestor
           ? (otherUser.name || otherUser.investor?.firmName || "Investor")
           : (otherUser.company?.companyName || otherUser.name || "Unknown Company"),
+        companyName: isOtherInvestor
+          ? (otherUser.name || otherUser.investor?.firmName || "Investor")
+          : (otherUser.company?.companyName || otherUser.name || "Unknown Company"),
+        logoUrl: isOtherInvestor
+          ? (otherUser.image || null)
+          : (otherUser.company?.logoUrl || otherUser.image || null),
+        type: isOtherInvestor
+          ? (otherUser.investor?.firmName
+              ? `${otherUser.investor.investorType} · ${otherUser.investor.firmName}`
+              : (otherUser.investor?.investorType || "Investor"))
+          : (otherUser.company?.type || "Business"),
+        location: otherUser.company?.location || null,
         company: otherUser.company,
         investor: otherUser.investor,
         accountType: otherUser.accountType,

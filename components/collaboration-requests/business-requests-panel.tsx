@@ -1,0 +1,437 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  MoreHorizontal,
+  Ban,
+  Flag,
+  MessageSquare,
+  Check,
+  X,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import VerificationBadge from "@/components/ui/VerificationBadge";
+import ReportCompanyModal from "@/components/modals/report-company-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import RequestsBoard from "./requests-board";
+import RequestDetailsModal from "./request-details-modal";
+import StatusBadge from "./status-badge";
+import { formatRelativeTime } from "./utils";
+export interface B2BRequest {
+  id: string;
+  requesterId: string;
+  expectations: string[];
+  offerings: string[];
+  contributionDesc: string | null;
+  resourcesAvailable: string | null;
+  expertiseCapabilities: string | null;
+  existingAssets: string | null;
+  overview: string;
+  status: string; // PENDING | ACCEPTED | DECLINED | INFO_REQUESTED
+  createdAt: string;
+  requester?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    verificationStatus?: string;
+    company?: {
+      companyName: string | null;
+      logoUrl: string | null;
+      type: string | null;
+      location: string | null;
+    } | null;
+  } | null;
+}
+
+type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "ALL";
+type SortKey = "NEWEST" | "OLDEST";
+
+interface BusinessRequestsPanelProps {
+  onPendingCountChange?: (count: number) => void;
+}
+
+export default function BusinessRequestsPanel({ onPendingCountChange }: BusinessRequestsPanelProps) {
+  const router = useRouter();
+  const [requests, setRequests] = useState<B2BRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
+  const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
+  const [selected, setSelected] = useState<B2BRequest | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/marketplace/collaborate?direction=received");
+        const json = res.ok ? await res.json() : null;
+        if (active && json?.success && Array.isArray(json.data)) {
+          setRequests(json.data);
+        } else if (!res.ok) {
+          console.warn(`B2B collaboration requests endpoint returned ${res.status}`);
+        }
+      } catch (err) {
+        console.error("Failed to load business collaboration requests:", err);
+        if (active) toast.error("Could not load business collaboration requests.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const stats = useMemo(
+    () => ({
+      pending: requests.filter((r) => r.status === "PENDING").length,
+      accepted: requests.filter((r) => r.status === "ACCEPTED").length,
+      info: requests.filter((r) => r.status === "INFO_REQUESTED").length,
+    }),
+    [requests]
+  );
+
+  useEffect(() => {
+    onPendingCountChange?.(stats.pending);
+  }, [stats.pending, onPendingCountChange]);
+
+  const visible = useMemo(() => {
+    const list = requests.filter((r) => activeFilter === "ALL" || r.status === activeFilter);
+    return [...list].sort((a, b) => {
+      const diff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return sortBy === "NEWEST" ? diff : -diff;
+    });
+  }, [requests, activeFilter, sortBy]);
+
+  const updateStatus = async (id: string, status: "ACCEPTED" | "DECLINED" | "INFO_REQUESTED") => {
+    setProcessingId(id);
+    try {
+      const res = await fetch("/api/marketplace/collaborate", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+        setSelected((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
+        toast.success(
+          status === "ACCEPTED" ? "Request accepted!" : status === "DECLINED" ? "Request declined." : "Follow-up initiated."
+        );
+        if (status === "INFO_REQUESTED") {
+          const item = requests.find((r) => r.id === id);
+          if (item?.requesterId) router.push(`/messages/${item.requesterId}`);
+        }
+      } else {
+        toast.error(data.message || "Failed to update request.");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const blockBusiness = async (id: string, requesterId: string, name: string) => {
+    setProcessingId(id);
+    try {
+      await fetch(`/api/company/${requesterId}/hide`, { method: "POST" });
+      await fetch("/api/marketplace/collaborate", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "DECLINED" }),
+      });
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      toast.success(`Blocked requests from ${name}.`);
+    } catch {
+      toast.error("Failed to block business.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const nameOf = (r: B2BRequest) => r.requester?.company?.companyName || r.requester?.name || "Business";
+
+  const actionButtons = (req: B2BRequest) => {
+    const busy = processingId === req.id;
+    if (req.status === "PENDING") {
+      return (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => updateStatus(req.id, "DECLINED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            <X size={13} className="text-red-500" />
+            <span>Reject</span>
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => updateStatus(req.id, "INFO_REQUESTED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            <MessageSquare size={13} />
+            <span>Ask for info</span>
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => updateStatus(req.id, "ACCEPTED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+            <span>Accept</span>
+          </button>
+        </>
+      );
+    }
+    if (req.status === "ACCEPTED") {
+      return (
+        <Link
+          href={`/messages/${req.requesterId}`}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-2xs"
+        >
+          <MessageSquare size={13} />
+          <span>Message Business</span>
+        </Link>
+      );
+    }
+    if (req.status === "INFO_REQUESTED") {
+      return (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => updateStatus(req.id, "DECLINED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            <X size={13} className="text-red-500" />
+            <span>Reject</span>
+          </button>
+          <Link
+            href={`/messages/${req.requesterId}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
+          >
+            <MessageSquare size={13} />
+            <span>Continue Conversation</span>
+          </Link>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => updateStatus(req.id, "ACCEPTED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+            <span>Accept</span>
+          </button>
+        </>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <>
+      <RequestsBoard
+        stats={[
+          { label: "Awaiting review", value: stats.pending, caption: "Needs your decision", icon: <Clock size={18} />, tone: "emerald" },
+          { label: "Accepted", value: stats.accepted, caption: "Ready to collaborate", icon: <CheckCircle2 size={18} />, tone: "emerald" },
+          { label: "More information", value: stats.info, caption: "Follow-up started", icon: <AlertCircle size={18} />, tone: "amber" },
+        ]}
+        filters={[
+          { key: "PENDING", label: "Pending", count: stats.pending },
+          { key: "ACCEPTED", label: "Accepted", count: stats.accepted },
+          { key: "INFO_REQUESTED", label: "Info requested", count: stats.info },
+          { key: "ALL", label: "All requests" },
+        ]}
+        activeFilter={activeFilter}
+        onFilterChange={(k) => setActiveFilter(k as FilterKey)}
+        sortOptions={[
+          { key: "NEWEST", label: "Recently received" },
+          { key: "OLDEST", label: "Oldest first" },
+        ]}
+        sortBy={sortBy}
+        onSortChange={(k) => setSortBy(k as SortKey)}
+        loading={loading}
+        isEmpty={visible.length === 0}
+        emptyTitle={
+          activeFilter === "PENDING"
+            ? "No pending collaboration requests"
+            : activeFilter === "ACCEPTED"
+            ? "No accepted collaboration requests"
+            : activeFilter === "INFO_REQUESTED"
+            ? "No info-requested collaboration requests"
+            : "No collaboration requests found"
+        }
+        emptyDescription="When other businesses send you a B2B collaboration proposal, it will appear here for your review."
+      >
+        {visible.map((req) => {
+          const name = nameOf(req);
+          const avatar = req.requester?.company?.logoUrl || req.requester?.image;
+          const ownerName = req.requester?.name || "Founder";
+          const companyType = req.requester?.company?.type;
+          const location = req.requester?.company?.location;
+
+          return (
+            <div
+              key={req.id}
+              className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-xs space-y-4 hover:border-gray-300 transition"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Link
+                    href={`/profile/${req.requesterId}`}
+                    className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 overflow-hidden text-blue-700 font-bold text-base hover:opacity-90 transition"
+                  >
+                    {avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </Link>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/profile/${req.requesterId}`}
+                        className="text-base font-bold text-gray-900 truncate hover:text-blue-600 hover:underline"
+                      >
+                        {name}
+                      </Link>
+                      <VerificationBadge status={req.requester?.verificationStatus || "UNVERIFIED"} size="xs" />
+                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      {ownerName}
+                      {companyType ? ` • ${companyType}` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={req.status} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition cursor-pointer outline-none"
+                        aria-label="More actions"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                      <DropdownMenuItem
+                        onSelect={() => blockBusiness(req.id, req.requesterId, name)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
+                      >
+                        <Ban size={14} className="text-gray-500" />
+                        <span>Block business</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => setReportTarget({ userId: req.requesterId, name })}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
+                      >
+                        <Flag size={14} className="text-gray-500" />
+                        <span>Report</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-gray-900 leading-snug">Proposes a business collaboration</p>
+                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{req.overview}</p>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {req.expectations.slice(0, 4).map((e) => (
+                    <span key={`e-${e}`} className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      Wants: {e}
+                    </span>
+                  ))}
+                  {req.offerings.slice(0, 4).map((o) => (
+                    <span key={`o-${o}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      Offers: {o}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
+                <div>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Business type</span>
+                  <span className="mt-0.5 block text-xs font-bold text-gray-800">{companyType || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Location</span>
+                  <span className="mt-0.5 block text-xs font-bold text-gray-900">{location || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Offerings</span>
+                  <span className="mt-0.5 block text-xs font-bold text-gray-900">{req.offerings.length}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Received</span>
+                  <span className="mt-0.5 block text-xs font-medium text-gray-600">{formatRelativeTime(req.createdAt)}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setSelected(req)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                >
+                  <span>View proposal details</span>
+                  <ArrowRight size={13} />
+                </button>
+                <div className="flex items-center gap-2 self-end sm:self-auto">{actionButtons(req)}</div>
+              </div>
+            </div>
+          );
+        })}
+      </RequestsBoard>
+
+      {selected && (
+        <RequestDetailsModal
+          title={nameOf(selected)}
+          subtitle={`Received ${formatRelativeTime(selected.createdAt)}`}
+          badge={<StatusBadge status={selected.status} />}
+          sections={[
+            { label: "Collaboration overview", value: selected.overview },
+            { label: "What they expect", chips: selected.expectations },
+            { label: "What they offer", chips: selected.offerings },
+            { label: "Their contribution", value: selected.contributionDesc },
+            { label: "Resources available", value: selected.resourcesAvailable },
+            { label: "Expertise & capabilities", value: selected.expertiseCapabilities },
+            { label: "Existing assets", value: selected.existingAssets },
+          ]}
+          actions={actionButtons(selected)}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {reportTarget && (
+        <ReportCompanyModal
+          companyUserId={reportTarget.userId}
+          companyName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
+    </>
+  );
+}

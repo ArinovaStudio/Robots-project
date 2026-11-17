@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,6 +15,7 @@ import {
   Sparkles,
   TrendingUp,
   Inbox,
+  Mailbox,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,7 +40,9 @@ export default function MenuCard() {
       .then((res) => res.json())
       .then((json) => {
         if (active && json.success && Array.isArray(json.data)) {
-          const count = json.data.filter((p: any) => p.status === "PENDING" && p.investorId === user.id).length;
+          const count = json.data.filter(
+            (p: any) => p.status === "PENDING" && p.investorId === user.id
+          ).length;
           setPendingRequestsCount(count);
         }
       })
@@ -64,6 +68,11 @@ export default function MenuCard() {
       label: "B2I Collaboration",
       href: "/collaborate",
     },
+    {
+      icon: Mailbox,
+      label: "Collaboration Requests",
+      href: "/collaboration-requests",
+    },
   ];
 
   const investorMenu: MenuItem[] = [
@@ -71,12 +80,6 @@ export default function MenuCard() {
       icon: Compass,
       label: "Explore",
       href: "/explore",
-    },
-    {
-      icon: Inbox,
-      label: "Investment Requests",
-      href: "/investors/requests",
-      badge: pendingRequestsCount && pendingRequestsCount > 0 ? String(pendingRequestsCount) : undefined,
     },
     {
       icon: Sparkles,
@@ -89,9 +92,13 @@ export default function MenuCard() {
       href: "/investors/top-performers",
     },
     {
-      icon: Handshake,
-      label: "Business Collaboration",
-      href: "/collaborate",
+      icon: Inbox,
+      label: "Investment Requests",
+      href: "/investors/requests",
+      badge:
+        pendingRequestsCount && pendingRequestsCount > 0
+          ? String(pendingRequestsCount)
+          : undefined,
     },
   ];
 
@@ -122,14 +129,19 @@ export default function MenuCard() {
             href={item.href}
             className={`
               flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
-              ${isActive
-                ? "bg-blue-50 text-blue-700 font-semibold"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              ${
+                isActive
+                  ? "bg-blue-50 text-blue-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }
             `}
           >
             <div className="flex items-center gap-3">
-              <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+              <item.icon
+                className={`w-[22px] h-[22px] ${
+                  isActive ? "text-blue-600" : "text-gray-400"
+                }`}
+              />
               <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>
                 {item.label}
               </span>
@@ -154,14 +166,19 @@ export default function MenuCard() {
             href={item.href}
             className={`
               flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
-              ${isActive
-                ? "bg-blue-50 text-blue-700 font-semibold"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              ${
+                isActive
+                  ? "bg-blue-50 text-blue-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }
             `}
           >
             <div className="flex items-center gap-3">
-              <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+              <item.icon
+                className={`w-[22px] h-[22px] ${
+                  isActive ? "text-blue-600" : "text-gray-400"
+                }`}
+              />
               <span className={`text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>
                 {item.label}
               </span>

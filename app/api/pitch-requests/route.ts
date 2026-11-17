@@ -14,8 +14,12 @@ const LIMITS = {
   equityOffered: 30,
   message: 2000,
 } as const;
-
-// Global in-memory set to prevent concurrent duplicate submissions under network throttling/retries
+const investorSelect = {
+  id: true,
+  name: true,
+  image: true,
+  investor: { select: { firmName: true, investorType: true } },
+} as const;
 const inFlightPitchRequests = new Set<string>();
 
 export async function POST(req: NextRequest) {
@@ -48,8 +52,6 @@ export async function POST(req: NextRequest) {
     const message = get("message");
     const deck = formData.get("pitchDeck");
     const pitchDeckFile = deck && typeof deck !== "string" ? deck : null;
-
-    // Concurrency guard: prevent multiple in-flight requests under network throttling or retries
     const lockKey = `${user.id}:${investorId}`;
     if (inFlightPitchRequests.has(lockKey)) {
       return NextResponse.json(
@@ -92,8 +94,6 @@ export async function POST(req: NextRequest) {
       if (!investor || investor.accountType !== "INVESTOR" || investor.status !== "ACTIVE") {
         return NextResponse.json({ success: false, message: "Investor not found." }, { status: 404 });
       }
-
-      // Check if this business already sent a pitch request to this investor (at max one per investor)
       const existing = await prisma.pitchRequest.findFirst({
         where: { senderId: user.id, investorId },
         select: { id: true, status: true },
@@ -224,6 +224,7 @@ export async function GET(req: NextRequest) {
               },
             },
           },
+          investor: { select: investorSelect },
         },
       });
 
@@ -259,6 +260,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        investor: { select: investorSelect },
       },
     });
 
