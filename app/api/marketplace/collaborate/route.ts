@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
+import { autoConnectUsers } from "@/lib/auto-connect";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
@@ -308,15 +309,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (status === "ACCEPTED") {
-      await prisma.follow
-        .createMany({
-          data: [
-            { followerId: user.id, followingId: collab.requesterId },
-            { followerId: collab.requesterId, followingId: user.id },
-          ],
-          skipDuplicates: true,
-        })
-        .catch(() => {});
+      await autoConnectUsers(user.id, collab.requesterId);
     }
 
     // Best effort: tell the business that sent the proposal

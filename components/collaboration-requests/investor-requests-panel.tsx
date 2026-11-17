@@ -36,12 +36,14 @@ interface ReceivedOffer {
 type FilterKey = "PENDING" | "ACCEPTED" | "DECLINED" | "ALL";
 type SortKey = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
 
-const SORT_OPTIONS = [
-  { key: "NEWEST", label: "Recently received" },
-  { key: "OLDEST", label: "Oldest first" },
-  { key: "HIGH_FUNDING", label: "Highest seeking amount" },
-  { key: "LOW_FUNDING", label: "Lowest seeking amount" },
-];
+function getSortOptions(direction: "received" | "sent") {
+  return [
+    { key: "NEWEST", label: direction === "sent" ? "Recently sent" : "Recently received" },
+    { key: "OLDEST", label: "Oldest first" },
+    { key: "HIGH_FUNDING", label: "Highest seeking amount" },
+    { key: "LOW_FUNDING", label: "Lowest seeking amount" },
+  ];
+}
 
 interface InvestorRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
@@ -53,6 +55,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
   const [direction, setDirection] = useState<"received" | "sent">("received");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<ReceivedOffer | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -120,7 +123,22 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   }, [stats.pending, onPendingCountChange]);
 
   const visible = useMemo(() => {
-    const list = offers.filter((o) => activeFilter === "ALL" || o.status === activeFilter);
+    const q = searchQuery.trim().toLowerCase();
+    const list = offers.filter((o) => {
+      if (activeFilter !== "ALL" && o.status !== activeFilter) return false;
+      if (q) {
+        const name = (o.name || "").toLowerCase();
+        const firm = (o.firmName || "").toLowerCase();
+        const title = (o.pitchTitle || "").toLowerCase();
+        const terms = (o.terms || "").toLowerCase();
+        const message = (o.message || "").toLowerCase();
+        const matchesQuery =
+          name.includes(q) || firm.includes(q) || title.includes(q) || terms.includes(q) || message.includes(q);
+        if (!matchesQuery) return false;
+      }
+      return true;
+    });
+
     return [...list].sort((a, b) => {
       switch (sortBy) {
         case "OLDEST":
@@ -133,7 +151,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
     });
-  }, [offers, activeFilter, sortBy]);
+  }, [offers, activeFilter, sortBy, searchQuery]);
 
   const respond = async (id: string, action: "ACCEPTED" | "DECLINED") => {
     setProcessingId(id);
@@ -212,32 +230,39 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         stats={[
           { label: "Awaiting review", value: stats.pending, caption: "Needs your decision", icon: <Clock size={18} />, tone: "emerald" },
           { label: "Accepted", value: stats.accepted, caption: "Ready to connect", icon: <CheckCircle2 size={18} />, tone: "emerald" },
-          { label: "Declined", value: stats.declined, caption: "Closed offers", icon: <XCircle size={18} />, tone: "amber" },
+          { label: "Rejected", value: stats.declined, caption: "Closed offers", icon: <XCircle size={18} />, tone: "amber" },
         ]}
         filters={[
           { key: "PENDING", label: "Pending", count: stats.pending },
           { key: "ACCEPTED", label: "Accepted", count: stats.accepted },
-          { key: "DECLINED", label: "Declined", count: stats.declined },
+          { key: "DECLINED", label: "Rejected", count: stats.declined },
           { key: "ALL", label: "All requests" },
         ]}
         activeFilter={activeFilter}
         onFilterChange={(k) => setActiveFilter(k as FilterKey)}
-        sortOptions={SORT_OPTIONS}
+        sortOptions={getSortOptions(direction)}
         sortBy={sortBy}
         onSortChange={(k) => setSortBy(k as SortKey)}
         direction={direction}
         onDirectionChange={(d) => setDirection(d)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search investor requests..."
         loading={loading}
         isEmpty={visible.length === 0}
         emptyTitle={
-          direction === "sent"
+          searchQuery
+            ? `No requests found matching "${searchQuery}"`
+            : direction === "sent"
             ? "No sent pitch requests"
             : activeFilter === "ALL"
             ? "No investor requests yet"
-            : `No ${activeFilter.toLowerCase()} investor requests`
+            : `No ${activeFilter === "DECLINED" ? "rejected" : activeFilter.toLowerCase()} investor requests`
         }
         emptyDescription={
-          direction === "sent"
+          searchQuery
+            ? "Try searching with different keywords or clearing your search."
+            : direction === "sent"
             ? "When you send pitch requests to investors, they will appear here."
             : "When an investor sends an investment offer on one of your pitches, it will appear here for your review."
         }

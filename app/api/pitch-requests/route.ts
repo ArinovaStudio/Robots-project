@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { autoConnectUsers } from "@/lib/auto-connect";
 import { uploadFile } from "@/lib/uploads";
 import { formatTargetAmount } from "@/lib/utils";
 
@@ -298,15 +299,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (status === "ACCEPTED") {
-      await prisma.follow
-        .createMany({
-          data: [
-            { followerId: user.id, followingId: pitch.senderId },
-            { followerId: pitch.senderId, followingId: user.id },
-          ],
-          skipDuplicates: true,
-        })
-        .catch(() => {});
+      await autoConnectUsers(user.id, pitch.senderId);
     }
 
     return NextResponse.json({ success: true, data: updated });

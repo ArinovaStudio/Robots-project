@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,9 @@ interface RequestsBoardProps {
   onSortChange: (key: string) => void;
   direction?: "received" | "sent";
   onDirectionChange?: (dir: "received" | "sent") => void;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  searchPlaceholder?: string;
   loading: boolean;
   isEmpty: boolean;
   emptyTitle: string;
@@ -59,6 +62,9 @@ export default function RequestsBoard({
   onSortChange,
   direction = "received",
   onDirectionChange,
+  searchQuery,
+  onSearchChange,
+  searchPlaceholder,
   loading,
   isEmpty,
   emptyTitle,
@@ -88,8 +94,8 @@ export default function RequestsBoard({
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
             {filters.map((f) => {
               const active = activeFilter === f.key;
               return (
@@ -116,7 +122,30 @@ export default function RequestsBoard({
             })}
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
+            {/* Search input */}
+            {onSearchChange && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder || "Search requests..."}
+                  value={searchQuery || ""}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="w-44 sm:w-52 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Adjacent Left: Sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -185,9 +214,20 @@ export default function RequestsBoard({
         </div>
       ) : isEmpty ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500 space-y-3">
-          <Sparkles className="mx-auto h-12 w-12 text-gray-300" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+            <Search size={22} strokeWidth={2} />
+          </div>
           <h3 className="text-base font-bold text-gray-800">{emptyTitle}</h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto">{emptyDescription}</p>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange?.("")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs mt-2"
+            >
+              Clear search
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">{children}</div>

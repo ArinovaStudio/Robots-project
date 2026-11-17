@@ -4,17 +4,28 @@ import { useState } from "react";
 import { X, Loader2, DollarSign, Building2, Calendar, FileText } from "lucide-react";
 import { toast } from "sonner";
 
+interface RecordedInvestmentData {
+  id?: string;
+  companyName: string;
+  amount?: string | null;
+  stage?: string | null;
+  year?: number | string | null;
+  notes?: string | null;
+}
+
 interface RecordInvestmentModalProps {
+  initialData?: RecordedInvestmentData | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function RecordInvestmentModal({ onClose, onSuccess }: RecordInvestmentModalProps) {
-  const [companyName, setCompanyName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [stage, setStage] = useState("Seed");
-  const [year, setYear] = useState(new Date().getFullYear().toString());
-  const [notes, setNotes] = useState("");
+export default function RecordInvestmentModal({ initialData, onClose, onSuccess }: RecordInvestmentModalProps) {
+  const isEditing = !!initialData?.id;
+  const [companyName, setCompanyName] = useState(initialData?.companyName || "");
+  const [amount, setAmount] = useState(initialData?.amount || "");
+  const [stage, setStage] = useState(initialData?.stage || "Seed");
+  const [year, setYear] = useState((initialData?.year || new Date().getFullYear()).toString());
+  const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,25 +37,31 @@ export default function RecordInvestmentModal({ onClose, onSuccess }: RecordInve
 
     setLoading(true);
     try {
+      const method = isEditing ? "PATCH" : "POST";
+      const payload: Record<string, any> = {
+        companyName: companyName.trim(),
+        amount: amount.trim() || undefined,
+        stage,
+        year: parseInt(year, 10) || new Date().getFullYear(),
+        notes: notes.trim() || undefined,
+      };
+      if (isEditing && initialData?.id) {
+        payload.id = initialData.id;
+      }
+
       const res = await fetch("/api/investor/investments", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: companyName.trim(),
-          amount: amount.trim() || undefined,
-          stage,
-          year: parseInt(year, 10) || new Date().getFullYear(),
-          notes: notes.trim() || undefined
-        })
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success("Investment added to portfolio!");
+        toast.success(isEditing ? "Investment updated successfully!" : "Investment added to portfolio!");
         onSuccess();
         onClose();
       } else {
-        toast.error(data.message || "Failed to record investment");
+        toast.error(data.message || (isEditing ? "Failed to update investment" : "Failed to record investment"));
       }
     } catch {
       toast.error("An error occurred. Please try again.");
@@ -58,8 +75,14 @@ export default function RecordInvestmentModal({ onClose, onSuccess }: RecordInve
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between pb-4 border-b border-gray-100">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Record New Investment</h3>
-            <p className="text-xs text-gray-500">Add a company you have invested in to update your portfolio.</p>
+            <h3 className="text-lg font-bold text-gray-900">
+              {isEditing ? "Edit Investment" : "Record New Investment"}
+            </h3>
+            <p className="text-xs text-gray-500">
+              {isEditing
+                ? "Update the details of your recorded portfolio investment."
+                : "Add a company you have invested in to update your portfolio."}
+            </p>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition">
             <X size={18} />
@@ -164,10 +187,10 @@ export default function RecordInvestmentModal({ onClose, onSuccess }: RecordInve
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm flex items-center gap-2"
+              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm flex items-center gap-2 cursor-pointer"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
-              Save Investment
+              {isEditing ? "Save Changes" : "Save Investment"}
             </button>
           </div>
         </form>

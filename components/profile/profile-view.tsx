@@ -54,6 +54,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
   const [showPitchModal, setShowPitchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRecordInvestmentModal, setShowRecordInvestmentModal] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<any | null>(null);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showUnfollowModal, setShowUnfollowModal] = useState(false);
@@ -217,6 +218,26 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       toast.error("Failed to update connection.");
     } finally {
       setIsConnectLoading(false);
+    }
+  };
+
+  const handleDeleteInvestment = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to remove "${name}" from your portfolio?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/investor/investments?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        toast.success("Investment removed from portfolio.");
+        fetchProfileData();
+      } else {
+        toast.error(data.message || "Failed to remove investment.");
+      }
+    } catch {
+      toast.error("An error occurred while removing investment.");
     }
   };
 
@@ -429,32 +450,31 @@ export default function ProfileView({ userId }: ProfileViewProps) {
       <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-200 p-1.5">
         {!viewerState.isOwnProfile && (
           <>
-            {connectionStatus === "ACCEPTED" && (
-              <>
-                {isInvestorOnly ? (
-                  <DropdownMenuItem
-                    onSelect={() => setShowPitchModal(true)}
-                    className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
-                  >
-                    <Send size={16} className="text-gray-600" /> Send pitch request
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onSelect={() => setShowCollaborateModal(true)}
-                    className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
-                  >
-                    <Handshake size={16} className="text-gray-600" /> Collaborate
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onSelect={toggleConnect}
-                  className="gap-2.5 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 cursor-pointer"
-                >
-                  <UserMinus size={16} className="text-red-500" /> Remove connection
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
+            {isInvestorOnly ? (
+              <DropdownMenuItem
+                onSelect={() => setShowPitchModal(true)}
+                className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+              >
+                <Send size={16} className="text-gray-600" /> Send pitch request
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onSelect={() => setShowCollaborateModal(true)}
+                className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
+              >
+                <Handshake size={16} className="text-gray-600" /> Collaborate
+              </DropdownMenuItem>
             )}
+
+            {connectionStatus === "ACCEPTED" && (
+              <DropdownMenuItem
+                onSelect={toggleConnect}
+                className="gap-2.5 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                <UserMinus size={16} className="text-red-500" /> Remove connection
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
 
             {(isFollowing || connectionStatus === "ACCEPTED") && (
               <DropdownMenuItem
@@ -494,7 +514,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          onSelect={() => router.push(`/profile/${userId}/posts`)}
+          onSelect={() => {
+            document.getElementById("activity-section")?.scrollIntoView({ behavior: "smooth" });
+          }}
           className="gap-2.5 px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer"
         >
           <ActivityIcon size={16} className="text-gray-600" /> Activity
@@ -809,7 +831,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   </div>
                 </Link>
 
-                <Link href={`/profile/${userId}/posts`} className="group flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 hover:border-blue-200 hover:bg-blue-50/40 transition">
+                <Link href="#activity-section" className="group flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 hover:border-blue-200 hover:bg-blue-50/40 transition">
                   <BarChart2 size={19} className="text-[#0a66c2] mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-gray-900 group-hover:text-[#0a66c2] transition">
@@ -837,7 +859,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             </div>
 
             <Link
-              href={`/profile/${userId}/posts`}
+              href="#activity-section"
               className="flex items-center justify-center gap-1.5 border-t border-gray-200 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
               Show all <ArrowRight size={15} />
@@ -848,7 +870,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
 
       {/* 4. Activity Card */}
       <ScrollReveal direction="up" delay={0.1}>
-        <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+        <section id="activity-section" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-5 pb-4">
             {/* Header Row */}
             <div className="flex items-start justify-between gap-3">
@@ -865,8 +887,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                {viewerState.isOwnProfile && (
+              {viewerState.isOwnProfile && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowCreatePostModal(true)}
@@ -874,15 +896,8 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   >
                     Create a post
                   </button>
-                )}
-                <Link
-                  href={`/profile/${userId}/posts`}
-                  aria-label="Manage posts"
-                  className="p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
-                >
-                  <Pencil size={17} />
-                </Link>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Filter Pills */}
@@ -1126,12 +1141,14 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             </div>
           </div>
 
-          <Link
-            href={activityTab === "saved" ? "/profile/saved-posts" : `/profile/${userId}/posts`}
-            className="flex items-center justify-center gap-1.5 border-t border-gray-200 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-          >
-            Show all <ArrowRight size={15} />
-          </Link>
+          {activityTab === "saved" && (
+            <Link
+              href="/profile/saved-posts"
+              className="flex items-center justify-center gap-1.5 border-t border-gray-200 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              Show all saved <ArrowRight size={15} />
+            </Link>
+          )}
         </section>
       </ScrollReveal>
 
@@ -1389,14 +1406,47 @@ export default function ProfileView({ userId }: ProfileViewProps) {
             {investor.recordedInvestments?.length > 0 || investor.previousStartups?.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {investor.recordedInvestments?.map((inv: any) => (
-                  <div key={inv.id} className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                  <div key={inv.id} className="relative rounded-xl border border-gray-200 bg-gray-50/60 p-4 transition hover:border-gray-300">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-bold text-gray-900 text-sm">{inv.companyName}</h4>
-                      <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                        {inv.stage}
-                      </span>
+                      <div className="min-w-0 pr-2">
+                        <h4 className="font-bold text-gray-900 text-sm truncate">{inv.companyName}</h4>
+                        <span className="mt-1 inline-block rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          {inv.stage}
+                        </span>
+                      </div>
+                      {viewerState.isOwnProfile && (
+                        <div className="shrink-0">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer"
+                                aria-label="Investment options"
+                              >
+                                <MoreHorizontal size={15} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                              <DropdownMenuItem
+                                onSelect={() => setEditingInvestment(inv)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                              >
+                                <Pencil size={13} className="text-gray-500" />
+                                <span>Edit details</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => handleDeleteInvestment(inv.id, inv.companyName)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                              >
+                                <Trash2 size={13} className="text-red-500" />
+                                <span>Delete record</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
                     </div>
-                    {inv.amount && <p className="mt-1 text-xs font-semibold text-gray-700">{inv.amount}</p>}
+                    {inv.amount && <p className="mt-1.5 text-xs font-semibold text-gray-700">{inv.amount}</p>}
                     <p className="mt-1 text-[11px] text-gray-500">Invested {inv.year || "Recently"}</p>
                     {inv.notes && <p className="mt-2 text-xs text-gray-600 line-clamp-2">{inv.notes}</p>}
                   </div>
@@ -1880,10 +1930,18 @@ export default function ProfileView({ userId }: ProfileViewProps) {
         />
       )}
 
-      {showRecordInvestmentModal && (
+      {(showRecordInvestmentModal || editingInvestment) && (
         <RecordInvestmentModal
-          onClose={() => setShowRecordInvestmentModal(false)}
-          onSuccess={() => fetchProfileData()}
+          initialData={editingInvestment}
+          onClose={() => {
+            setShowRecordInvestmentModal(false);
+            setEditingInvestment(null);
+          }}
+          onSuccess={() => {
+            setShowRecordInvestmentModal(false);
+            setEditingInvestment(null);
+            fetchProfileData();
+          }}
         />
       )}
 

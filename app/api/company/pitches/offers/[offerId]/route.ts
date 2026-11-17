@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { autoConnectUsers } from "@/lib/auto-connect";
 
 export async function PATCH(
   req: NextRequest,
@@ -55,6 +56,10 @@ export async function PATCH(
         }
       });
     });
+
+    if (action === "ACCEPTED") {
+      await autoConnectUsers(user.id, offer.investorId);
+    }
 
     return NextResponse.json({
       success: true,

@@ -19,7 +19,7 @@ import {
   Loader2,
   ChevronDown,
   Building2,
-  Sparkles,
+  Search,
   ArrowLeftRight,
   Landmark,
 } from "lucide-react";
@@ -57,7 +57,7 @@ interface PitchRequestItem extends PitchRequestData {
   } | null;
 }
 
-type FilterTab = "PENDING" | "ACCEPTED" | "REVIEWED" | "ALL";
+type FilterTab = "PENDING" | "ACCEPTED" | "REVIEWED" | "DECLINED" | "ALL";
 type SortOption = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
 
 function formatReceivedTime(dateString: string) {
@@ -95,6 +95,7 @@ export default function InvestorRequestsClient() {
   const user = useUserStore((s) => s.user);
   const [division, setDivision] = useState<"business" | "investor">("business");
   const [direction, setDirection] = useState<"received" | "sent">("received");
+  const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
   const [investorOffers, setInvestorOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,16 +196,35 @@ export default function InvestorRequestsClient() {
   const stats = useMemo(() => {
     const pending = activeRequests.filter((r) => r.status === "PENDING").length;
     const accepted = activeRequests.filter((r) => r.status === "ACCEPTED").length;
-    const reviewed = activeRequests.filter((r) => r.status === "REVIEWED" || r.status === "DECLINED").length;
-    return { pending, accepted, reviewed };
+    const reviewed = activeRequests.filter((r) => r.status === "REVIEWED").length;
+    const declined = activeRequests.filter((r) => r.status === "DECLINED" || r.status === "REJECTED").length;
+    return { pending, accepted, reviewed, declined };
   }, [activeRequests]);
 
   // Filter & sort
   const filteredRequests = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     const list = activeRequests.filter((r) => {
-      if (activeTab === "PENDING") return r.status === "PENDING";
-      if (activeTab === "ACCEPTED") return r.status === "ACCEPTED";
-      if (activeTab === "REVIEWED") return r.status === "REVIEWED" || r.status === "DECLINED";
+      if (activeTab === "PENDING" && r.status !== "PENDING") return false;
+      if (activeTab === "ACCEPTED" && r.status !== "ACCEPTED") return false;
+      if (activeTab === "REVIEWED" && r.status !== "REVIEWED") return false;
+      if (activeTab === "DECLINED" && r.status !== "DECLINED" && r.status !== "REJECTED") return false;
+
+      if (q) {
+        const founder = (r.sender?.name || "").toLowerCase();
+        const company = (r.sender?.company?.companyName || r.companyName || "").toLowerCase();
+        const problem = (r.problemStatement || "").toLowerCase();
+        const solution = (r.proposedSolution || "").toLowerCase();
+        const message = (r.message || "").toLowerCase();
+        const matchesQuery =
+          founder.includes(q) ||
+          company.includes(q) ||
+          problem.includes(q) ||
+          solution.includes(q) ||
+          message.includes(q);
+        if (!matchesQuery) return false;
+      }
+
       return true;
     });
 
@@ -223,7 +243,7 @@ export default function InvestorRequestsClient() {
       }
       return 0;
     });
-  }, [activeRequests, activeTab, sortBy]);
+  }, [activeRequests, activeTab, sortBy, searchQuery]);
 
   const handleUpdateStatus = async (id: string, newStatus: "ACCEPTED" | "DECLINED" | "REVIEWED") => {
     setProcessingId(id);
@@ -304,7 +324,7 @@ export default function InvestorRequestsClient() {
   const sortLabel = () => {
     switch (sortBy) {
       case "NEWEST":
-        return "Recently received";
+        return direction === "sent" ? "Recently sent" : "Recently received";
       case "OLDEST":
         return "Oldest first";
       case "HIGH_FUNDING":
@@ -312,7 +332,7 @@ export default function InvestorRequestsClient() {
       case "LOW_FUNDING":
         return "Lowest seeking amount";
       default:
-        return "Recently received";
+        return direction === "sent" ? "Recently sent" : "Recently received";
     }
   };
 
@@ -454,6 +474,25 @@ export default function InvestorRequestsClient() {
 
             <button
               type="button"
+              onClick={() => setActiveTab("DECLINED")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
+                activeTab === "DECLINED"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+              }`}
+            >
+              Rejected
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                  activeTab === "DECLINED" ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {stats.declined}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab("ALL")}
               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
                 activeTab === "ALL"
@@ -465,8 +504,29 @@ export default function InvestorRequestsClient() {
             </button>
           </div>
 
-          {/* 2 Dropdowns on right */}
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          {/* Search + 2 Dropdowns on right */}
+          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search investment requests..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-44 sm:w-52 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
             {/* Adjacent Left: Sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -485,7 +545,7 @@ export default function InvestorRequestsClient() {
                     sortBy === "NEWEST" ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
                   }`}
                 >
-                  Recently received
+                  {direction === "sent" ? "Recently sent" : "Recently received"}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => setSortBy("OLDEST")}
@@ -557,9 +617,13 @@ export default function InvestorRequestsClient() {
         </div>
       ) : filteredRequests.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500 space-y-3">
-          <Sparkles className="mx-auto h-12 w-12 text-gray-300" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+            <Search size={22} strokeWidth={2} />
+          </div>
           <h3 className="text-base font-bold text-gray-800">
-            {direction === "sent"
+            {searchQuery
+              ? `No requests found matching "${searchQuery}"`
+              : direction === "sent"
               ? division === "business"
                 ? "No sent pitch requests"
                 : "No sent investment offers"
@@ -569,13 +633,26 @@ export default function InvestorRequestsClient() {
               ? "No accepted investment requests"
               : activeTab === "REVIEWED"
               ? "No info-requested requests"
+              : activeTab === "DECLINED"
+              ? "No rejected investment requests"
               : "No investment requests found"}
           </h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto">
-            {direction === "sent"
+            {searchQuery
+              ? "Try searching with a different keyword, company name, or clearing your search."
+              : direction === "sent"
               ? "When you send pitch requests or investment offers, they will appear here."
               : "When startups and businesses send you pitch requests, they will appear here for your review and evaluation."}
           </p>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs mt-2"
+            >
+              Clear search
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

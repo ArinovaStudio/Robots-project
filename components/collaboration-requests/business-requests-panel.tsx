@@ -68,15 +68,17 @@ export interface B2BRequest {
   } | null;
 }
 
-type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "ALL";
+type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "DECLINED" | "ALL";
 type SortKey = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
 
-const SORT_OPTIONS = [
-  { key: "NEWEST", label: "Recently received" },
-  { key: "OLDEST", label: "Oldest first" },
-  { key: "HIGH_FUNDING", label: "Highest seeking amount" },
-  { key: "LOW_FUNDING", label: "Lowest seeking amount" },
-];
+function getSortOptions(direction: "received" | "sent") {
+  return [
+    { key: "NEWEST", label: direction === "sent" ? "Recently sent" : "Recently received" },
+    { key: "OLDEST", label: "Oldest first" },
+    { key: "HIGH_FUNDING", label: "Highest seeking amount" },
+    { key: "LOW_FUNDING", label: "Lowest seeking amount" },
+  ];
+}
 
 interface BusinessRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
@@ -89,6 +91,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
   const [direction, setDirection] = useState<"received" | "sent">("received");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<B2BRequest | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -122,6 +125,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
       pending: requests.filter((r) => r.status === "PENDING").length,
       accepted: requests.filter((r) => r.status === "ACCEPTED").length,
       info: requests.filter((r) => r.status === "INFO_REQUESTED").length,
+      declined: requests.filter((r) => r.status === "DECLINED" || r.status === "REJECTED").length,
     }),
     [requests]
   );
@@ -130,8 +134,41 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     onPendingCountChange?.(stats.pending);
   }, [stats.pending, onPendingCountChange]);
 
+  const partnerOf = (req: B2BRequest) => (direction === "sent" ? req.recipient : req.requester);
+  const partnerIdOf = (req: B2BRequest) =>
+    direction === "sent" ? req.recipientId || req.recipient?.id || "" : req.requesterId;
+  const nameOf = (req: B2BRequest) => {
+    const p = partnerOf(req);
+    return p?.company?.companyName || p?.name || "Business";
+  };
+
   const visible = useMemo(() => {
-    const list = requests.filter((r) => activeFilter === "ALL" || r.status === activeFilter);
+    const q = searchQuery.trim().toLowerCase();
+    const list = requests.filter((r) => {
+      if (activeFilter === "DECLINED") {
+        if (r.status !== "DECLINED" && r.status !== "REJECTED") return false;
+      } else if (activeFilter !== "ALL" && r.status !== activeFilter) {
+        return false;
+      }
+
+      if (q) {
+        const name = nameOf(r).toLowerCase();
+        const overview = (r.overview || "").toLowerCase();
+        const contribution = (r.contributionDesc || "").toLowerCase();
+        const offerings = (r.offerings || []).join(" ").toLowerCase();
+        const expectations = (r.expectations || []).join(" ").toLowerCase();
+        const matchesQuery =
+          name.includes(q) ||
+          overview.includes(q) ||
+          contribution.includes(q) ||
+          offerings.includes(q) ||
+          expectations.includes(q);
+        if (!matchesQuery) return false;
+      }
+
+      return true;
+    });
+
     return [...list].sort((a, b) => {
       switch (sortBy) {
         case "OLDEST":
@@ -144,15 +181,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
     });
-  }, [requests, activeFilter, sortBy]);
-
-  const partnerOf = (req: B2BRequest) => (direction === "sent" ? req.recipient : req.requester);
-  const partnerIdOf = (req: B2BRequest) =>
-    direction === "sent" ? req.recipientId || req.recipient?.id || "" : req.requesterId;
-  const nameOf = (req: B2BRequest) => {
-    const p = partnerOf(req);
-    return p?.company?.companyName || p?.name || "Business";
-  };
+  }, [requests, activeFilter, sortBy, searchQuery, direction]);
 
   const cancelProposal = async (id: string) => {
     setProcessingId(id);
@@ -352,19 +381,25 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
           { key: "PENDING", label: "Pending", count: stats.pending },
           { key: "ACCEPTED", label: "Accepted", count: stats.accepted },
           { key: "INFO_REQUESTED", label: "Info requested", count: stats.info },
+          { key: "DECLINED", label: "Rejected", count: stats.declined },
           { key: "ALL", label: "All requests" },
         ]}
         activeFilter={activeFilter}
         onFilterChange={(k) => setActiveFilter(k as FilterKey)}
-        sortOptions={SORT_OPTIONS}
+        sortOptions={getSortOptions(direction)}
         sortBy={sortBy}
         onSortChange={(k) => setSortBy(k as SortKey)}
         direction={direction}
         onDirectionChange={(d) => setDirection(d)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search collaboration requests..."
         loading={loading}
         isEmpty={visible.length === 0}
         emptyTitle={
-          direction === "sent"
+          searchQuery
+            ? `No requests found matching "${searchQuery}"`
+            : direction === "sent"
             ? "No sent collaboration requests"
             : activeFilter === "PENDING"
             ? "No pending collaboration requests"
@@ -372,10 +407,14 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             ? "No accepted collaboration requests"
             : activeFilter === "INFO_REQUESTED"
             ? "No info-requested collaboration requests"
+            : activeFilter === "DECLINED"
+            ? "No rejected collaboration requests"
             : "No collaboration requests found"
         }
         emptyDescription={
-          direction === "sent"
+          searchQuery
+            ? "Try searching with different keywords or clearing your search."
+            : direction === "sent"
             ? "You have not sent any collaboration proposals to other businesses yet."
             : "When other businesses send you a B2B collaboration proposal, it will appear here for your review."
         }
