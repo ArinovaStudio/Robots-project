@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 
 export default function InvestorTopPerformersPage() {
   return (
-    <section className="mx-auto max-w-5xl py-6">
+    <div className="mx-auto max-w-6xl space-y-4 pb-24">
       <InvestorDirectory />
-    </section>
+    </div>
   );
 }

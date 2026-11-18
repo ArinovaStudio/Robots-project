@@ -1,9 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2, Send, CheckCircle2, ChevronDown, Plus, Search } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Building2,
+  Handshake,
+  IndianRupee,
+  Loader2,
+  MessageSquareText,
+  Percent,
+  Send,
+  Upload,
+  X,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useUserStore } from "@/store/AuthStore";
 
+export const COLLABORATION_TYPES = [
+  "Capital investment",
+  "Strategic Partnership",
+  "Business companion",
+  "Market access and networking",
+  "Revenue / profit sharing",
+  "Debt / venture debt recovering",
+] as const;
+
+// Retained for backwards compatibility
 export const COLLABORATION_EXPECTATIONS = [
   "Access to new customers",
   "Expand into new markets",
@@ -35,6 +58,18 @@ export const BUSINESS_OFFERINGS = [
   "Other",
 ] as const;
 
+const MESSAGE_MAX = 1000;
+
+const labelClass = "mb-1.5 block text-xs font-semibold text-gray-800";
+const fieldWrap =
+  "flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30";
+const fieldInput =
+  "w-full bg-transparent py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:opacity-60";
+
+function Required() {
+  return <span className="text-red-500"> *</span>;
+}
+
 interface CollaborateModalProps {
   recipientId: string;
   companyName: string;
@@ -48,452 +83,314 @@ export default function CollaborateModal({
   onClose,
   onSuccess,
 }: CollaborateModalProps) {
-  // Section 1: Expectations
-  const [selectedExpectations, setSelectedExpectations] = useState<string[]>([]);
-  const [expectationSearch, setExpectationSearch] = useState("");
-  const [showExpectationDropdown, setShowExpectationDropdown] = useState(false);
+  const me = useUserStore((s) => s.user);
+  const requesterName = me?.investor?.firmName || me?.company?.companyName || me?.name || "You";
 
-  // Section 2: Offerings
-  const [selectedOfferings, setSelectedOfferings] = useState<string[]>([]);
-  const [offeringSearch, setOfferingSearch] = useState("");
-  const [showOfferingDropdown, setShowOfferingDropdown] = useState(false);
-
-  // Section 3: Additional Details
-  const [contributionDesc, setContributionDesc] = useState("");
-  const [resourcesAvailable, setResourcesAvailable] = useState("");
-  const [expertiseCapabilities, setExpertiseCapabilities] = useState("");
-  const [existingAssets, setExistingAssets] = useState("");
-
-  // Section 4: Collaboration Overview
-  const [overview, setOverview] = useState("");
-
+  const [collaborationType, setCollaborationType] = useState("");
+  const [targetOpportunity, setTargetOpportunity] = useState("");
+  const [proposedInvestment, setProposedInvestment] = useState("");
+  const [yourParticipation, setYourParticipation] = useState("");
+  const [message, setMessage] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleExpectation = (item: string) => {
-    if (selectedExpectations.includes(item)) {
-      setSelectedExpectations((prev) => prev.filter((i) => i !== item));
-    } else {
-      setSelectedExpectations((prev) => [...prev, item]);
-    }
-  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    e.target.value = "";
+    if (!selected) return;
 
-  const toggleOffering = (item: string) => {
-    if (selectedOfferings.includes(item)) {
-      setSelectedOfferings((prev) => prev.filter((i) => i !== item));
-    } else {
-      setSelectedOfferings((prev) => [...prev, item]);
+    if (selected.size > 25 * 1024 * 1024) {
+      toast.error("File size must be 25 MB or smaller.");
+      return;
     }
+    setFile(selected);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    if (loading) return;
 
-    if (selectedExpectations.length === 0) {
-      setError("Please select at least one collaboration expectation.");
-      return;
-    }
-
-    if (selectedOfferings.length === 0) {
-      setError("Please select at least one item your business can offer.");
-      return;
-    }
-
-    if (!overview.trim() || overview.trim().length < 10) {
-      setError("Please write a detailed collaboration overview (at least 10 characters).");
+    if (
+      !collaborationType ||
+      !targetOpportunity.trim() ||
+      !proposedInvestment.trim() ||
+      !yourParticipation.trim() ||
+      !message.trim()
+    ) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch("/api/marketplace/collaborate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipientId,
-          expectations: selectedExpectations,
-          offerings: selectedOfferings,
-          contributionDesc: contributionDesc.trim() || undefined,
-          resourcesAvailable: resourcesAvailable.trim() || undefined,
-          expertiseCapabilities: expertiseCapabilities.trim() || undefined,
-          existingAssets: existingAssets.trim() || undefined,
-          overview: overview.trim(),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to submit collaboration request");
+      const formData = new FormData();
+      formData.append("recipientId", recipientId);
+      formData.append("collaborationType", collaborationType);
+      formData.append("targetOpportunity", targetOpportunity.trim());
+      formData.append("proposedInvestment", proposedInvestment.trim());
+      formData.append("yourParticipation", yourParticipation.trim());
+      formData.append("message", message.trim());
+      if (file) {
+        formData.append("document", file);
       }
 
-      setSubmitted(true);
-      toast.success("Collaboration request submitted successfully!");
-      if (onSuccess) onSuccess();
-    } catch (err: any) {
-      setError(err.message || "An error occurred while submitting your request.");
+      const res = await fetch("/api/marketplace/collaborate", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        toast.error(json?.message || "Failed to send collaboration request.");
+        return;
+      }
+
+      toast.success(`Collaboration request sent to ${companyName}.`);
+      onSuccess?.();
+      onClose();
+    } catch {
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredExpectations = COLLABORATION_EXPECTATIONS.filter((item) =>
-    item.toLowerCase().includes(expectationSearch.toLowerCase().trim())
-  );
-
-  const filteredOfferings = BUSINESS_OFFERINGS.filter((item) =>
-    item.toLowerCase().includes(offeringSearch.toLowerCase().trim())
-  );
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl rounded-2xl bg-white border border-[#E5E7EB] shadow-2xl my-8 overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="border-b border-gray-100 bg-[#EFF6FF] px-6 py-4 flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="collab-modal-title"
+    >
+      <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="flex shrink-0 items-start justify-between border-b border-gray-100 px-6 py-4">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-white border border-blue-200 px-2.5 py-0.5 rounded-full">
-              B2B Collaboration Proposal
-            </span>
-            <h2 className="text-xl font-bold text-[#172033] mt-1">
-              Collaborate with {companyName}
-            </h2>
+            <div className="flex items-center gap-2">
+              <Handshake className="h-5 w-5 text-blue-600" />
+              <h3 id="collab-modal-title" className="text-lg font-bold text-gray-900">
+                Collaboration request with {companyName}
+              </h3>
+            </div>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Invite <span className="font-semibold text-gray-700">{companyName}</span> to collaborate on an opportunity.
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-blue-100 text-[#64748B] hover:text-[#172033] transition"
+            disabled={loading}
+            aria-label="Close"
+            className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {submitted ? (
-          <div className="p-8 text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#2563EB]">
-              <CheckCircle2 size={32} />
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+            {/* 1. Requesting investor and collaborating business prefetched */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>
+                  Requesting Investor<Required /> <span className="font-normal text-gray-500">(You)</span>
+                </label>
+                <div className={`${fieldWrap} bg-gray-50`}>
+                  <Building2 size={16} className="shrink-0 text-gray-500" />
+                  <input value={requesterName} readOnly tabIndex={-1} className={`${fieldInput} cursor-not-allowed`} />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Collaborating Business<Required />
+                </label>
+                <div className={`${fieldWrap} bg-gray-50`}>
+                  <Building2 size={16} className="shrink-0 text-gray-500" />
+                  <input value={companyName} readOnly tabIndex={-1} className={`${fieldInput} cursor-not-allowed`} />
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-[#172033]">Proposal Sent!</h3>
-            <p className="text-sm text-[#64748B] max-w-md mx-auto leading-relaxed">
-              Your collaboration proposal has been securely delivered to{" "}
-              <strong className="text-[#172033]">{companyName}</strong>. They will be notified to review your
-              expectations, offerings, and overview.
-            </p>
-            <div className="pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl bg-[#2563EB] px-6 py-2.5 text-xs font-bold text-white hover:bg-blue-700 transition"
-              >
-                Close
-              </button>
+
+            {/* 2. Collaboration Type in full row */}
+            <div>
+              <label htmlFor="collab-type" className={labelClass}>
+                Collaboration Type<Required />
+              </label>
+              <div className={fieldWrap}>
+                <Handshake size={16} className="shrink-0 text-gray-500" />
+                <select
+                  id="collab-type"
+                  value={collaborationType}
+                  onChange={(e) => setCollaborationType(e.target.value)}
+                  disabled={loading}
+                  required
+                  className={`${fieldInput} ${collaborationType ? "" : "text-gray-400"}`}
+                >
+                  <option value="" disabled>Select collaboration type</option>
+                  {COLLABORATION_TYPES.map((t) => (
+                    <option key={t} value={t} className="text-gray-900">{t}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 3. Target Opportunity field */}
+            <div>
+              <label htmlFor="target-opportunity" className={labelClass}>
+                Target Opportunity<Required />
+              </label>
+              <div className={fieldWrap}>
+                <Building2 size={16} className="shrink-0 text-gray-500" />
+                <input
+                  id="target-opportunity"
+                  value={targetOpportunity}
+                  onChange={(e) => setTargetOpportunity(e.target.value)}
+                  maxLength={120}
+                  disabled={loading}
+                  required
+                  placeholder="e.g. Scaling market distribution, expansion, co-development"
+                  className={fieldInput}
+                />
+              </div>
+            </div>
+
+            {/* 4. Proposed investment and Your participation */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="proposed-investment" className={labelClass}>
+                  Proposed Investment<Required />
+                </label>
+                <div className={fieldWrap}>
+                  <IndianRupee size={16} className="shrink-0 text-gray-500" />
+                  <input
+                    id="proposed-investment"
+                    value={proposedInvestment}
+                    onChange={(e) => setProposedInvestment(e.target.value)}
+                    maxLength={60}
+                    disabled={loading}
+                    required
+                    placeholder="e.g. ₹50 Lakhs / $500K"
+                    className={fieldInput}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="your-participation" className={labelClass}>
+                  Your Participation<Required />
+                </label>
+                <div className={fieldWrap}>
+                  <Percent size={16} className="shrink-0 text-gray-500" />
+                  <input
+                    id="your-participation"
+                    value={yourParticipation}
+                    onChange={(e) => setYourParticipation(e.target.value)}
+                    maxLength={60}
+                    disabled={loading}
+                    required
+                    placeholder="e.g. Equity, advisory, strategic resources"
+                    className={fieldInput}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Collaboration Message */}
+            <div>
+              <label htmlFor="collab-message" className={labelClass}>
+                Collaboration Message<Required />
+              </label>
+              <div className={`${fieldWrap} items-start pt-2.5`}>
+                <MessageSquareText size={16} className="mt-0.5 shrink-0 text-gray-500" />
+                <div className="w-full">
+                  <textarea
+                    id="collab-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    maxLength={MESSAGE_MAX}
+                    rows={4}
+                    disabled={loading}
+                    required
+                    placeholder="Share details about the collaboration, terms, and how you would like to work together."
+                    className={`${fieldInput} resize-none py-0`}
+                  />
+                  <p className="pb-2 text-right text-xs text-gray-400">
+                    {message.length} / {MESSAGE_MAX.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Attach document with single browse */}
+            <div>
+              <p className={labelClass}>
+                Attach Document <span className="font-normal text-gray-500">(Optional)</span>
+              </p>
+              <p className="mb-2 text-xs text-gray-500">Share any supporting pitch deck, proposal, or document.</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                onChange={handleFileChange}
+                disabled={loading}
+                className="hidden"
+              />
+              {file ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                  <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                    <FileText size={18} className="shrink-0 text-blue-600" />
+                    <span className="truncate font-medium">{file.name}</span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {(file.size / (1024 * 1024)).toFixed(1)} MB
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFile(null)}
+                    disabled={loading}
+                    aria-label="Remove document"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-red-600 transition disabled:opacity-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-center transition hover:border-blue-400 hover:bg-blue-50/40"
+                >
+                  <Upload size={18} className="text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-800">Browse Document</span>
+                  <span className="text-[11px] text-gray-500">(PDF, Word, PPT, Excel up to 25MB)</span>
+                </button>
+              )}
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(85vh-90px)] overflow-y-auto">
-            {error && (
-              <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-xs font-semibold text-red-700">
-                {error}
-              </div>
-            )}
 
-            {/* SECTION 1: Collaboration Expectations */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wide text-[#172033]">
-                  1. Collaboration Expectations <span className="text-red-500">*</span>
-                </label>
-                <span className="text-[11px] text-[#64748B]">What do you expect from this partnership?</span>
-              </div>
-
-              {/* Selected Chips */}
-              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-xl border border-[#E5E7EB] bg-gray-50/60">
-                {selectedExpectations.length === 0 ? (
-                  <span className="text-xs text-gray-400 self-center px-1">
-                    Select options below (e.g. Access to new customers, Technology integration...)
-                  </span>
-                ) : (
-                  selectedExpectations.map((item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-medium text-[#2563EB]"
-                    >
-                      {item}
-                      <button
-                        type="button"
-                        onClick={() => toggleExpectation(item)}
-                        className="hover:text-blue-900 rounded-full"
-                      >
-                        <X size={13} />
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
-
-              {/* Expandable Dropdown / Selector */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowExpectationDropdown((prev) => !prev)}
-                  className="w-full flex items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-medium text-[#172033] hover:bg-gray-50"
-                >
-                  <span className="flex items-center gap-1.5 text-[#64748B]">
-                    <Plus size={14} className="text-[#2563EB]" /> Choose Expectations (
-                    {selectedExpectations.length} selected)
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={`transition-transform duration-150 text-[#64748B] ${
-                      showExpectationDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showExpectationDropdown && (
-                  <div className="mt-1 rounded-xl border border-[#E5E7EB] bg-white p-2.5 shadow-lg space-y-2 z-10 relative">
-                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-1.5 bg-gray-50 text-xs">
-                      <Search size={14} className="text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search expectations..."
-                        value={expectationSearch}
-                        onChange={(e) => setExpectationSearch(e.target.value)}
-                        className="w-full bg-transparent outline-hidden text-xs text-gray-800"
-                      />
-                    </div>
-                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                      {filteredExpectations.map((option) => {
-                        const isSelected = selectedExpectations.includes(option);
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => toggleExpectation(option)}
-                            className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left transition ${
-                              isSelected
-                                ? "bg-blue-50 text-[#2563EB] font-bold"
-                                : "text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            <span>{option}</span>
-                            {isSelected && <CheckCircle2 size={14} className="text-[#2563EB]" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* SECTION 2: What Can Our Business Offer? */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wide text-[#172033]">
-                  2. What Can Our Business Offer? <span className="text-red-500">*</span>
-                </label>
-                <span className="text-[11px] text-[#64748B]">What assets or skills do you bring?</span>
-              </div>
-
-              {/* Selected Chips */}
-              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-xl border border-[#E5E7EB] bg-gray-50/60">
-                {selectedOfferings.length === 0 ? (
-                  <span className="text-xs text-gray-400 self-center px-1">
-                    Select options below (e.g. Technical expertise, Customer base, Software...)
-                  </span>
-                ) : (
-                  selectedOfferings.map((item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                    >
-                      {item}
-                      <button
-                        type="button"
-                        onClick={() => toggleOffering(item)}
-                        className="hover:text-emerald-900 rounded-full"
-                      >
-                        <X size={13} />
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
-
-              {/* Expandable Dropdown / Selector */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowOfferingDropdown((prev) => !prev)}
-                  className="w-full flex items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-medium text-[#172033] hover:bg-gray-50"
-                >
-                  <span className="flex items-center gap-1.5 text-[#64748B]">
-                    <Plus size={14} className="text-[#2563EB]" /> Choose What You Offer (
-                    {selectedOfferings.length} selected)
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={`transition-transform duration-150 text-[#64748B] ${
-                      showOfferingDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showOfferingDropdown && (
-                  <div className="mt-1 rounded-xl border border-[#E5E7EB] bg-white p-2.5 shadow-lg space-y-2 z-10 relative">
-                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-1.5 bg-gray-50 text-xs">
-                      <Search size={14} className="text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search offerings..."
-                        value={offeringSearch}
-                        onChange={(e) => setOfferingSearch(e.target.value)}
-                        className="w-full bg-transparent outline-hidden text-xs text-gray-800"
-                      />
-                    </div>
-                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                      {filteredOfferings.map((option) => {
-                        const isSelected = selectedOfferings.includes(option);
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => toggleOffering(option)}
-                            className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left transition ${
-                              isSelected
-                                ? "bg-emerald-50 text-emerald-700 font-bold"
-                                : "text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            <span>{option}</span>
-                            {isSelected && <CheckCircle2 size={14} className="text-emerald-600" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* SECTION 3: Additional Details (4 Text Input Areas) */}
-            <div className="space-y-3 pt-2 border-t border-gray-100">
-              <label className="text-xs font-bold uppercase tracking-wide text-[#172033] block">
-                3. Additional Details
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Field 1: Describe your contribution */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                    Describe your contribution
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Specific deliverables, time commitment, or responsibilities..."
-                    value={contributionDesc}
-                    onChange={(e) => setContributionDesc(e.target.value)}
-                    className="w-full rounded-xl border border-[#E5E7EB] p-2.5 text-xs text-gray-900 outline-hidden focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  />
-                </div>
-
-                {/* Field 2: Resources available for collaboration */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                    Resources available for collaboration
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Team members, budget, software licenses, or facilities..."
-                    value={resourcesAvailable}
-                    onChange={(e) => setResourcesAvailable(e.target.value)}
-                    className="w-full rounded-xl border border-[#E5E7EB] p-2.5 text-xs text-gray-900 outline-hidden focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  />
-                </div>
-
-                {/* Field 3: Expertise and capabilities */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                    Expertise and capabilities
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Domain knowledge, certifications, patents, or specialized skill sets..."
-                    value={expertiseCapabilities}
-                    onChange={(e) => setExpertiseCapabilities(e.target.value)}
-                    className="w-full rounded-xl border border-[#E5E7EB] p-2.5 text-xs text-gray-900 outline-hidden focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  />
-                </div>
-
-                {/* Field 4: Existing assets or infrastructure */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                    Existing assets or infrastructure
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Existing platforms, APIs, warehouses, distribution channels..."
-                    value={existingAssets}
-                    onChange={(e) => setExistingAssets(e.target.value)}
-                    className="w-full rounded-xl border border-[#E5E7EB] p-2.5 text-xs text-gray-900 outline-hidden focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 4: Collaboration Overview */}
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wide text-[#172033]">
-                  4. Collaboration Overview <span className="text-red-500">*</span>
-                </label>
-                <span className="text-[10px] text-gray-400">Written by you</span>
-              </div>
-              <textarea
-                required
-                rows={4}
-                placeholder="Describe your collaboration proposal, what you hope to achieve, and how both businesses can benefit from working together."
-                value={overview}
-                onChange={(e) => setOverview(e.target.value)}
-                className="w-full rounded-xl border border-[#E5E7EB] p-3 text-xs text-gray-900 outline-hidden focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] leading-relaxed"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Sending Proposal...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={14} />
-                    <span>Send Collaboration Request</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+          {/* 7. Collaboration request in place of send partnership request */}
+          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-5 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {loading ? "Sending…" : "Collaboration request"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
-

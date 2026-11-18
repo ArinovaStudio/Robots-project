@@ -24,7 +24,9 @@ export async function GET(req: NextRequest) {
              cp."companyName", cp."logoUrl", cp."type" as "companyType", cp.location, cp.size,
              u.name as "founderName", u.image as "founderImage", u."verificationStatus",
              (SELECT count(*)::int FROM "CompanyPitchRating" r WHERE r."pitchId" = p.id) as "ratingCount",
-             (SELECT COALESCE(avg(r.rating), 0)::float FROM "CompanyPitchRating" r WHERE r."pitchId" = p.id) as "averageRating"
+             (SELECT COALESCE(avg(r.rating), 0)::float FROM "CompanyPitchRating" r WHERE r."pitchId" = p.id) as "averageRating",
+             (SELECT count(*)::int FROM "CompanyPitchView" v WHERE v."pitchId" = p.id) as "viewCount",
+             (SELECT count(*)::int FROM "Connection" conn WHERE (conn."senderId" = p."userId" OR conn."receiverId" = p."userId") AND conn."status" = 'ACCEPTED') as "connectionsCount"
       FROM "CompanyPitch" p
       INNER JOIN "User" u ON p."userId" = u.id
       LEFT JOIN "CompanyProfile" cp ON p."userId" = cp."userId"
@@ -131,6 +133,8 @@ export async function GET(req: NextRequest) {
         isRated: !!ratingInfo,
         averageRating: Number(p.averageRating || 0),
         ratingCount: Number(p.ratingCount || 0),
+        views: Number(p.viewCount || 0),
+        connections: Number(p.connectionsCount || 0),
       };
     });
 

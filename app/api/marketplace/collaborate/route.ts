@@ -10,24 +10,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
-    if (user.accountType === "INVESTOR") {
-      return NextResponse.json(
-        { success: false, message: "Investors cannot send B2B service collaboration requests." },
-        { status: 403 }
-      );
-    }
+    const isMultipart = req.headers.get("content-type")?.includes("multipart/form-data");
+    let recipientId = "";
+    let expectations: string[] = [];
+    let offerings: string[] = [];
+    let contributionDesc: string | null = null;
+    let resourcesAvailable: string | null = null;
+    let expertiseCapabilities: string | null = null;
+    let existingAssets: string | null = null;
+    let overview = "";
 
-    const body = await req.json();
-    const {
-      recipientId,
-      expectations,
-      offerings,
-      contributionDesc,
-      resourcesAvailable,
-      expertiseCapabilities,
-      existingAssets,
-      overview,
-    } = body;
+    if (isMultipart) {
+      const formData = await req.formData();
+      recipientId = formData.get("recipientId")?.toString().trim() ?? "";
+      const collaborationType = formData.get("collaborationType")?.toString().trim() ?? "";
+      const targetOpportunity = formData.get("targetOpportunity")?.toString().trim() ?? "";
+      const proposedInvestment = formData.get("proposedInvestment")?.toString().trim() ?? "";
+      const yourParticipation = formData.get("yourParticipation")?.toString().trim() ?? "";
+      const message = formData.get("message")?.toString().trim() ?? "";
+
+      expectations = collaborationType ? [collaborationType] : ["Capital investment"];
+      offerings = [
+        proposedInvestment ? `Proposed Investment: ${proposedInvestment}` : null,
+        yourParticipation ? `Participation: ${yourParticipation}` : null,
+      ].filter(Boolean) as string[];
+      contributionDesc = targetOpportunity || null;
+      overview = message;
+
+      const fileEntry = formData.get("document");
+      if (fileEntry && typeof fileEntry !== "string" && (fileEntry as File).size > 0) {
+        try {
+          const { uploadFile } = await import("@/lib/uploads");
+          resourcesAvailable = await uploadFile(fileEntry as File, "collaborations");
+        } catch (uploadErr) {
+          console.error("Document upload failed:", uploadErr);
+        }
+      }
+    } else {
+      if (user.accountType === "INVESTOR") {
+        return NextResponse.json(
+          { success: false, message: "Investors cannot send B2B service collaboration requests." },
+          { status: 403 }
+        );
+      }
+
+      const body = await req.json();
+      recipientId = body.recipientId;
+      expectations = body.expectations;
+      offerings = body.offerings;
+      contributionDesc = body.contributionDesc;
+      resourcesAvailable = body.resourcesAvailable;
+      expertiseCapabilities = body.expertiseCapabilities;
+      existingAssets = body.existingAssets;
+      overview = body.overview;
+    }
 
     if (!recipientId || typeof recipientId !== "string") {
       return NextResponse.json(
@@ -117,13 +153,13 @@ export async function POST(req: NextRequest) {
     );
 
     // Send notification to recipient
-    const senderName = user.name || "A business partner";
+    const senderName = user.name || (user.accountType === "INVESTOR" ? "An investor" : "A business partner");
     await prisma.notification.create({
       data: {
         userId: recipientId,
         actorId: user.id,
         type: "SYSTEM",
-        content: `${senderName} submitted a B2B collaboration proposal to your business.`,
+        content: `${senderName} submitted a collaboration proposal to your business.`,
         link: "/collaboration-requests?tab=business",
       },
     });

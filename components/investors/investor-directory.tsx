@@ -220,7 +220,7 @@ export default function InvestorDirectory() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           {[{ label: "All Stages", value: "" }, ...INVESTMENT_STAGES.map((s) => ({ label: s, value: s }))].map((s) => (
@@ -286,7 +286,7 @@ export default function InvestorDirectory() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {visible.map((inv) => (
-            <div key={inv.id} className="rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col gap-3">
+            <div key={inv.id} className="rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col gap-3 hover:border-gray-300 transition duration-150 h-full">
               <div className="flex items-start justify-between gap-3">
                 <Link href={`/profile/${inv.id}`} className="flex items-center gap-3 min-w-0 group">
                   <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gray-100 border border-[#E5E7EB]">
