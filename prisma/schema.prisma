@@ -91,6 +91,8 @@ model User {
   receivedPitchRequests PitchRequest[] @relation("PitchRequestInvestor")
   sentInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabRequester")
   receivedInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabCollaborator")
+  infoRequestsAsked InfoRequest[] @relation("InfoRequestAskedBy")
+  infoRequestsToAnswer InfoRequest[] @relation("InfoRequestAnsweringUser")
 }
 
 model VerificationApplication {
@@ -898,5 +900,43 @@ model InvestorCollaboration {
 
   @@index([requesterId])
   @@index([collaboratorId])
+  @@index([status])
+}
+
+
+// Structured questions and answers attached to an existing collaboration/request.
+enum InfoRequestStatus {
+  PENDING
+  ANSWERED
+}
+
+enum InfoRequestType {
+  INVESTMENT_OFFER
+  PITCH_REQUEST
+  INVESTOR_COLLABORATION
+  BUSINESS_COLLABORATION
+}
+
+model InfoRequest {
+  id String @id @default(uuid())
+  requestId String
+  requestType InfoRequestType
+  roundNumber Int @default(1)
+  askedById String
+  answeringUserId String
+  questions Json
+  answers Json?
+  status InfoRequestStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answeredAt DateTime?
+
+  askedBy User @relation("InfoRequestAskedBy", fields: [askedById], references: [id], onDelete: Cascade)
+  answeringUser User @relation("InfoRequestAnsweringUser", fields: [answeringUserId], references: [id], onDelete: Cascade)
+
+  @@unique([requestType, requestId, roundNumber])
+  @@index([requestType, requestId, roundNumber])
+  @@index([askedById])
+  @@index([answeringUserId])
   @@index([status])
 }

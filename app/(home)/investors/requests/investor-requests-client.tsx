@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Clock,
   CheckCircle2,
@@ -32,6 +32,8 @@ import ViewPitchModal, {
   formatPitchEquity,
 } from "@/components/modals/view-pitch-modal";
 import ReportCompanyModal from "@/components/modals/report-company-modal";
+import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
+import InfoRequestAction from "@/components/info-requests/info-request-action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,12 +93,12 @@ function parseAmountValue(str: string): number {
 }
 
 export default function InvestorRequestsClient() {
-  const router = useRouter();
   const user = useUserStore((s) => s.user);
   const searchParams = useSearchParams();
   const collaborationId = searchParams.get("collaborationId");
   // Notification links carry ?collaborationId=..., so open the Investor tab for them.
   const [division, setDivision] = useState<"business" | "investor">(collaborationId ? "investor" : "business");
+  const [infoDialog, setInfoDialog] = useState<{ id: string; type: "PITCH_REQUEST" | "INVESTOR_COLLABORATION"; mode: "ask" | "answer" | "view" } | null>(null);
   const [direction, setDirection] = useState<"received" | "sent">("received");
   const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
@@ -324,14 +326,6 @@ export default function InvestorRequestsClient() {
             ? "Request declined."
             : "Follow-up initiated."
         );
-        if (newStatus === "REVIEWED") {
-          const otherId = isCollab
-            ? collabReceived.find((c) => c.id === id)?.requesterId
-            : requests.find((r) => r.id === id)?.senderId;
-          if (otherId) {
-            router.push(`/messages/${otherId}`);
-          }
-        }
       } else {
         toast.error(data.message || "Failed to update status.");
       }
@@ -918,7 +912,7 @@ export default function InvestorRequestsClient() {
                           <button
                             type="button"
                             disabled={isProcessing}
-                            onClick={() => handleUpdateStatus(req.id, "REVIEWED")}
+                            onClick={() => setInfoDialog({ id: req.id, type: collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST", mode: "ask" })}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                           >
                             <MessageSquare size={13} />
@@ -953,13 +947,7 @@ export default function InvestorRequestsClient() {
                     )}
 
                     {req.status === "REVIEWED" && (
-                      <Link
-                        href={`/messages/${req.senderId}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
-                      >
-                        <MessageSquare size={13} />
-                        <span>Continue Conversation</span>
-                      </Link>
+                      <InfoRequestAction requestId={req.id} requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"} />
                     )}
                   </div>
                 </div>
@@ -968,6 +956,8 @@ export default function InvestorRequestsClient() {
           })}
         </div>
       )}
+
+      {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType={infoDialog.type} mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
 
       {/* View Pitch Modal */}
       {selectedPitch && (

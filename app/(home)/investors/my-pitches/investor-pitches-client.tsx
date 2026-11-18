@@ -30,6 +30,7 @@ import AddPitchModal from "@/components/modals/add-pitch-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
 import ReadMoreText from "@/components/ui/read-more-text";
+import InfoRequestAction from "@/components/info-requests/info-request-action";
 
 interface CreatedPitch {
   id: string;
@@ -60,7 +61,7 @@ interface SubmittedOffer {
   amountValue: number;
   terms: string;
   message: string | null;
-  status: "PENDING" | "ACCEPTED" | "DECLINED";
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "INFO_REQUESTED";
   createdAt: string;
   pitchTitle: string;
   sector: string;
@@ -491,6 +492,7 @@ export default function InvestorPitchesClient() {
                         </div>
 
                         <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
+                          {offer.status === "INFO_REQUESTED" && <InfoRequestAction requestId={offer.id} requestType="INVESTMENT_OFFER" className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700" />}
                           {offer.status === "ACCEPTED" && (
                             <Link
                               href={`/messages/${offer.founderId}`}
@@ -516,6 +518,7 @@ export default function InvestorPitchesClient() {
           )}
         </section>
       )}
+
 
       {/* TAB 3: EVALUATED DEALS */}
       {activeTab === "ratings" && (

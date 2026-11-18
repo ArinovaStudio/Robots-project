@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Clock, CheckCircle2, XCircle, MessageSquare, ArrowRight, Loader2, Check, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import VerificationBadge from "@/components/ui/VerificationBadge";
@@ -11,6 +10,8 @@ import RequestDetailsModal from "./request-details-modal";
 import StatusBadge from "./status-badge";
 import { formatRelativeTime } from "./utils";
 import SendPitchRequestModal, { type ExistingPitchRequest } from "@/components/modals/send-pitch-request-modal";
+import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
+import InfoRequestAction from "@/components/info-requests/info-request-action";
 
 // An investor -> business request = an investment offer made on one of the business's pitches.
 interface ReceivedOffer {
@@ -54,7 +55,6 @@ interface InvestorRequestsPanelProps {
 }
 
 export default function InvestorRequestsPanel({ onPendingCountChange }: InvestorRequestsPanelProps) {
-  const router = useRouter();
   const [offers, setOffers] = useState<ReceivedOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
@@ -65,6 +65,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ReceivedOffer | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view" } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -186,10 +187,6 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         toast.success(
           action === "ACCEPTED" ? "Offer accepted!" : action === "DECLINED" ? "Offer declined." : "Follow-up initiated."
         );
-        if (action === "INFO_REQUESTED") {
-          const item = offers.find((o) => o.id === id);
-          if (item?.investorId) router.push(`/messages/${item.investorId}`);
-        }
       } else {
         toast.error(data.message || "Failed to update offer.");
       }
@@ -234,15 +231,6 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         <span>Message Investor</span>
       </Link>
     );
-    const continueConversation = (
-      <Link
-        href={`/messages/${o.investorId}`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
-      >
-        <MessageSquare size={13} />
-        <span>Continue Conversation</span>
-      </Link>
-    );
     // Business viewing a pitch request it sent: it cannot accept/decline its own pitch.
     if (direction === "sent") {
       if (o.status === "PENDING") {
@@ -273,6 +261,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       if (o.status === "INFO_REQUESTED") {
         return (
           <>
+            <InfoRequestAction requestId={o.id} requestType="INVESTMENT_OFFER" />
             <button
               type="button"
               disabled={busy}
@@ -291,7 +280,6 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               <Pencil size={13} />
               <span>Edit</span>
             </button>
-            {continueConversation}
           </>
         );
       }
@@ -300,6 +288,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
     if (o.status === "INFO_REQUESTED") {
       return (
         <>
+          <InfoRequestAction requestId={o.id} requestType="INVESTMENT_OFFER" />
           <button
             type="button"
             disabled={busy}
@@ -309,7 +298,6 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
             <X size={13} />
             <span>Decline</span>
           </button>
-          {continueConversation}
           <button
             type="button"
             disabled={busy}
@@ -337,7 +325,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           <button
             type="button"
             disabled={busy}
-            onClick={() => respond(o.id, "INFO_REQUESTED")}
+            onClick={() => setInfoDialog({ id: o.id, mode: "ask" })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <MessageSquare size={13} />
@@ -487,6 +475,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           }}
         />
       )}
+
+      {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType="INVESTMENT_OFFER" mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
 
       {selected && (
         <RequestDetailsModal

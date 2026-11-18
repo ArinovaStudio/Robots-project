@@ -29,6 +29,8 @@ import RequestsBoard from "./requests-board";
 import RequestDetailsModal from "./request-details-modal";
 import StatusBadge from "./status-badge";
 import { formatRelativeTime } from "./utils";
+import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
+import InfoRequestAction from "@/components/info-requests/info-request-action";
 export interface B2BRequest {
   id: string;
   requesterId: string;
@@ -95,6 +97,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
   const [selected, setSelected] = useState<B2BRequest | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view" } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -279,13 +282,10 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
       }
       if (req.status === "INFO_REQUESTED") {
         return (
-          <Link
-            href={`/messages/${partnerId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
-          >
-            <MessageSquare size={13} />
-            <span>Continue Conversation</span>
-          </Link>
+          <>
+            <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
+            <Link href={`/messages/${partnerId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"><MessageSquare size={13} /><span>Continue Conversation</span></Link>
+          </>
         );
       }
       return null;
@@ -306,7 +306,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
           <button
             type="button"
             disabled={busy}
-            onClick={() => updateStatus(req.id, "INFO_REQUESTED")}
+            onClick={() => setInfoDialog({ id: req.id, mode: "ask" })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <MessageSquare size={13} />
@@ -338,6 +338,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     if (req.status === "INFO_REQUESTED") {
       return (
         <>
+          <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
           <button
             type="button"
             disabled={busy}
@@ -347,13 +348,6 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             <X size={13} className="text-red-500" />
             <span>Reject</span>
           </button>
-          <Link
-            href={`/messages/${partnerId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"
-          >
-            <MessageSquare size={13} />
-            <span>Continue Conversation</span>
-          </Link>
           <button
             type="button"
             disabled={busy}
@@ -565,6 +559,8 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
           onClose={() => setSelected(null)}
         />
       )}
+
+      {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType="BUSINESS_COLLABORATION" mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
 
       {reportTarget && (
         <ReportCompanyModal
