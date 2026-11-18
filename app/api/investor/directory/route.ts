@@ -13,6 +13,36 @@ export async function GET(req: NextRequest) {
     const sector = sp.get("sector");
     const range = sp.get("range");
 
+    // Per-viewer state: who they're connected to, and who they've hidden/blocked (or been blocked by)
+    type ConnState = "CONNECTED" | "PENDING" | "INCOMING";
+    const connectionMap = new Map<string, { status: ConnState; connectionId: string }>();
+    const excludedIds = new Set<string>();
+    if (viewer?.id) {
+      try {
+        const [hidden, blocks, connections] = await Promise.all([
+          prisma.hiddenInvestor.findMany({ where: { userId: viewer.id }, select: { investorUserId: true } }),
+          prisma.userBlock.findMany({
+            where: { OR: [{ blockerId: viewer.id }, { blockedId: viewer.id }] },
+            select: { blockerId: true, blockedId: true },
+          }),
+          prisma.connection.findMany({
+            where: { OR: [{ senderId: viewer.id }, { receiverId: viewer.id }], status: { in: ["PENDING", "ACCEPTED"] } },
+            select: { id: true, senderId: true, receiverId: true, status: true },
+          }),
+        ]);
+        hidden.forEach((h) => excludedIds.add(h.investorUserId));
+        blocks.forEach((b) => excludedIds.add(b.blockerId === viewer.id ? b.blockedId : b.blockerId));
+        connections.forEach((c) => {
+          const otherId = c.senderId === viewer.id ? c.receiverId : c.senderId;
+          const status: ConnState =
+            c.status === "ACCEPTED" ? "CONNECTED" : c.senderId === viewer.id ? "PENDING" : "INCOMING";
+          connectionMap.set(otherId, { status, connectionId: c.id });
+        });
+      } catch (err) {
+        console.warn("Viewer relationship lookup skipped:", (err as Error)?.message);
+      }
+    }
+
     const investorFilter: any = { AND: [] as any[] };
     if (stage) investorFilter.AND.push({ stages: { has: stage } });
     if (type) investorFilter.AND.push({ investorType: { equals: type, mode: "insensitive" } });
@@ -23,7 +53,7 @@ export async function GET(req: NextRequest) {
       where: {
         accountType: "INVESTOR",
         status: "ACTIVE",
-        ...(viewer?.id ? { id: { not: viewer.id } } : {}),
+        ...(viewer?.id ? { id: { notIn: [viewer.id, ...excludedIds] } } : {}),
         investor: { is: investorFilter },
         ...(q
           ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { investor: { is: { firmName: { contains: q, mode: "insensitive" } } } }] }
@@ -126,6 +156,8 @@ export async function GET(req: NextRequest) {
           portfolioCount: portfolioCounts.get(r.id) ?? inv.previousInvestmentCount ?? inv.previousStartups.length,
           connections: r._count.sentConnections + r._count.receivedConnections,
           matchScore: scores.get(r.id) ?? null,
+          connectionStatus: connectionMap.get(r.id)?.status ?? "NONE",
+          connectionId: connectionMap.get(r.id)?.connectionId ?? null,
         };
       })
       .sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1));

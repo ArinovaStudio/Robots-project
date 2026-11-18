@@ -3,10 +3,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, MoreVertical, MapPin, Send, Handshake, UserPlus, Trash2, Ban, Flag, TrendingUp } from "lucide-react";
+import { Search, MoreVertical, MapPin, Handshake, UserPlus, UserCheck, UserMinus, Clock, MessageCircle, Trash2, Ban, Flag, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import ConnectModal from "@/components/modals/connect-modal";
+import ReportInvestorModal from "@/components/modals/report-investor-modal";
+import ConfirmModal from "@/components/modals/confirm-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { INVESTMENT_RANGES, INVESTMENT_STAGES, INVESTOR_TYPES } from "@/lib/investor-options";
+
+type ConnectionStatus = "NONE" | "PENDING" | "INCOMING" | "CONNECTED";
 
 interface InvestorCard {
   id: string;
@@ -31,6 +35,8 @@ interface InvestorCard {
   portfolioCount: number;
   connections: number;
   matchScore: number | null;
+  connectionStatus: ConnectionStatus;
+  connectionId: string | null;
 }
 
 const selectCls =
@@ -92,6 +98,9 @@ export default function InvestorDirectory() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [connectTarget, setConnectTarget] = useState<InvestorCard | null>(null);
   const [partnershipTarget, setPartnershipTarget] = useState<InvestorCard | null>(null);
+  const [reportTarget, setReportTarget] = useState<InvestorCard | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: "block" | "disconnect"; investor: InvestorCard } | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(query.trim()), 350);
@@ -126,6 +135,89 @@ export default function InvestorDirectory() {
 
   const visible = useMemo(() => investors.filter((i) => !hidden.has(i.id)), [investors, hidden]);
   const hide = (id: string) => setHidden((prev) => new Set(prev).add(id));
+  const unhide = (id: string) =>
+    setHidden((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  const patchInvestor = (id: string, patch: Partial<InvestorCard>) =>
+    setInvestors((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+
+  const callApi = async (url: string, init: RequestInit) => {
+    try {
+      const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
+      const data = await res.json();
+      return { ok: !!data.success, message: data.message as string | undefined };
+    } catch {
+      return { ok: false, message: "An error occurred. Please try again." };
+    }
+  };
+
+  // "Delete": remove from this viewer's list (persisted, with undo)
+  const handleDelete = async (inv: InvestorCard) => {
+    const r = await callApi(`/api/investor/${inv.id}/hide`, { method: "POST" });
+    if (!r.ok) return toast.error(r.message || "Couldn't remove this investor");
+    hide(inv.id);
+    toast.success("Investor removed from your list", {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          const u = await callApi(`/api/investor/${inv.id}/hide`, { method: "DELETE" });
+          if (u.ok) unhide(inv.id);
+          else toast.error("Couldn't restore this investor");
+        },
+      },
+    });
+  };
+
+  const handleCancelRequest = async (inv: InvestorCard) => {
+    const r = await callApi("/api/network/connect/remove", { method: "POST", body: JSON.stringify({ targetUserId: inv.id }) });
+    if (!r.ok) return toast.error(r.message || "Couldn't cancel the request");
+    patchInvestor(inv.id, { connectionStatus: "NONE", connectionId: null });
+    toast.success("Connection request cancelled");
+  };
+
+  const handleAcceptRequest = async (inv: InvestorCard) => {
+    if (!inv.connectionId) return;
+    const r = await callApi("/api/network/connect/respond", {
+      method: "POST",
+      body: JSON.stringify({ connectionId: inv.connectionId, action: "ACCEPTED" }),
+    });
+    if (!r.ok) return toast.error(r.message || "Couldn't accept the request");
+    patchInvestor(inv.id, { connectionStatus: "CONNECTED", connections: inv.connections + 1 });
+    toast.success(`You're now connected with ${inv.name}`);
+  };
+
+  const handleConfirm = async () => {
+    if (!confirm) return;
+    const { kind, investor: inv } = confirm;
+    setConfirming(true);
+    if (kind === "disconnect") {
+      const r = await callApi("/api/network/connect/remove", { method: "POST", body: JSON.stringify({ targetUserId: inv.id }) });
+      if (r.ok) {
+        patchInvestor(inv.id, { connectionStatus: "NONE", connectionId: null, connections: Math.max(0, inv.connections - 1) });
+        toast.success("Connection removed");
+      } else toast.error(r.message || "Couldn't remove the connection");
+    } else {
+      const r = await callApi(`/api/investor/${inv.id}/block`, { method: "POST" });
+      if (r.ok) {
+        hide(inv.id);
+        toast.success("Investor blocked", {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              const u = await callApi(`/api/investor/${inv.id}/block`, { method: "DELETE" });
+              if (u.ok) unhide(inv.id);
+              else toast.error("Couldn't unblock this investor");
+            },
+          },
+        });
+      } else toast.error(r.message || "Couldn't block this investor");
+    }
+    setConfirming(false);
+    setConfirm(null);
+  };
 
   return (
     <div className="space-y-5">
@@ -225,18 +317,41 @@ export default function InvestorDirectory() {
                     <DropdownMenuTrigger className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="More options">
                       <MoreVertical size={16} />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setConnectTarget(inv)}><UserPlus size={14} className="mr-2" /> Connect</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-52">
+                      {inv.connectionStatus === "CONNECTED" ? (
+                        <>
+                          <DropdownMenuItem disabled className="gap-2 font-semibold text-emerald-600 opacity-100">
+                            <UserCheck size={14} /> Connected
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                            <Link href={`/messages/${inv.id}`}><MessageCircle size={14} /> Message</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setConfirm({ kind: "disconnect", investor: inv })} className="gap-2 cursor-pointer">
+                            <UserMinus size={14} /> Remove connection
+                          </DropdownMenuItem>
+                        </>
+                      ) : inv.connectionStatus === "PENDING" ? (
+                        <DropdownMenuItem onSelect={() => handleCancelRequest(inv)} className="gap-2 cursor-pointer">
+                          <Clock size={14} /> Request sent · Cancel
+                        </DropdownMenuItem>
+                      ) : inv.connectionStatus === "INCOMING" ? (
+                        <DropdownMenuItem onSelect={() => handleAcceptRequest(inv)} className="gap-2 cursor-pointer">
+                          <UserCheck size={14} /> Accept request
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onSelect={() => setConnectTarget(inv)} className="gap-2 cursor-pointer">
+                          <UserPlus size={14} /> Connect
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => { hide(inv.id); toast.success("Investor removed from your list"); }}>
-                        <Trash2 size={14} className="mr-2" /> Delete
+                      <DropdownMenuItem onSelect={() => handleDelete(inv)} className="gap-2 cursor-pointer">
+                        <Trash2 size={14} /> Delete
                       </DropdownMenuItem>
-                      {/* TODO: wire Block / Report to their APIs (only CompanyReport exists today) */}
-                      <DropdownMenuItem onClick={() => { hide(inv.id); toast.success("Investor blocked"); }}>
-                        <Ban size={14} className="mr-2" /> Block
+                      <DropdownMenuItem onSelect={() => setConfirm({ kind: "block", investor: inv })} className="gap-2 cursor-pointer">
+                        <Ban size={14} /> Block
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.info("Report submitted")}>
-                        <Flag size={14} className="mr-2" /> Report
+                      <DropdownMenuItem onSelect={() => setReportTarget(inv)} className="gap-2 cursor-pointer text-red-600 focus:text-red-600">
+                        <Flag size={14} /> Report
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -300,9 +415,37 @@ export default function InvestorDirectory() {
           receiverId={connectTarget.id}
           companyName={connectTarget.name}
           onClose={() => setConnectTarget(null)}
-          onSuccess={(msg) => { toast.success(msg); setConnectTarget(null); }}
+          onSuccess={(msg) => {
+            toast.success(msg);
+            patchInvestor(connectTarget.id, { connectionStatus: "PENDING" });
+            setConnectTarget(null);
+          }}
         />
       )}
+
+      {reportTarget && (
+        <ReportInvestorModal
+          investorUserId={reportTarget.id}
+          investorName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={!!confirm}
+        title={confirm?.kind === "block" ? `Block ${confirm.investor.name}?` : `Remove connection with ${confirm?.investor.name}?`}
+        message={
+          confirm?.kind === "block"
+            ? "They'll be hidden from your directory and any connection between you will be removed."
+            : "You'll no longer be connected. You can send a new request later."
+        }
+        confirmText={confirm?.kind === "block" ? "Block" : "Remove"}
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={confirming}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </div>
   );
 }
