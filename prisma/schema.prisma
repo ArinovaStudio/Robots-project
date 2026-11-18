@@ -89,6 +89,8 @@ model User {
   pitchRatings CompanyPitchRating[] @relation("InvestorPitchRatings")
   sentPitchRequests PitchRequest[] @relation("PitchRequestSender")
   receivedPitchRequests PitchRequest[] @relation("PitchRequestInvestor")
+  sentInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabRequester")
+  receivedInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabCollaborator")
 }
 
 model VerificationApplication {
@@ -871,4 +873,30 @@ model InvestorReport {
   reporter User @relation("InvestorReporter", fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@unique([investorUserId, reporterId])
+}
+
+model InvestorCollaboration {
+  id String @id @default(uuid())
+  requesterId String
+  collaboratorId String
+  collaborationType String
+  dealStage String
+  targetCompany String
+  proposedAmount String
+  participation String
+  message String @db.Text
+  pitchDeckUrl String?
+  businessPlanUrl String?
+  financialsUrl String?
+  otherDocumentsUrl String?
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requester User @relation("InvestorCollabRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  collaborator User @relation("InvestorCollabCollaborator", fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([collaboratorId])
+  @@index([status])
 }

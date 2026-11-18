@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import InvestorCollaborationModal from "@/components/modals/investor-collaboration-modal";
 import { INVESTMENT_RANGES, INVESTMENT_STAGES, INVESTOR_TYPES } from "@/lib/investor-options";
 
 type ConnectionStatus = "NONE" | "PENDING" | "INCOMING" | "CONNECTED";
@@ -400,15 +400,13 @@ export default function InvestorDirectory() {
         </div>
       )}
 
-      {/* Placeholder until the partnership form is added */}
-      <Dialog open={!!partnershipTarget} onOpenChange={(o) => !o && setPartnershipTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Partnership request to {partnershipTarget?.name}</DialogTitle>
-            <DialogDescription>The partnership request form is coming soon.</DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      {partnershipTarget && (
+        <InvestorCollaborationModal
+          collaboratorId={partnershipTarget.id}
+          collaboratorName={partnershipTarget.name}
+          onClose={() => setPartnershipTarget(null)}
+        />
+      )}
 
       {connectTarget && (
         <ConnectModal

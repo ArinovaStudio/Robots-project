@@ -57,3 +57,24 @@ export const INVESTMENT_STRUCTURES = [
   "Debt",
   "Other",
 ] as const;
+
+
+export const COLLABORATION_TYPES = [
+  "Co-Investment Opportunities",
+  "Investment Deal Sharing",
+  "Portfolio Diversification",
+  "Joint Due Diligence",
+  "Market Research & Analysis",
+  "Knowledge & Expertise Exchange",
+  "Strategic Investor Networking",
+] as const;
+
+export const DEAL_STAGES = ["Pre-seed", "Seed", "Series A", "Series B+"] as const;
+
+// Optional document slots on the investor collaboration form (keep sizes in sync with the API route)
+export const COLLABORATION_DOCUMENTS = [
+  { key: "pitchDeck", label: "Pitch Deck", hint: "PDF · ≤ 120 MB", maxMb: 120, exts: [".pdf"] },
+  { key: "businessPlan", label: "Business Plan", hint: "PDF · ≤ 50 MB", maxMb: 50, exts: [".pdf"] },
+  { key: "financials", label: "Financials", hint: "PDF/XLSX · ≤ 50 MB", maxMb: 50, exts: [".pdf", ".xlsx"] },
+  { key: "otherDocuments", label: "Other Documents", hint: "PDF/ZIP · ≤ 50 MB", maxMb: 50, exts: [".pdf", ".zip"] },
+] as const;
