@@ -380,7 +380,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
         filters={[
           { key: "PENDING", label: "Pending", count: stats.pending },
           { key: "ACCEPTED", label: "Accepted", count: stats.accepted },
-          { key: "INFO_REQUESTED", label: "Info requested", count: stats.info },
+          { key: "INFO_REQUESTED", label: "Ask info", count: stats.info },
           { key: "DECLINED", label: "Rejected", count: stats.declined },
           { key: "ALL", label: "All requests" },
         ]}

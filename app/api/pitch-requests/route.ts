@@ -309,6 +309,137 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) {
+      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+    if (user.accountType !== "BUSINESS") {
+      return NextResponse.json({ success: false, message: "Only business accounts can edit pitch requests." }, { status: 403 });
+    }
+    if (!req.headers.get("content-type")?.includes("multipart/form-data")) {
+      return NextResponse.json({ success: false, message: "Invalid request." }, { status: 400 });
+    }
+
+    const formData = await req.formData();
+    const get = (key: string) => formData.get(key)?.toString().trim() ?? "";
+    const id = get("id");
+    const companyName = get("companyName");
+    const problemStatement = get("problemStatement");
+    const proposedSolution = get("proposedSolution");
+    const fundingRequirement = get("fundingRequirement");
+    const equityOffered = get("equityOffered");
+    const message = get("message");
+    const deck = formData.get("pitchDeck");
+    const pitchDeckFile = deck && typeof deck !== "string" ? deck : null;
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Missing request id" }, { status: 400 });
+    }
+    const missing: string[] = [];
+    if (!companyName) missing.push("startup/company name");
+    if (!problemStatement) missing.push("problem statement");
+    if (!proposedSolution) missing.push("proposed solution");
+    if (!fundingRequirement) missing.push("funding requirement");
+    if (!message) missing.push("message to investor");
+    if (missing.length > 0) {
+      return NextResponse.json({ success: false, message: `Please provide: ${missing.join(", ")}.` }, { status: 400 });
+    }
+    const tooLong = (Object.keys(LIMITS) as (keyof typeof LIMITS)[]).find((key) => {
+      const value = { companyName, problemStatement, proposedSolution, fundingRequirement, equityOffered, message }[key];
+      return value.length > LIMITS[key];
+    });
+    if (tooLong) {
+      return NextResponse.json(
+        { success: false, message: `"${tooLong}" is too long (max ${LIMITS[tooLong]} characters).` },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.pitchRequest.findFirst({ where: { id, senderId: user.id } });
+    if (!existing) {
+      return NextResponse.json({ success: false, message: "Pitch request not found" }, { status: 404 });
+    }
+    if (existing.status !== "PENDING") {
+      return NextResponse.json(
+        { success: false, message: "The investor has already responded, so this pitch can no longer be edited." },
+        { status: 409 }
+      );
+    }
+
+    // Keep the current deck unless a new PDF was attached.
+    let pitchDeckUrl = existing.pitchDeckUrl;
+    if (pitchDeckFile) {
+      const file = pitchDeckFile as File;
+      if (file.type !== "application/pdf") {
+        return NextResponse.json({ success: false, message: "Pitch deck must be a PDF file." }, { status: 400 });
+      }
+      if (file.size === 0 || file.size > MAX_PDF_BYTES) {
+        return NextResponse.json({ success: false, message: "Pitch deck must be non-empty and 120 MB or smaller." }, { status: 400 });
+      }
+      const signature = new TextDecoder().decode(new Uint8Array(await file.slice(0, 5).arrayBuffer()));
+      if (signature !== "%PDF-") {
+        return NextResponse.json({ success: false, message: "The selected file is not a valid PDF." }, { status: 400 });
+      }
+      pitchDeckUrl = await uploadFile(file, "pitches/requests");
+    }
+
+    let created;
+    try {
+      created = await prisma.$transaction(async (tx) => {
+        // Re-check inside the transaction so an accept/decline can't slip in between.
+        const deleted = await tx.pitchRequest.deleteMany({ where: { id, senderId: user.id, status: "PENDING" } });
+        if (deleted.count === 0) throw new Error("PITCH_NOT_EDITABLE");
+        await tx.notification.deleteMany({
+          where: { userId: existing.investorId, actorId: user.id, link: { contains: `pitchRequestId=${id}` } },
+        });
+        return tx.pitchRequest.create({
+          data: {
+            senderId: user.id,
+            investorId: existing.investorId,
+            companyName,
+            problemStatement,
+            proposedSolution,
+            fundingRequirement: formatTargetAmount(fundingRequirement),
+            equityOffered: equityOffered || null,
+            message,
+            pitchDeckUrl,
+          },
+          select: { id: true },
+        });
+      });
+    } catch (txError: any) {
+      if (txError?.message === "PITCH_NOT_EDITABLE") {
+        return NextResponse.json(
+          { success: false, message: "The investor has already responded, so this pitch can no longer be edited." },
+          { status: 409 }
+        );
+      }
+      throw txError;
+    }
+
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: existing.investorId,
+          actorId: user.id,
+          type: "SYSTEM",
+          content: `${companyName} sent you an updated pitch request`,
+          link: `/profile/${user.id}?pitchRequestId=${created.id}`,
+        },
+      });
+    } catch (notifyError) {
+      console.error("Failed to notify investor of updated pitch request:", notifyError);
+    }
+
+    return NextResponse.json({ success: true, message: "Pitch request updated and re-sent.", data: { id: created.id } });
+  } catch (error) {
+    console.error("Failed to edit pitch request:", error);
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const { user, error } = await getOnboardedUser();
@@ -333,9 +464,19 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Pitch request not found" }, { status: 404 });
     }
 
-    await prisma.pitchRequest.delete({
-      where: { id },
-    });
+    if (pitch.senderId === user.id && pitch.status !== "PENDING") {
+      return NextResponse.json(
+        { success: false, message: "This pitch request can no longer be cancelled." },
+        { status: 409 }
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.pitchRequest.delete({ where: { id } }),
+      prisma.notification.deleteMany({
+        where: { userId: pitch.investorId, actorId: pitch.senderId, link: { contains: `pitchRequestId=${id}` } },
+      }),
+    ]);
 
     return NextResponse.json({ success: true, message: "Pitch request deleted" });
   } catch (error) {

@@ -15,9 +15,9 @@ export async function PATCH(
 
     const { offerId } = await params;
     const body = await req.json();
-    const { action } = body; // "ACCEPTED" | "DECLINED"
+    const { action } = body; // "ACCEPTED" | "DECLINED" | "INFO_REQUESTED"
 
-    if (action !== "ACCEPTED" && action !== "DECLINED") {
+    if (action !== "ACCEPTED" && action !== "DECLINED" && action !== "INFO_REQUESTED") {
       return NextResponse.json({ success: false, message: "Invalid action." }, { status: 400 });
     }
 
@@ -51,7 +51,10 @@ export async function PATCH(
           userId: offer.investorId,
           actorId: user.id,
           type: "INVESTOR_OFFER",
-          content: `${user.name || "The company"} has ${action === "ACCEPTED" ? "accepted" : "declined"} your offer of ${offer.amount} for "${offer.pitchTitle}"`,
+          content:
+            action === "INFO_REQUESTED"
+              ? `${user.name || "The company"} asked for more information about your offer of ${offer.amount} for "${offer.pitchTitle}"`
+              : `${user.name || "The company"} has ${action === "ACCEPTED" ? "accepted" : "declined"} your offer of ${offer.amount} for "${offer.pitchTitle}"`,
           link: `/investors/portal`
         }
       });
@@ -63,7 +66,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      message: `Offer marked as ${action.toLowerCase()}.`
+      message: `Offer marked as ${action.toLowerCase().replace("_", " ")}.`
     });
 
   } catch (error) {
@@ -118,4 +121,3 @@ export async function DELETE(
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }
-

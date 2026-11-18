@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clock, CheckCircle2, XCircle, MessageSquare, ArrowRight, Loader2, Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Clock, CheckCircle2, XCircle, MessageSquare, ArrowRight, Loader2, Check, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import RequestsBoard from "./requests-board";
 import RequestDetailsModal from "./request-details-modal";
 import StatusBadge from "./status-badge";
 import { formatRelativeTime } from "./utils";
+import SendPitchRequestModal, { type ExistingPitchRequest } from "@/components/modals/send-pitch-request-modal";
 
 // An investor -> business request = an investment offer made on one of the business's pitches.
 interface ReceivedOffer {
@@ -22,7 +24,7 @@ interface ReceivedOffer {
   amountValue: number;
   terms: string | null;
   message: string | null;
-  status: string; // PENDING | ACCEPTED | DECLINED
+  status: string; // PENDING | ACCEPTED | INFO_REQUESTED | DECLINED
   createdAt: string;
   investorId: string;
   name: string | null;
@@ -31,9 +33,11 @@ interface ReceivedOffer {
   firmName: string | null;
   investorType: string | null;
   location: string | null;
+  // Only set for pitch requests the business sent; used to prefill the edit form.
+  pitchRequest?: ExistingPitchRequest;
 }
 
-type FilterKey = "PENDING" | "ACCEPTED" | "DECLINED" | "ALL";
+type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "DECLINED" | "ALL";
 type SortKey = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
 
 function getSortOptions(direction: "received" | "sent") {
@@ -50,6 +54,7 @@ interface InvestorRequestsPanelProps {
 }
 
 export default function InvestorRequestsPanel({ onPendingCountChange }: InvestorRequestsPanelProps) {
+  const router = useRouter();
   const [offers, setOffers] = useState<ReceivedOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
@@ -58,6 +63,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<ReceivedOffer | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ReceivedOffer | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -80,7 +87,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               amountValue: parseFloat(String(p.fundingRequirement).replace(/[^0-9.]/g, "")) || 0,
               terms: p.equityOffered ? `${p.equityOffered} equity` : null,
               message: p.message,
-              status: p.status,
+              // Pitch requests call "info asked" REVIEWED; this panel calls it INFO_REQUESTED.
+              status: p.status === "REVIEWED" ? "INFO_REQUESTED" : p.status,
               createdAt: p.createdAt,
               investorId: p.investorId,
               name: p.investor?.name || "Investor",
@@ -89,6 +97,15 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               firmName: p.investor?.firmName || null,
               investorType: p.investor?.investorType || "Investor",
               location: p.investor?.location || null,
+              pitchRequest: {
+                id: p.id,
+                companyName: p.companyName,
+                problemStatement: p.problemStatement,
+                proposedSolution: p.proposedSolution,
+                fundingRequirement: p.fundingRequirement,
+                equityOffered: p.equityOffered ?? null,
+                message: p.message,
+              },
             }));
             setOffers(mapped);
           }
@@ -107,12 +124,13 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
     return () => {
       active = false;
     };
-  }, [direction]);
+  }, [direction, reloadKey]);
 
   const stats = useMemo(
     () => ({
       pending: offers.filter((o) => o.status === "PENDING").length,
       accepted: offers.filter((o) => o.status === "ACCEPTED").length,
+      info: offers.filter((o) => o.status === "INFO_REQUESTED").length,
       declined: offers.filter((o) => o.status === "DECLINED").length,
     }),
     [offers]
@@ -153,7 +171,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
     });
   }, [offers, activeFilter, sortBy, searchQuery]);
 
-  const respond = async (id: string, action: "ACCEPTED" | "DECLINED") => {
+  const respond = async (id: string, action: "ACCEPTED" | "DECLINED" | "INFO_REQUESTED") => {
     setProcessingId(id);
     try {
       const res = await fetch(`/api/company/pitches/offers/${id}`, {
@@ -165,9 +183,36 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       if (res.ok && data.success) {
         setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, status: action } : o)));
         setSelected((prev) => (prev && prev.id === id ? { ...prev, status: action } : prev));
-        toast.success(action === "ACCEPTED" ? "Offer accepted!" : "Offer declined.");
+        toast.success(
+          action === "ACCEPTED" ? "Offer accepted!" : action === "DECLINED" ? "Offer declined." : "Follow-up initiated."
+        );
+        if (action === "INFO_REQUESTED") {
+          const item = offers.find((o) => o.id === id);
+          if (item?.investorId) router.push(`/messages/${item.investorId}`);
+        }
       } else {
         toast.error(data.message || "Failed to update offer.");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const cancelPitch = async (id: string) => {
+    if (!window.confirm("Cancel this pitch request? It will be removed for the investor too.")) return;
+    setProcessingId(id);
+    try {
+      const res = await fetch(`/api/pitch-requests?id=${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setOffers((prev) => prev.filter((o) => o.id !== id));
+        setSelected((prev) => (prev && prev.id === id ? null : prev));
+        toast.success("Pitch request cancelled.");
+      } else {
+        toast.error(data.message || "Failed to cancel pitch request.");
+        setReloadKey((k) => k + 1); // status may have changed (e.g. accepted)
       }
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -189,6 +234,94 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         <span>Message Investor</span>
       </Link>
     );
+    const continueConversation = (
+      <Link
+        href={`/messages/${o.investorId}`}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
+      >
+        <MessageSquare size={13} />
+        <span>Continue Conversation</span>
+      </Link>
+    );
+    // Business viewing a pitch request it sent: it cannot accept/decline its own pitch.
+    if (direction === "sent") {
+      if (o.status === "PENDING") {
+        return (
+          <>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => cancelPitch(o.id)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            >
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+              <span>Cancel</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(o)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            >
+              <Pencil size={13} />
+              <span>Edit</span>
+            </button>
+          </>
+        );
+      }
+      if (o.status === "ACCEPTED") return message;
+      if (o.status === "INFO_REQUESTED") {
+        return (
+          <>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => cancelPitch(o.id)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            >
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+              <span>Cancel</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(o)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            >
+              <Pencil size={13} />
+              <span>Edit</span>
+            </button>
+            {continueConversation}
+          </>
+        );
+      }
+      return null;
+    }
+    if (o.status === "INFO_REQUESTED") {
+      return (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => respond(o.id, "DECLINED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            <X size={13} />
+            <span>Decline</span>
+          </button>
+          {continueConversation}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => respond(o.id, "ACCEPTED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+          >
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} />}
+            <span>Accept</span>
+          </button>
+        </>
+      );
+    }
     if (o.status === "PENDING") {
       return (
         <>
@@ -201,13 +334,15 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
             <X size={13} />
             <span>Decline</span>
           </button>
-          <Link
-            href={`/messages/${o.investorId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => respond(o.id, "INFO_REQUESTED")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <MessageSquare size={13} />
-            <span>Message</span>
-          </Link>
+            <span>Ask for info</span>
+          </button>
           <button
             type="button"
             disabled={busy}
@@ -235,6 +370,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         filters={[
           { key: "PENDING", label: "Pending", count: stats.pending },
           { key: "ACCEPTED", label: "Accepted", count: stats.accepted },
+          { key: "INFO_REQUESTED", label: "Ask info", count: stats.info },
           { key: "DECLINED", label: "Rejected", count: stats.declined },
           { key: "ALL", label: "All requests" },
         ]}
@@ -257,7 +393,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
             ? "No sent pitch requests"
             : activeFilter === "ALL"
             ? "No investor requests yet"
-            : `No ${activeFilter === "DECLINED" ? "rejected" : activeFilter.toLowerCase()} investor requests`
+            : `No ${activeFilter === "DECLINED" ? "rejected" : activeFilter === "INFO_REQUESTED" ? "ask info" : activeFilter.toLowerCase()} investor requests`
         }
         emptyDescription={
           searchQuery
@@ -338,6 +474,19 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           );
         })}
       </RequestsBoard>
+
+      {editing?.pitchRequest && (
+        <SendPitchRequestModal
+          investorId={editing.investorId}
+          investorName={nameOf(editing)}
+          existing={editing.pitchRequest}
+          onClose={() => setEditing(null)}
+          onSuccess={() => {
+            setSelected(null);
+            setReloadKey((k) => k + 1); // old request is gone; load the replacement
+          }}
+        />
+      )}
 
       {selected && (
         <RequestDetailsModal

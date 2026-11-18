@@ -11,25 +11,39 @@ const inputClass =
   "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 disabled:opacity-60";
 const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-700";
 
+export interface ExistingPitchRequest {
+  id: string;
+  companyName: string;
+  problemStatement: string;
+  proposedSolution: string;
+  fundingRequirement: string;
+  equityOffered: string | null;
+  message: string;
+}
+
 export default function SendPitchRequestModal({
   investorId,
   investorName,
   onClose,
   onSuccess,
+  existing,
 }: {
   investorId: string;
   investorName: string;
   onClose: () => void;
   onSuccess?: () => void;
+  /** When set, the modal edits this pending pitch and re-sends it instead of creating a new one. */
+  existing?: ExistingPitchRequest;
 }) {
+  const isEdit = !!existing;
   const companyFromProfile = useUserStore((s) => s.user?.company?.companyName as string | undefined);
 
-  const [companyName, setCompanyName] = useState(companyFromProfile ?? "");
-  const [problemStatement, setProblemStatement] = useState("");
-  const [proposedSolution, setProposedSolution] = useState("");
-  const [fundingRequirement, setFundingRequirement] = useState("");
-  const [equityOffered, setEquityOffered] = useState("");
-  const [message, setMessage] = useState("");
+  const [companyName, setCompanyName] = useState(existing?.companyName ?? companyFromProfile ?? "");
+  const [problemStatement, setProblemStatement] = useState(existing?.problemStatement ?? "");
+  const [proposedSolution, setProposedSolution] = useState(existing?.proposedSolution ?? "");
+  const [fundingRequirement, setFundingRequirement] = useState(existing?.fundingRequirement ?? "");
+  const [equityOffered, setEquityOffered] = useState(existing?.equityOffered ?? "");
+  const [message, setMessage] = useState(existing?.message ?? "");
   const [pitchDeck, setPitchDeck] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -65,7 +79,7 @@ export default function SendPitchRequestModal({
       toast.error("Please fill in all required fields.");
       return;
     }
-    if (!pitchDeck) {
+    if (!pitchDeck && !isEdit) {
       toast.error("Please attach your pitch deck (PDF).");
       return;
     }
@@ -74,24 +88,25 @@ export default function SendPitchRequestModal({
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append("investorId", investorId);
+      if (existing) formData.append("id", existing.id);
+      else formData.append("investorId", investorId);
       formData.append("companyName", companyName.trim());
       formData.append("problemStatement", problemStatement.trim());
       formData.append("proposedSolution", proposedSolution.trim());
       formData.append("fundingRequirement", fundingRequirement.trim());
       formData.append("equityOffered", equityOffered.trim());
       formData.append("message", message.trim());
-      formData.append("pitchDeck", pitchDeck);
+      if (pitchDeck) formData.append("pitchDeck", pitchDeck);
 
-      const res = await fetch("/api/pitch-requests", { method: "POST", body: formData });
+      const res = await fetch("/api/pitch-requests", { method: isEdit ? "PUT" : "POST", body: formData });
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        toast.error(json?.message || "Failed to send pitch request.");
+        toast.error(json?.message || (isEdit ? "Failed to update pitch request." : "Failed to send pitch request."));
         return;
       }
 
-      toast.success(`Pitch request sent to ${investorName}.`);
+      toast.success(isEdit ? `Updated pitch sent to ${investorName}.` : `Pitch request sent to ${investorName}.`);
       onSuccess?.();
       onClose();
     } catch {
@@ -115,11 +130,12 @@ export default function SendPitchRequestModal({
             <div className="flex items-center gap-2">
               <Send className="h-5 w-5 text-blue-600" />
               <h3 id="pitch-request-title" className="text-lg font-bold text-gray-900">
-                Send pitch request
+                {isEdit ? "Edit pitch request" : "Send pitch request"}
               </h3>
             </div>
             <p className="mt-0.5 text-xs text-gray-500">
-              Share your pitch with <span className="font-semibold text-gray-700">{investorName}</span>.
+              {isEdit ? "Saving replaces your earlier request and re-sends it to " : "Share your pitch with "}
+              <span className="font-semibold text-gray-700">{investorName}</span>.
             </p>
           </div>
           <button
@@ -223,7 +239,7 @@ export default function SendPitchRequestModal({
           </div>
 
           <div>
-            <label htmlFor="pr-deck" className={labelClass}>Attach pitch deck (PDF) *</label>
+            <label htmlFor="pr-deck" className={labelClass}>{isEdit ? "Replace pitch deck (PDF)" : "Attach pitch deck (PDF) *"}</label>
             {pitchDeck ? (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
                 <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
@@ -252,7 +268,9 @@ export default function SendPitchRequestModal({
                 className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
               />
             )}
-            <p className="mt-1 text-xs text-gray-400">PDF only, up to 120 MB.</p>
+            <p className="mt-1 text-xs text-gray-400">
+              {isEdit ? "Optional. Leave empty to keep your current deck. " : ""}PDF only, up to 120 MB.
+            </p>
           </div>
           </div>
 
@@ -271,7 +289,7 @@ export default function SendPitchRequestModal({
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-5 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              {loading ? "Sending…" : "Send pitch request"}
+              {loading ? "Sending…" : isEdit ? "Save & resend" : "Send pitch request"}
             </button>
           </div>
         </form>

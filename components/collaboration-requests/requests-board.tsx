@@ -52,6 +52,7 @@ const TONES = {
   emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
   amber: "bg-amber-50 text-amber-600 border-amber-100",
 } as const;
+
 export default function RequestsBoard({
   stats,
   filters,
@@ -72,6 +73,7 @@ export default function RequestsBoard({
   children,
 }: RequestsBoardProps) {
   const sortLabel = sortOptions.find((o) => o.key === sortBy)?.label ?? sortOptions[0]?.label;
+  const activeItem = filters.find((f) => f.key === activeFilter) ?? filters[0];
 
   return (
     <div className="space-y-6">
@@ -94,45 +96,19 @@ export default function RequestsBoard({
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
-            {filters.map((f) => {
-              const active = activeFilter === f.key;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => onFilterChange(f.key)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                    active ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                  }`}
-                >
-                  {f.label}
-                  {f.count !== undefined && (
-                    <span
-                      className={`rounded-full px-1.5 text-[10px] font-bold ${
-                        active ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {f.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* Left side: search */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
             {/* Search input */}
             {onSearchChange && (
-              <div className="relative">
+              <div className="relative shrink-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input
                   type="text"
                   placeholder={searchPlaceholder || "Search requests..."}
                   value={searchQuery || ""}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="w-44 sm:w-52 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
+                  className="w-full sm:w-72 lg:w-96 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
                 />
                 {searchQuery && (
                   <button
@@ -145,8 +121,40 @@ export default function RequestsBoard({
                 )}
               </div>
             )}
+          </div>
 
-            {/* Adjacent Left: Sort dropdown */}
+          {/* Right side: status + sort + direction */}
+          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
+            {/* Status filter dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+                >
+                  <span>{activeItem?.label}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-52 bg-white border border-gray-200 p-1 rounded-xl shadow-lg"
+              >
+                {filters.map((f) => (
+                  <DropdownMenuItem
+                    key={f.key}
+                    onSelect={() => onFilterChange(f.key)}
+                    className={`flex items-center justify-between px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                      activeFilter === f.key ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                    }`}
+                  >
+                    <span>{f.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -172,7 +180,7 @@ export default function RequestsBoard({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Most Right: Direction filter dropdown */}
+            {/* Direction dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button

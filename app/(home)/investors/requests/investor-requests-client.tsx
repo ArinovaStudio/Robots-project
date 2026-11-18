@@ -57,7 +57,7 @@ interface PitchRequestItem extends PitchRequestData {
   } | null;
 }
 
-type FilterTab = "PENDING" | "ACCEPTED" | "REVIEWED" | "DECLINED" | "ALL";
+type FilterTab = "PENDING" | "ACCEPTED" | "REVIEWED" | "DECLINED" | "ALL" |"Ask more info";
 type SortOption = "NEWEST" | "OLDEST" | "HIGH_FUNDING" | "LOW_FUNDING";
 
 function formatReceivedTime(dateString: string) {
@@ -412,101 +412,9 @@ export default function InvestorRequestsClient() {
 
       {/* Request filters and sorting */}
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab("PENDING")}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === "PENDING"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-              }`}
-            >
-              Pending
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  activeTab === "PENDING" ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {stats.pending}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("ACCEPTED")}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === "ACCEPTED"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-              }`}
-            >
-              Accepted
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  activeTab === "ACCEPTED" ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {stats.accepted}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("REVIEWED")}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === "REVIEWED"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-              }`}
-            >
-              Info requested
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  activeTab === "REVIEWED" ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {stats.reviewed}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("DECLINED")}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === "DECLINED"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-              }`}
-            >
-              Rejected
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  activeTab === "DECLINED" ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {stats.declined}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("ALL")}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === "ALL"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-              }`}
-            >
-              All requests
-            </button>
-          </div>
-
-          {/* Search + 2 Dropdowns on right */}
-          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
-            {/* Search Input */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* Left side: search */}
+          <div className="min-w-0 flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
@@ -514,7 +422,7 @@ export default function InvestorRequestsClient() {
                 placeholder="Search investment requests..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-44 sm:w-52 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
+                className="w-full sm:w-72 lg:w-96 pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 shadow-2xs"
               />
               {searchQuery && (
                 <button
@@ -526,6 +434,47 @@ export default function InvestorRequestsClient() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Right side: status + sort + direction */}
+          <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto shrink-0">
+            {/* Status filter dropdown */}
+            {(() => {
+              const filterOptions: { key: FilterTab; label: string }[] = [
+                { key: "PENDING", label: "Pending" },
+                { key: "ACCEPTED", label: "Accepted" },
+                { key: "REVIEWED", label: "Ask info" },
+                { key: "DECLINED", label: "Rejected" },
+                { key: "ALL", label: "All requests" },
+              ];
+              const activeOption = filterOptions.find((f) => f.key === activeTab) ?? filterOptions[0];
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+                    >
+                      <span>{activeOption.label}</span>
+                      <ChevronDown size={14} className="text-gray-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                    {filterOptions.map((f) => (
+                      <DropdownMenuItem
+                        key={f.key}
+                        onSelect={() => setActiveTab(f.key)}
+                        className={`flex items-center justify-between px-3 py-1.5 text-xs font-medium cursor-pointer rounded-lg ${
+                          activeTab === f.key ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700"
+                        }`}
+                      >
+                        <span>{f.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
 
             {/* Adjacent Left: Sort dropdown */}
             <DropdownMenu>
@@ -673,7 +622,7 @@ export default function InvestorRequestsClient() {
                 case "REVIEWED":
                   return (
                     <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
-                      Info requested
+                      Ask info
                     </span>
                   );
                 case "DECLINED":
@@ -863,7 +812,7 @@ export default function InvestorRequestsClient() {
                             type="button"
                             disabled={isProcessing}
                             onClick={() => handleUpdateStatus(req.id, "DECLINED")}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                            className="inline-flex items-center gap-1.5 rounded-lg border  bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                           >
                             <X size={13} className="text-red-500" />
                             <span>Reject</span>
