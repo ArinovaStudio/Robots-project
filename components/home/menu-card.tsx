@@ -83,12 +83,12 @@ export default function MenuCard() {
     },
     {
       icon: Sparkles,
-      label: "Investor Portal",
+      label: "Business collaboration (I2B)",
       href: "/investors/portal",
     },
     {
       icon: TrendingUp,
-      label: "Top Performers",
+      label: "Investor collaboration (I2I)",
       href: "/investors/top-performers",
     },
     {

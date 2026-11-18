@@ -36,6 +36,30 @@ const optionalInteger = z.preprocess(
   (value) => (value === "" || value === null || value === undefined ? undefined : Number(value)),
   z.number().int().nonnegative().optional().nullable(),
 );
+const STAGE_ALIASES: Record<string, (typeof INVESTMENT_STAGES)[number]> = {
+  preseed: "Pre-seed",
+  seed: "Seed",
+  seriesa: "Series A",
+  seriesb: "Series B+",
+  seriesbplus: "Series B+",
+  seriesc: "Series B+",
+  seriescplus: "Series B+",
+  growth: "Series B+",
+  late: "Series B+",
+  latestage: "Series B+",
+};
+
+const normalizeStages = (val: unknown) => {
+  if (!Array.isArray(val)) return val;
+  const out = new Set<string>();
+  for (const v of val) {
+    if (typeof v !== "string") continue;
+    const key = v.toLowerCase().replace(/\+/g, "plus").replace(/[^a-z]/g, "");
+    const mapped = STAGE_ALIASES[key];
+    if (mapped) out.add(mapped);
+  }
+  return Array.from(out);
+};
 
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(120),
@@ -44,7 +68,10 @@ const profileSchema = z.object({
   }),
   firmName: optionalString,
   sectors: z.array(z.string().trim().min(1).max(100)).min(1, "Add at least one sector.").max(20),
-  stages: z.array(z.enum(INVESTMENT_STAGES)).min(1, "Select at least one investment stage."),
+  stages: z.preprocess(
+  normalizeStages,
+  z.array(z.enum(INVESTMENT_STAGES)).min(1, "Select at least one investment stage."),
+),
   investmentRange: z.enum(INVESTMENT_RANGES, {
     message: "Please select a valid investment range.",
   }),

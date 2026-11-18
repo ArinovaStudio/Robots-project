@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import InvestorPortalClient from "../portal/investor-portal-client";
+import InvestorDirectory from "@/components/investors/investor-directory";
 
 export const metadata: Metadata = {
   title: "Top Performing Companies | Connecto",
@@ -14,5 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default function InvestorTopPerformersPage() {
-  return <InvestorPortalClient view="performers" />;
+  return (
+    <section className="mx-auto max-w-5xl py-6">
+      <h1 className="mb-4 text-xl font-bold text-[#172033]">Top Performing Investors</h1>
+      <InvestorDirectory />
+    </section>
+  );
 }
