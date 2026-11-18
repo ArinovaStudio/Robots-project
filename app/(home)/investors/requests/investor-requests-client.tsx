@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Clock,
   CheckCircle2,
@@ -93,11 +93,17 @@ function parseAmountValue(str: string): number {
 export default function InvestorRequestsClient() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
-  const [division, setDivision] = useState<"business" | "investor">("business");
+  const searchParams = useSearchParams();
+  const collaborationId = searchParams.get("collaborationId");
+  // Notification links carry ?collaborationId=..., so open the Investor tab for them.
+  const [division, setDivision] = useState<"business" | "investor">(collaborationId ? "investor" : "business");
   const [direction, setDirection] = useState<"received" | "sent">("received");
   const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
   const [investorOffers, setInvestorOffers] = useState<any[]>([]);
+  const [collabSent, setCollabSent] = useState<any[]>([]);
+  const [collabReceived, setCollabReceived] = useState<any[]>([]);
+  const [expandedCollabId, setExpandedCollabId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("PENDING");
   const [sortBy, setSortBy] = useState<SortOption>("NEWEST");
@@ -109,9 +115,10 @@ export default function InvestorRequestsClient() {
     let active = true;
     const fetchRequests = async () => {
       try {
-        const [pitchRes, myPitchesRes] = await Promise.all([
+        const [pitchRes, myPitchesRes, collabRes] = await Promise.all([
           fetch("/api/pitch-requests"),
           fetch("/api/investor/my-pitches").catch(() => null),
+          fetch("/api/investor/collaborations").catch(() => null),
         ]);
         const json = await pitchRes.json();
         if (active && json.success && Array.isArray(json.data)) {
@@ -121,6 +128,13 @@ export default function InvestorRequestsClient() {
           const myPitchesJson = await myPitchesRes.json();
           if (active && myPitchesJson.success && Array.isArray(myPitchesJson.data?.offers)) {
             setInvestorOffers(myPitchesJson.data.offers);
+          }
+        }
+        if (collabRes && collabRes.ok) {
+          const collabJson = await collabRes.json();
+          if (active && collabJson.success) {
+            setCollabSent(Array.isArray(collabJson.data?.sent) ? collabJson.data.sent : []);
+            setCollabReceived(Array.isArray(collabJson.data?.received) ? collabJson.data.received : []);
           }
         }
       } catch (err) {
@@ -142,14 +156,49 @@ export default function InvestorRequestsClient() {
     [requests, user?.id]
   );
   const investorPending = useMemo(
-    () => investorOffers.filter((o) => o.status === "PENDING").length,
-    [investorOffers]
+    () => collabReceived.filter((c) => c.status === "PENDING").length,
+    [collabReceived]
   );
 
   const tabs: { key: "business" | "investor"; label: string; icon: typeof ArrowLeftRight; pending: number }[] = [
     { key: "business", label: "Business", icon: ArrowLeftRight, pending: businessPending },
     { key: "investor", label: "Investor", icon: Landmark, pending: investorPending },
   ];
+
+  // Maps an investor collaboration row to the card shape; `other` is the counterparty.
+  const mapCollab = (c: any, other: any): PitchRequestItem & { kind: "collaboration" } => {
+    const firm = other?.investor?.firmName || other?.name || "Investor";
+    return {
+      kind: "collaboration",
+      id: c.id,
+      senderId: other?.id || "",
+      investorId: user?.id || "",
+      companyName: firm,
+      problemStatement: `${c.collaborationType} collaboration on ${c.targetCompany}`,
+      proposedSolution: c.participation || "",
+      fundingRequirement: c.proposedAmount || "",
+      equityOffered: null,
+      message: c.message || "",
+      pitchDeckUrl: c.pitchDeckUrl || "",
+      status: c.status,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      sender: {
+        id: other?.id || "",
+        name: other?.name || null,
+        image: other?.image || null,
+        verificationStatus: other?.verificationStatus,
+        company: {
+          companyName: firm,
+          logoUrl: other?.image || null,
+          type: other?.investor?.investorType || "Investor",
+          location: [other?.investor?.city, other?.investor?.country].filter(Boolean).join(", ") || null,
+        },
+      },
+      // extra details shown in the expanded view
+      ...({ collab: c } as object),
+    } as PitchRequestItem & { kind: "collaboration" };
+  };
 
   // Active requests depending on division (Business vs Investor) & direction (received vs sent)
   const activeRequests = useMemo(() => {
@@ -160,8 +209,12 @@ export default function InvestorRequestsClient() {
       return user?.id ? requests.filter((r) => r.senderId === user.id) : [];
     }
     // Investor division
+    if (direction === "received") {
+      return collabReceived.map((c) => mapCollab(c, c.requester));
+    }
     if (direction === "sent") {
-      return investorOffers.map((o) => ({
+      const collabs = collabSent.map((c) => mapCollab(c, c.collaborator));
+      const offers = investorOffers.map((o) => ({
         id: o.id,
         senderId: o.founderId || "",
         investorId: user?.id || "",
@@ -188,9 +241,10 @@ export default function InvestorRequestsClient() {
           },
         },
       })) as PitchRequestItem[];
+      return [...collabs, ...offers];
     }
     return [];
-  }, [division, direction, requests, investorOffers, user?.id]);
+  }, [division, direction, requests, investorOffers, collabSent, collabReceived, user?.id]);
 
   // Compute stat counts
   const stats = useMemo(() => {
@@ -247,17 +301,22 @@ export default function InvestorRequestsClient() {
 
   const handleUpdateStatus = async (id: string, newStatus: "ACCEPTED" | "DECLINED" | "REVIEWED") => {
     setProcessingId(id);
+    const isCollab = collabReceived.some((c) => c.id === id);
     try {
-      const res = await fetch("/api/pitch-requests", {
+      const res = await fetch(isCollab ? "/api/investor/collaborations" : "/api/pitch-requests", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: newStatus }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setRequests((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
-        );
+        if (isCollab) {
+          setCollabReceived((prev) => prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c)));
+        } else {
+          setRequests((prev) =>
+            prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+          );
+        }
         toast.success(
           newStatus === "ACCEPTED"
             ? "Request accepted!"
@@ -266,9 +325,11 @@ export default function InvestorRequestsClient() {
             : "Follow-up initiated."
         );
         if (newStatus === "REVIEWED") {
-          const reqItem = requests.find((r) => r.id === id);
-          if (reqItem?.senderId) {
-            router.push(`/messages/${reqItem.senderId}`);
+          const otherId = isCollab
+            ? collabReceived.find((c) => c.id === id)?.requesterId
+            : requests.find((r) => r.id === id)?.senderId;
+          if (otherId) {
+            router.push(`/messages/${otherId}`);
           }
         }
       } else {
@@ -283,13 +344,20 @@ export default function InvestorRequestsClient() {
 
   const handleDelete = async (id: string) => {
     setProcessingId(id);
+    const isCollab = collabSent.some((c) => c.id === id) || collabReceived.some((c) => c.id === id);
     try {
-      const res = await fetch(`/api/pitch-requests?id=${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        isCollab ? `/api/investor/collaborations?id=${id}` : `/api/pitch-requests?id=${id}`,
+        { method: "DELETE" }
+      );
       const data = await res.json();
       if (res.ok && data.success) {
-        setRequests((prev) => prev.filter((r) => r.id !== id));
+        if (isCollab) {
+          setCollabSent((prev) => prev.filter((c) => c.id !== id));
+          setCollabReceived((prev) => prev.filter((c) => c.id !== id));
+        } else {
+          setRequests((prev) => prev.filter((r) => r.id !== id));
+        }
         toast.success("Request deleted successfully.");
       } else {
         toast.error(data.message || "Failed to delete request.");
@@ -591,6 +659,8 @@ export default function InvestorRequestsClient() {
               ? "Try searching with a different keyword, company name, or clearing your search."
               : direction === "sent"
               ? "When you send pitch requests or investment offers, they will appear here."
+              : division === "investor"
+              ? "When other investors send you collaboration requests, they will appear here for your review."
               : "When startups and businesses send you pitch requests, they will appear here for your review and evaluation."}
           </p>
           {searchQuery && (
@@ -610,6 +680,7 @@ export default function InvestorRequestsClient() {
             const founderName = req.sender?.name || "Founder";
             const companyType = req.sender?.company?.type || "Startup";
             const isProcessing = processingId === req.id;
+            const collab = (req as any).kind === "collaboration" ? (req as any).collab : null;
 
             const statusBadge = () => {
               switch (req.status) {
@@ -674,7 +745,7 @@ export default function InvestorRequestsClient() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {founderName} &bull; Co-founder & CEO
+                        {collab ? `${founderName} • Investor` : `${founderName} • Co-founder & CEO`}
                       </p>
                     </div>
                   </div>
@@ -701,6 +772,7 @@ export default function InvestorRequestsClient() {
                           <Trash2 size={14} className="text-red-500" />
                           <span>Delete request</span>
                         </DropdownMenuItem>
+                        {!collab && (
                         <DropdownMenuItem
                           onSelect={() => handleBlock(req.id, req.senderId, req.companyName)}
                           className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
@@ -708,6 +780,7 @@ export default function InvestorRequestsClient() {
                           <Ban size={14} className="text-gray-500" />
                           <span>Block request</span>
                         </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onSelect={() =>
                             setReportTarget({
@@ -748,16 +821,16 @@ export default function InvestorRequestsClient() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
                   <div>
                     <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      Funding Stage
+                      {collab ? "Deal Stage" : "Funding Stage"}
                     </span>
                     <span className="mt-0.5 block text-xs font-bold text-gray-800">
-                      Seed
+                      {collab ? collab.dealStage : "Seed"}
                     </span>
                   </div>
 
                   <div>
                     <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      Seeking
+                      {collab ? "Proposed Amount" : "Seeking"}
                     </span>
                     <span className="mt-0.5 block text-xs font-bold text-gray-900">
                       {formatPitchFunding(req.fundingRequirement)}
@@ -766,10 +839,10 @@ export default function InvestorRequestsClient() {
 
                   <div>
                     <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      Equity Offered
+                      {collab ? "Type" : "Equity Offered"}
                     </span>
                     <span className="mt-0.5 block text-xs font-bold text-gray-900">
-                      {formatPitchEquity(req.equityOffered)}
+                      {collab ? collab.collaborationType : formatPitchEquity(req.equityOffered)}
                     </span>
                   </div>
 
@@ -783,14 +856,38 @@ export default function InvestorRequestsClient() {
                   </div>
                 </div>
 
+                {collab && expandedCollabId === req.id && (
+                  <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-xs text-gray-700 space-y-2">
+                    <p><span className="font-semibold">Target company:</span> {collab.targetCompany}</p>
+                    <p><span className="font-semibold">Participation:</span> {collab.participation}</p>
+                    <p className="whitespace-pre-wrap"><span className="font-semibold">Message:</span> {collab.message}</p>
+                    <div className="flex flex-wrap gap-3 pt-1">
+                      {([
+                        ["Pitch deck", collab.pitchDeckUrl],
+                        ["Business plan", collab.businessPlanUrl],
+                        ["Financials", collab.financialsUrl],
+                        ["Other documents", collab.otherDocumentsUrl],
+                      ] as [string, string | null][]).filter(([, url]) => url).map(([label, url]) => (
+                        <a key={label} href={url as string} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold">
+                          {label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Card footer: View pitch details link on left, action buttons on right */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-gray-100">
                   <button
                     type="button"
-                    onClick={() => setSelectedPitch(req)}
+                    onClick={() =>
+                      collab
+                        ? setExpandedCollabId((prev) => (prev === req.id ? null : req.id))
+                        : setSelectedPitch(req)
+                    }
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
                   >
-                    <span>View pitch details</span>
+                    <span>{collab ? (expandedCollabId === req.id ? "Hide details" : "View details") : "View pitch details"}</span>
                     <ArrowRight size={13} />
                   </button>
 
@@ -851,7 +948,7 @@ export default function InvestorRequestsClient() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-2xs"
                       >
                         <MessageSquare size={13} />
-                        <span>Message Founder</span>
+                        <span>{collab ? "Message Investor" : "Message Founder"}</span>
                       </Link>
                     )}
 

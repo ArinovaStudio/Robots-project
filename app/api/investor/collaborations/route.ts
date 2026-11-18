@@ -3,6 +3,7 @@ import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads";
 import { formatTargetAmount } from "@/lib/utils";
+import { autoConnectUsers } from "@/lib/auto-connect";
 import { COLLABORATION_DOCUMENTS, COLLABORATION_TYPES, DEAL_STAGES } from "@/lib/investor-options";
 
 const LIMITS = { targetCompany: 120, proposedAmount: 60, participation: 60, message: 1000 } as const;
@@ -139,6 +140,84 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("Failed to create investor collaboration:", error);
+    return fail("Internal server error", 500);
+  }
+}
+
+const partySelect = {
+  id: true,
+  name: true,
+  image: true,
+  verificationStatus: true,
+  investor: { select: { firmName: true, investorType: true, city: true, country: true } },
+} as const;
+
+// Lists investor collaboration requests the current investor has sent and received.
+export async function GET() {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) return fail(error || "Unauthorized", 401);
+    if (user.accountType !== "INVESTOR") return fail("Only investor accounts can view investor collaboration requests.", 403);
+
+    const [sent, received] = await Promise.all([
+      prisma.investorCollaboration.findMany({
+        where: { requesterId: user.id },
+        orderBy: { createdAt: "desc" },
+        include: { collaborator: { select: partySelect } },
+      }),
+      prisma.investorCollaboration.findMany({
+        where: { collaboratorId: user.id },
+        orderBy: { createdAt: "desc" },
+        include: { requester: { select: partySelect } },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true, data: { sent, received } });
+  } catch (error) {
+    console.error("Failed to fetch investor collaborations:", error);
+    return fail("Internal server error", 500);
+  }
+}
+
+// The receiving investor accepts, declines or asks for more info.
+export async function PATCH(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) return fail(error || "Unauthorized", 401);
+
+    const { id, status } = await req.json();
+    if (!id || !["ACCEPTED", "DECLINED", "REVIEWED"].includes(status)) return fail("Invalid status");
+
+    const collab = await prisma.investorCollaboration.findFirst({ where: { id, collaboratorId: user.id } });
+    if (!collab) return fail("Collaboration request not found", 404);
+
+    const updated = await prisma.investorCollaboration.update({ where: { id }, data: { status } });
+    if (status === "ACCEPTED") await autoConnectUsers(user.id, collab.requesterId);
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error("Failed to update investor collaboration:", error);
+    return fail("Internal server error", 500);
+  }
+}
+
+// Either party can remove the request.
+export async function DELETE(req: NextRequest) {
+  try {
+    const { user, error } = await getOnboardedUser();
+    if (error || !user) return fail(error || "Unauthorized", 401);
+
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) return fail("Missing id");
+
+    const result = await prisma.investorCollaboration.deleteMany({
+      where: { id, OR: [{ requesterId: user.id }, { collaboratorId: user.id }] },
+    });
+    if (!result.count) return fail("Collaboration request not found", 404);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete investor collaboration:", error);
     return fail("Internal server error", 500);
   }
 }
