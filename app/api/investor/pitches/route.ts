@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const stage = searchParams.get("stage");
     const search = searchParams.get("search");
 
+    const params: any[] = [user.id];
     let query = `
       SELECT p.id, p."userId", p.title, p.tagline, p.type, p.summary, p.sector, p.stage,
              p."targetAmount", p."equityOffered", p.highlights, p."pitchDeckUrl", p."websiteUrl",
@@ -30,10 +31,8 @@ export async function GET(req: NextRequest) {
       FROM "CompanyPitch" p
       INNER JOIN "User" u ON p."userId" = u.id
       LEFT JOIN "CompanyProfile" cp ON p."userId" = cp."userId"
-      WHERE p.status = 'ACTIVE'
+      WHERE p.status = 'ACTIVE' AND u."accountType" = 'BUSINESS' AND p."userId" != $1
     `;
-
-    const params: any[] = [];
     if (type && type !== "ALL") {
       params.push(type);
       query += ` AND p.type = $${params.length}`;

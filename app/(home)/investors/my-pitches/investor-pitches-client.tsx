@@ -91,7 +91,7 @@ interface SubmittedRating {
 }
 
 export default function InvestorPitchesClient() {
-  const [activeTab, setActiveTab] = useState<"created" | "offers" | "ratings">("created");
+  const [activeTab, setActiveTab] = useState<"created" | "offers" | "ratings">("offers");
   const [createdPitches, setCreatedPitches] = useState<CreatedPitch[]>([]);
   const [offers, setOffers] = useState<SubmittedOffer[]>([]);
   const [ratings, setRatings] = useState<SubmittedRating[]>([]);
@@ -179,13 +179,6 @@ export default function InvestorPitchesClient() {
           </div>
 
           <div className="flex flex-wrap sm:flex-nowrap md:flex-col gap-2.5 shrink-0">
-            <button
-              onClick={() => setShowAddPitchModal(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-sm font-bold text-white transition"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Publish Pitch / Idea
-            </button>
             <Link
               href="/investors/requests"
               className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition"

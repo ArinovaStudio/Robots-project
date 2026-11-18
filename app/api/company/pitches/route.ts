@@ -18,6 +18,13 @@ export async function GET() {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
+    if (user.accountType !== "BUSINESS") {
+      return NextResponse.json(
+        { success: false, message: "Only business accounts can view company pitches." },
+        { status: 403 }
+      );
+    }
+
     // Fetch all pitches created by this company
     const pitches = await prisma.$queryRaw<CompanyPitchRow[]>`
       SELECT p.id, p."userId", p.title, p.tagline, p.type, p.summary, p.sector, p.stage,
@@ -97,6 +104,13 @@ export async function POST(req: NextRequest) {
     const { user, error } = await getOnboardedUser();
     if (error || !user) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
+    }
+
+    if (user.accountType !== "BUSINESS") {
+      return NextResponse.json(
+        { success: false, message: "Only business accounts can publish company pitches." },
+        { status: 403 }
+      );
     }
 
     let body: Record<string, unknown>;
