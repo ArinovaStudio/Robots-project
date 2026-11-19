@@ -29,6 +29,7 @@ interface Signals {
 
 const WEIGHTS = { services: 0.6, keywords: 0.25, tags: 0.15 };
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_MATCH_TIMEOUT_MS || 10000);
+const OLLAMA_CHUNK = Math.max(1, Number(process.env.OLLAMA_MATCH_CHUNK || 10));
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const FALLBACK_TTL_MS = 2 * 60 * 1000;
 const CACHE_MAX = 2000;
@@ -332,7 +333,15 @@ export async function scoreMatches(
       pair: pairFor(direction, viewer, buildSignals(c, tagMap.get(c.userId) || [])),
     }));
 
-    const ai = await askOllama(entries.map(({ id, pair }) => ({ id, pair })));
+    // A whole pool in one prompt is too big/slow for the model, so ask in small parallel chunks.
+    // A chunk that fails or times out only affects its own companies (they get keyword scores).
+    const chunks: typeof entries[] = [];
+    for (let i = 0; i < entries.length; i += OLLAMA_CHUNK) chunks.push(entries.slice(i, i + OLLAMA_CHUNK));
+    const chunkResults = await Promise.all(
+      chunks.map((chunk) => askOllama(chunk.map(({ id, pair }) => ({ id, pair }))))
+    );
+    const ai = new Map<string, OllamaResult>();
+    chunkResults.forEach((m) => m?.forEach((row, id) => ai.set(id, row)));
 
     for (const { id, company, pair } of entries) {
       try {

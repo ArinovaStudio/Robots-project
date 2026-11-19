@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CompanyCard from "@/components/home/search/company-card";
 import FeedCard from "@/components/home/feed-card";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
@@ -10,6 +10,8 @@ import { useUserStore } from "@/store/AuthStore";
 import Link from "next/link";
 import CollaborateModal from "@/components/modals/collaborate-modal";
 
+const COMPANY_PAGE_SIZE = 12;
+
 export default function MarketplaceClient() {
   const { user } = useUserStore();
   const isInvestor = user?.accountType === "INVESTOR";
@@ -18,6 +20,15 @@ export default function MarketplaceClient() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [buyers, setBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Infinite scroll for the company cards (Suppliers / Buyers)
+  const [companyPage, setCompanyPage] = useState(1);
+  const [companyHasMore, setCompanyHasMore] = useState(false);
+  const [companyLoadingMore, setCompanyLoadingMore] = useState(false);
+  const companyLoadingMoreRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Identifies which list (tab + source) is on screen, so a slow "next page" response
+  // for a list the user already left can never be appended to the current one.
+  const listKeyRef = useRef("");
   // Posts tab: real posts from other businesses that match my Services & Offerings / Looking For
   const [matchedPosts, setMatchedPosts] = useState<any[]>([]);
   const [postsPage, setPostsPage] = useState(1);
@@ -44,22 +55,27 @@ export default function MarketplaceClient() {
     // an old tab/source can never overwrite the list the user is looking at now.
     const controller = new AbortController();
     const tab = activeTab;
+    listKeyRef.current = `${tab}:${secondaryTab}`;
+    setCompanyHasMore(false);
     setLoading(true);
 
     (async () => {
       try {
         const endpoint = `${
           tab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers"
-        }?source=${secondaryTab}`;
+        }?source=${secondaryTab}&page=1&limit=${COMPANY_PAGE_SIZE}`;
         const res = await fetch(endpoint, { signal: controller.signal });
         const json = await res.json();
 
         if (json.success) {
           if (tab === "suppliers") setSuppliers(json.data);
           else setBuyers(json.data);
+          setCompanyPage(1);
+          setCompanyHasMore(Boolean(json.pagination?.hasMore));
         } else {
           if (tab === "suppliers") setSuppliers([]);
           else setBuyers([]);
+          setCompanyHasMore(false);
         }
         setLoading(false);
       } catch (err) {
@@ -125,6 +141,54 @@ export default function MarketplaceClient() {
       setPostsLoadingMore(false);
     }
   };
+
+  const loadMoreCompanies = useCallback(async () => {
+    if (companyLoadingMoreRef.current || !companyHasMore) return;
+    companyLoadingMoreRef.current = true;
+    setCompanyLoadingMore(true);
+    const key = listKeyRef.current;
+    const tab = activeTab;
+    const next = companyPage + 1;
+    try {
+      const endpoint = `${
+        tab === "suppliers" ? "/api/match/suppliers" : "/api/match/buyers"
+      }?source=${secondaryTab}&page=${next}&limit=${COMPANY_PAGE_SIZE}`;
+      const res = await fetch(endpoint);
+      const json = await res.json();
+      if (listKeyRef.current !== key) return; // user switched tab/source meanwhile
+      if (json.success) {
+        const append = (prev: any[]) => {
+          const seen = new Set(prev.map((c) => c.userId));
+          return [...prev, ...json.data.filter((c: any) => !seen.has(c.userId))];
+        };
+        if (tab === "suppliers") setSuppliers(append);
+        else setBuyers(append);
+        setCompanyPage(next);
+        setCompanyHasMore(Boolean(json.pagination?.hasMore));
+      } else {
+        setCompanyHasMore(false);
+      }
+    } catch (err) {
+      console.error("Failed to load more matches:", err);
+    } finally {
+      companyLoadingMoreRef.current = false;
+      setCompanyLoadingMore(false);
+    }
+  }, [activeTab, secondaryTab, companyPage, companyHasMore]);
+
+  // Fire loadMore when the sentinel below the grid scrolls near the viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !companyHasMore || showPosts || isInvestor) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMoreCompanies();
+      },
+      { rootMargin: "400px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMoreCompanies, companyHasMore, showPosts, isInvestor, loading]);
 
   if (isInvestor) {
     return (
@@ -319,6 +383,12 @@ export default function MarketplaceClient() {
                 }}
               />
             ))}
+          </div>
+        )}
+
+        {!showPosts && !loading && (
+          <div ref={sentinelRef} className="flex h-12 items-center justify-center">
+            {companyLoadingMore && <Loader2 size={18} className="animate-spin text-blue-600" />}
           </div>
         )}
         

@@ -104,7 +104,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/marketplace/collaborate?direction=${direction}`);
+        const res = await fetch(`/api/marketplace/collaborate?direction=${direction}&counterparty=business`);
         const json = res.ok ? await res.json() : null;
         if (active && json?.success && Array.isArray(json.data)) {
           setRequests(json.data);

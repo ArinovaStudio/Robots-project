@@ -160,7 +160,8 @@ export async function POST(req: NextRequest) {
         actorId: user.id,
         type: "SYSTEM",
         content: `${senderName} submitted a collaboration proposal to your business.`,
-        link: "/collaboration-requests?tab=business",
+        // An investor's proposal belongs on the recipient's Investor tab, a business's on the Business tab.
+        link: `/collaboration-requests?tab=${user.accountType === "INVESTOR" ? "investor" : "business"}`,
       },
     });
 
@@ -193,7 +194,19 @@ export async function DELETE(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const recipientId = body?.recipientId;
+    let recipientId = body?.recipientId;
+    const idParam = req.nextUrl.searchParams.get("id");
+    if ((!recipientId || typeof recipientId !== "string") && idParam) {
+      // Cancel by request id: resolve the recipient from my own pending request.
+      const row = await prisma.marketplaceCollaboration.findFirst({
+        where: { id: idParam, requesterId: user.id, status: "PENDING" },
+        select: { recipientId: true },
+      });
+      recipientId = row?.recipientId;
+      if (!recipientId) {
+        return NextResponse.json({ success: false, message: "No pending collaboration request found." }, { status: 404 });
+      }
+    }
     if (!recipientId || typeof recipientId !== "string") {
       return NextResponse.json({ success: false, message: "Recipient business ID is required." }, { status: 400 });
     }
@@ -228,7 +241,7 @@ export async function DELETE(req: NextRequest) {
           userId: recipientId,
           actorId: user.id,
           type: "SYSTEM",
-          content: { endsWith: "submitted a B2B collaboration proposal to your business." },
+          content: { endsWith: "submitted a collaboration proposal to your business." },
           createdAt: { gte: new Date(new Date(earliest).getTime() - 5000) },
         },
       })
@@ -246,6 +259,8 @@ const partySelect = {
   name: true,
   image: true,
   verificationStatus: true,
+  accountType: true,
+  investor: { select: { firmName: true, investorType: true, city: true, country: true } },
   company: {
     select: {
       companyName: true,
@@ -259,8 +274,11 @@ const partySelect = {
 /**
  * List collaboration requests.
  * Query: ?direction=received (default) | sent   &page=1 &limit=50 (max 100)
- *  - received: proposals other businesses sent to me
- *  - sent: proposals I sent to other businesses
+ *        &counterparty=business | investor  (optional)
+ *  - received: proposals other accounts sent to me
+ *  - sent: proposals I sent to other accounts
+ *  - counterparty narrows to the OTHER side: "investor" = only investors, "business" = everyone
+ *    who is not an investor. Omit it to get both.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -274,7 +292,18 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
 
-    const where = direction === "sent" ? { requesterId: user.id } : { recipientId: user.id };
+    const counterparty = searchParams.get("counterparty");
+    const otherSide =
+      counterparty === "investor"
+        ? { accountType: "INVESTOR" as const }
+        : counterparty === "business"
+        ? { accountType: { not: "INVESTOR" as const } }
+        : null;
+
+    const where =
+      direction === "sent"
+        ? { requesterId: user.id, ...(otherSide ? { recipient: otherSide } : {}) }
+        : { recipientId: user.id, ...(otherSide ? { requester: otherSide } : {}) };
 
     const [data, total] = await Promise.all([
       prisma.marketplaceCollaboration.findMany({

@@ -105,6 +105,8 @@ export default function InvestorRequestsClient() {
   const [investorOffers, setInvestorOffers] = useState<any[]>([]);
   const [collabSent, setCollabSent] = useState<any[]>([]);
   const [collabReceived, setCollabReceived] = useState<any[]>([]);
+  // Collaboration proposals this investor sent to BUSINESSES (MarketplaceCollaboration rows)
+  const [bizCollabSent, setBizCollabSent] = useState<any[]>([]);
   const [expandedCollabId, setExpandedCollabId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("PENDING");
@@ -117,10 +119,11 @@ export default function InvestorRequestsClient() {
     let active = true;
     const fetchRequests = async () => {
       try {
-        const [pitchRes, myPitchesRes, collabRes] = await Promise.all([
+        const [pitchRes, myPitchesRes, collabRes, bizCollabRes] = await Promise.all([
           fetch("/api/pitch-requests"),
           fetch("/api/investor/my-pitches").catch(() => null),
           fetch("/api/investor/collaborations").catch(() => null),
+          fetch("/api/marketplace/collaborate?direction=sent&counterparty=business&limit=100").catch(() => null),
         ]);
         const json = await pitchRes.json();
         if (active && json.success && Array.isArray(json.data)) {
@@ -137,6 +140,12 @@ export default function InvestorRequestsClient() {
           if (active && collabJson.success) {
             setCollabSent(Array.isArray(collabJson.data?.sent) ? collabJson.data.sent : []);
             setCollabReceived(Array.isArray(collabJson.data?.received) ? collabJson.data.received : []);
+          }
+        }
+        if (bizCollabRes && bizCollabRes.ok) {
+          const bizJson = await bizCollabRes.json();
+          if (active && bizJson.success && Array.isArray(bizJson.data)) {
+            setBizCollabSent(bizJson.data);
           }
         }
       } catch (err) {
@@ -202,13 +211,71 @@ export default function InvestorRequestsClient() {
     } as PitchRequestItem & { kind: "collaboration" };
   };
 
+  // Maps a collaboration proposal I sent to a BUSINESS (MarketplaceCollaboration) to the card shape.
+  const mapBizCollab = (c: any): PitchRequestItem & { kind: "collaboration" } => {
+    const biz = c.recipient;
+    const name = biz?.company?.companyName || biz?.name || "Business";
+    const offering = (label: string) =>
+      (Array.isArray(c.offerings) ? c.offerings : [])
+        .find((o: string) => typeof o === "string" && o.startsWith(`${label}:`))
+        ?.slice(label.length + 1)
+        .trim() || "";
+    const type = c.expectations?.[0] || "Collaboration";
+    const amount = offering("Proposed Investment");
+    const participation = offering("Participation");
+    // The business side's "asked for more info" is stored as INFO_REQUESTED; this page calls it REVIEWED.
+    const status = c.status === "INFO_REQUESTED" ? "REVIEWED" : c.status === "COMPLETED" ? "ACCEPTED" : c.status;
+
+    return {
+      kind: "collaboration",
+      id: c.id,
+      senderId: biz?.id || c.recipientId || "",
+      investorId: user?.id || "",
+      companyName: name,
+      problemStatement: `${type} collaboration${c.contributionDesc ? ` on ${c.contributionDesc}` : ""}`,
+      proposedSolution: participation,
+      fundingRequirement: amount,
+      equityOffered: null,
+      message: c.overview || "",
+      pitchDeckUrl: c.resourcesAvailable || "",
+      status,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      sender: {
+        id: biz?.id || "",
+        name: biz?.name || null,
+        image: biz?.image || null,
+        verificationStatus: biz?.verificationStatus,
+        company: {
+          companyName: name,
+          logoUrl: biz?.company?.logoUrl || biz?.image || null,
+          type: biz?.company?.type || "Business",
+          location: biz?.company?.location || null,
+        },
+      },
+      collab: {
+        isBusinessCollab: true,
+        collaborationType: type,
+        proposedAmount: amount,
+        targetCompany: c.contributionDesc || "—",
+        participation,
+        message: c.overview || "",
+        pitchDeckUrl: c.resourcesAvailable || null,
+        businessPlanUrl: null,
+        financialsUrl: null,
+        otherDocumentsUrl: null,
+      },
+    } as unknown as PitchRequestItem & { kind: "collaboration" };
+  };
+
   // Active requests depending on division (Business vs Investor) & direction (received vs sent)
   const activeRequests = useMemo(() => {
     if (division === "business") {
       if (direction === "received") {
         return user?.id ? requests.filter((r) => r.investorId === user.id) : requests;
       }
-      return user?.id ? requests.filter((r) => r.senderId === user.id) : [];
+      const sentPitchRequests = user?.id ? requests.filter((r) => r.senderId === user.id) : [];
+      return [...bizCollabSent.map(mapBizCollab), ...sentPitchRequests];
     }
     // Investor division
     if (direction === "received") {
@@ -246,7 +313,7 @@ export default function InvestorRequestsClient() {
       return [...collabs, ...offers];
     }
     return [];
-  }, [division, direction, requests, investorOffers, collabSent, collabReceived, user?.id]);
+  }, [division, direction, requests, investorOffers, collabSent, collabReceived, bizCollabSent, user?.id]);
 
   // Compute stat counts
   const stats = useMemo(() => {
@@ -338,6 +405,29 @@ export default function InvestorRequestsClient() {
 
   const handleDelete = async (id: string) => {
     setProcessingId(id);
+    const bizCollab = bizCollabSent.find((c) => c.id === id);
+    if (bizCollab) {
+      // Proposals to businesses can only be cancelled while pending, by recipient id.
+      try {
+        const res = await fetch("/api/marketplace/collaborate", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipientId: bizCollab.recipientId }),
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.success) {
+          setBizCollabSent((prev) => prev.filter((c) => c.recipientId !== bizCollab.recipientId || c.status !== "PENDING"));
+          toast.success("Request cancelled.");
+        } else {
+          toast.error(data?.message || "Failed to cancel request.");
+        }
+      } catch {
+        toast.error("An error occurred while cancelling.");
+      } finally {
+        setProcessingId(null);
+      }
+      return;
+    }
     const isCollab = collabSent.some((c) => c.id === id) || collabReceived.some((c) => c.id === id);
     try {
       const res = await fetch(
@@ -636,7 +726,7 @@ export default function InvestorRequestsClient() {
               ? `No requests found matching "${searchQuery}"`
               : direction === "sent"
               ? division === "business"
-                ? "No sent pitch requests"
+                ? "No sent collaboration requests"
                 : "No sent investment offers"
               : activeTab === "PENDING"
               ? "No pending investment requests"
@@ -652,7 +742,9 @@ export default function InvestorRequestsClient() {
             {searchQuery
               ? "Try searching with a different keyword, company name, or clearing your search."
               : direction === "sent"
-              ? "When you send pitch requests or investment offers, they will appear here."
+              ? division === "business"
+                ? "Collaboration requests you send to businesses will appear here."
+                : "When you send investment offers or investor collaboration requests, they will appear here."
               : division === "investor"
               ? "When other investors send you collaboration requests, they will appear here for your review."
               : "When startups and businesses send you pitch requests, they will appear here for your review and evaluation."}
@@ -675,6 +767,7 @@ export default function InvestorRequestsClient() {
             const companyType = req.sender?.company?.type || "Startup";
             const isProcessing = processingId === req.id;
             const collab = (req as any).kind === "collaboration" ? (req as any).collab : null;
+            const isBizCollab = Boolean(collab?.isBusinessCollab);
 
             const statusBadge = () => {
               switch (req.status) {
@@ -739,7 +832,7 @@ export default function InvestorRequestsClient() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {collab ? `${founderName} • Investor` : `${founderName} • Co-founder & CEO`}
+                        {isBizCollab ? `${founderName} • Business` : collab ? `${founderName} • Investor` : `${founderName} • Co-founder & CEO`}
                       </p>
                     </div>
                   </div>
@@ -759,13 +852,15 @@ export default function InvestorRequestsClient() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
+                        {(!isBizCollab || req.status === "PENDING") && (
                         <DropdownMenuItem
                           onSelect={() => handleDelete(req.id)}
                           className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
                         >
                           <Trash2 size={14} className="text-red-500" />
-                          <span>Delete request</span>
+                          <span>{isBizCollab ? "Cancel request" : "Delete request"}</span>
                         </DropdownMenuItem>
+                        )}
                         {!collab && (
                         <DropdownMenuItem
                           onSelect={() => handleBlock(req.id, req.senderId, req.companyName)}
@@ -780,7 +875,7 @@ export default function InvestorRequestsClient() {
                             setReportTarget({
                               userId: req.senderId,
                               name: req.companyName,
-                              pitchRequestId: req.id,
+                              pitchRequestId: isBizCollab ? undefined : req.id,
                             })
                           }
                           className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
@@ -815,10 +910,10 @@ export default function InvestorRequestsClient() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
                   <div>
                     <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      {collab ? "Deal Stage" : "Funding Stage"}
+                      {isBizCollab ? "Business Type" : collab ? "Deal Stage" : "Funding Stage"}
                     </span>
                     <span className="mt-0.5 block text-xs font-bold text-gray-800">
-                      {collab ? collab.dealStage : "Seed"}
+                      {isBizCollab ? companyType : collab ? collab.dealStage : "Seed"}
                     </span>
                   </div>
 
@@ -842,7 +937,7 @@ export default function InvestorRequestsClient() {
 
                   <div>
                     <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      Received
+                      {direction === "sent" ? "Sent" : "Received"}
                     </span>
                     <span className="mt-0.5 block text-xs font-medium text-gray-600">
                       {formatReceivedTime(req.createdAt)}
@@ -852,12 +947,12 @@ export default function InvestorRequestsClient() {
 
                 {collab && expandedCollabId === req.id && (
                   <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-xs text-gray-700 space-y-2">
-                    <p><span className="font-semibold">Target company:</span> {collab.targetCompany}</p>
+                    <p><span className="font-semibold">{isBizCollab ? "Target opportunity:" : "Target company:"}</span> {collab.targetCompany}</p>
                     <p><span className="font-semibold">Participation:</span> {collab.participation}</p>
                     <p className="whitespace-pre-wrap"><span className="font-semibold">Message:</span> {collab.message}</p>
                     <div className="flex flex-wrap gap-3 pt-1">
                       {([
-                        ["Pitch deck", collab.pitchDeckUrl],
+                        [isBizCollab ? "Document" : "Pitch deck", collab.pitchDeckUrl],
                         ["Business plan", collab.businessPlanUrl],
                         ["Financials", collab.financialsUrl],
                         ["Other documents", collab.otherDocumentsUrl],
@@ -942,11 +1037,25 @@ export default function InvestorRequestsClient() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-2xs"
                       >
                         <MessageSquare size={13} />
-                        <span>{collab ? "Message Investor" : "Message Founder"}</span>
+                        <span>{isBizCollab ? "Message Business" : collab ? "Message Investor" : "Message Founder"}</span>
                       </Link>
                     )}
 
-                    {req.status === "REVIEWED" && (
+                    {req.status === "REVIEWED" && isBizCollab && (
+                      <>
+                        {/* Questions the business asked through "Ask for info" (renders nothing if there are none) */}
+                        <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
+                        <Link
+                          href={`/messages/${req.senderId}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition shadow-2xs"
+                        >
+                          <MessageSquare size={13} />
+                          <span>Message Business</span>
+                        </Link>
+                      </>
+                    )}
+
+                    {req.status === "REVIEWED" && !isBizCollab && (
                       <InfoRequestAction requestId={req.id} requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"} />
                     )}
                   </div>

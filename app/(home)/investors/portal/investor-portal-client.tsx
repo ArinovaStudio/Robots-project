@@ -182,6 +182,8 @@ function BioText({
   );
 }
 
+const PITCH_CHUNK = 12;
+
 export default function InvestorPortalClient({ view }: { view: "pitches" | "performers" }) {
   const [pitches, setPitches] = useState<PitchItem[]>([]);
   const [performers, setPerformers] = useState<PreferenceCompany[]>([]);
@@ -190,6 +192,9 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
   const [preferences, setPreferences] = useState<{ sectors: string[]; stages: string[]; investmentRange: string } | null>(null);
 
   const [loadingPitches, setLoadingPitches] = useState(true);
+  // Progressive rendering: show pitches in chunks, load the next chunk on scroll
+  const [renderCount, setRenderCount] = useState(PITCH_CHUNK);
+  const pitchSentinelRef = useRef<HTMLDivElement | null>(null);
   const [loadingPerformers, setLoadingPerformers] = useState(true);
 
   // Filters
@@ -507,6 +512,31 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
     return filteredPitches.filter((p) => !hiddenPitches.has(p.id));
   }, [filteredPitches, hiddenPitches]);
 
+  const shownPitches = useMemo(
+    () => visiblePitches.slice(0, renderCount),
+    [visiblePitches, renderCount]
+  );
+  const hasMorePitches = renderCount < visiblePitches.length;
+
+  // Back to the first chunk whenever the filters change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRenderCount(PITCH_CHUNK);
+  }, [typeFilter, stageFilter, sectorFilter, searchQuery, onlyPreferences]);
+
+  useEffect(() => {
+    const el = pitchSentinelRef.current;
+    if (!el || !hasMorePitches) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setRenderCount((c) => c + PITCH_CHUNK);
+      },
+      { rootMargin: "400px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMorePitches, renderCount, loadingPitches]);
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 pb-24">
       {view === "pitches" && (
@@ -625,8 +655,9 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
               </button>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {visiblePitches.map((pitch) => {
+              {shownPitches.map((pitch) => {
                 const typeColor =
                   pitch.type === "PITCH"
                     ? "bg-[#EFF6FF] text-[#2563EB] border-blue-200"
@@ -907,6 +938,8 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                 );
               })}
             </div>
+            {hasMorePitches && <div ref={pitchSentinelRef} className="h-12" />}
+            </>
           )}
         </section>
       )}

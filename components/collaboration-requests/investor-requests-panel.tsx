@@ -36,6 +36,65 @@ interface ReceivedOffer {
   location: string | null;
   // Only set for pitch requests the business sent; used to prefill the edit form.
   pitchRequest?: ExistingPitchRequest;
+  // "collaboration" = a MarketplaceCollaboration proposal between this business and an investor
+  kind?: "collaboration";
+  targetOpportunity?: string | null;
+  documentUrl?: string | null;
+}
+
+type InfoType = "INVESTMENT_OFFER" | "BUSINESS_COLLABORATION";
+const infoTypeOf = (o: Pick<ReceivedOffer, "kind">): InfoType =>
+  o.kind === "collaboration" ? "BUSINESS_COLLABORATION" : "INVESTMENT_OFFER";
+
+function offeringOf(offerings: unknown, label: string): string {
+  const list = Array.isArray(offerings) ? offerings : [];
+  const hit = list.find((o) => typeof o === "string" && o.startsWith(`${label}:`)) as string | undefined;
+  return hit ? hit.slice(label.length + 1).trim() : "";
+}
+
+// Maps a MarketplaceCollaboration row to the card shape. `other` is the investor on the other side.
+function mapCollaboration(c: any, other: any, otherId: string): ReceivedOffer {
+  const type = c.expectations?.[0] || "Collaboration";
+  const amount = offeringOf(c.offerings, "Proposed Investment");
+  const participation = offeringOf(c.offerings, "Participation");
+  return {
+    id: c.id,
+    pitchId: c.id,
+    pitchTitle: `${type} collaboration${c.contributionDesc ? ` on ${c.contributionDesc}` : ""}`,
+    pitchSector: null,
+    pitchStage: null,
+    pitchTargetAmount: null,
+    amount: amount || "—",
+    amountValue: parseFloat(amount.replace(/[^0-9.]/g, "")) || 0,
+    terms: participation || null,
+    message: c.overview || null,
+    status: c.status === "COMPLETED" ? "ACCEPTED" : c.status, // PENDING | ACCEPTED | INFO_REQUESTED | DECLINED
+    createdAt: c.createdAt,
+    investorId: other?.id || otherId,
+    name: other?.name ?? null,
+    image: other?.image ?? null,
+    verificationStatus: other?.verificationStatus ?? null,
+    firmName: other?.investor?.firmName ?? null,
+    investorType: other?.investor?.investorType || "Investor",
+    location: [other?.investor?.city, other?.investor?.country].filter(Boolean).join(", ") || null,
+    kind: "collaboration",
+    targetOpportunity: c.contributionDesc || null,
+    documentUrl: c.resourcesAvailable || null,
+  };
+}
+
+// Collaboration proposals exchanged with INVESTORS (the business tab never shows these).
+async function loadInvestorCollaborations(dir: "received" | "sent"): Promise<ReceivedOffer[]> {
+  try {
+    const res = await fetch(`/api/marketplace/collaborate?direction=${dir}&counterparty=investor&limit=100`);
+    const json = res.ok ? await res.json() : null;
+    if (!json?.success || !Array.isArray(json.data)) return [];
+    return json.data.map((c: any) =>
+      dir === "sent" ? mapCollaboration(c, c.recipient, c.recipientId) : mapCollaboration(c, c.requester, c.requesterId)
+    );
+  } catch {
+    return [];
+  }
 }
 
 type FilterKey = "PENDING" | "ACCEPTED" | "INFO_REQUESTED" | "DECLINED" | "ALL";
@@ -65,7 +124,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ReceivedOffer | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view" } | null>(null);
+  const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view"; type: InfoType } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -73,8 +132,9 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       setLoading(true);
       try {
         if (direction === "sent") {
-          const res = await fetch("/api/pitch-requests");
+          const [res, collabItems] = await Promise.all([fetch("/api/pitch-requests"), loadInvestorCollaborations("sent")]);
           const json = res.ok ? await res.json() : null;
+          if (active && !(json?.success && Array.isArray(json.data))) setOffers(collabItems);
           if (active && json?.success && Array.isArray(json.data)) {
             // Map sent pitch requests into displayable offers format
             const mapped: ReceivedOffer[] = json.data.map((p: any) => ({
@@ -108,12 +168,12 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
                 message: p.message,
               },
             }));
-            setOffers(mapped);
+            setOffers([...collabItems, ...mapped]);
           }
         } else {
-          const res = await fetch("/api/company/pitches/offers");
+          const [res, collabItems] = await Promise.all([fetch("/api/company/pitches/offers"), loadInvestorCollaborations("received")]);
           const json = res.ok ? await res.json() : null;
-          if (active && json?.success && Array.isArray(json.data)) setOffers(json.data);
+          if (active) setOffers(json?.success && Array.isArray(json.data) ? [...collabItems, ...json.data] : collabItems);
         }
       } catch (err) {
         console.error("Failed to load investor requests:", err);
@@ -175,10 +235,11 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   const respond = async (id: string, action: "ACCEPTED" | "DECLINED" | "INFO_REQUESTED") => {
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/company/pitches/offers/${id}`, {
+      const isCollab = offers.find((o) => o.id === id)?.kind === "collaboration";
+      const res = await fetch(isCollab ? "/api/marketplace/collaborate" : `/api/company/pitches/offers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(isCollab ? { id, status: action } : { action }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
@@ -198,15 +259,16 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
   };
 
   const cancelPitch = async (id: string) => {
-    if (!window.confirm("Cancel this pitch request? It will be removed for the investor too.")) return;
+    const isCollab = offers.find((o) => o.id === id)?.kind === "collaboration";
+    if (!window.confirm(`Cancel this ${isCollab ? "collaboration request" : "pitch request"}? It will be removed for the investor too.`)) return;
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/pitch-requests?id=${id}`, { method: "DELETE" });
+      const res = await fetch(isCollab ? `/api/marketplace/collaborate?id=${id}` : `/api/pitch-requests?id=${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setOffers((prev) => prev.filter((o) => o.id !== id));
         setSelected((prev) => (prev && prev.id === id ? null : prev));
-        toast.success("Pitch request cancelled.");
+        toast.success(isCollab ? "Collaboration request cancelled." : "Pitch request cancelled.");
       } else {
         toast.error(data.message || "Failed to cancel pitch request.");
         setReloadKey((k) => k + 1); // status may have changed (e.g. accepted)
@@ -245,6 +307,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
               <span>Cancel</span>
             </button>
+            {o.pitchRequest && (
             <button
               type="button"
               disabled={busy}
@@ -254,6 +317,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               <Pencil size={13} />
               <span>Edit</span>
             </button>
+            )}
           </>
         );
       }
@@ -261,7 +325,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       if (o.status === "INFO_REQUESTED") {
         return (
           <>
-            <InfoRequestAction requestId={o.id} requestType="INVESTMENT_OFFER" />
+            <InfoRequestAction requestId={o.id} requestType={infoTypeOf(o)} />
             <button
               type="button"
               disabled={busy}
@@ -271,6 +335,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
               <span>Cancel</span>
             </button>
+            {o.pitchRequest && (
             <button
               type="button"
               disabled={busy}
@@ -280,6 +345,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               <Pencil size={13} />
               <span>Edit</span>
             </button>
+            )}
           </>
         );
       }
@@ -288,7 +354,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
     if (o.status === "INFO_REQUESTED") {
       return (
         <>
-          <InfoRequestAction requestId={o.id} requestType="INVESTMENT_OFFER" />
+          <InfoRequestAction requestId={o.id} requestType={infoTypeOf(o)} />
           <button
             type="button"
             disabled={busy}
@@ -325,7 +391,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           <button
             type="button"
             disabled={busy}
-            onClick={() => setInfoDialog({ id: o.id, mode: "ask" })}
+            onClick={() => setInfoDialog({ id: o.id, mode: "ask", type: infoTypeOf(o) })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <MessageSquare size={13} />
@@ -378,7 +444,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           searchQuery
             ? `No requests found matching "${searchQuery}"`
             : direction === "sent"
-            ? "No sent pitch requests"
+            ? "No sent requests"
             : activeFilter === "ALL"
             ? "No investor requests yet"
             : `No ${activeFilter === "DECLINED" ? "rejected" : activeFilter === "INFO_REQUESTED" ? "ask info" : activeFilter.toLowerCase()} investor requests`
@@ -387,8 +453,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
           searchQuery
             ? "Try searching with different keywords or clearing your search."
             : direction === "sent"
-            ? "When you send pitch requests to investors, they will appear here."
-            : "When an investor sends an investment offer on one of your pitches, it will appear here for your review."
+            ? "Pitch requests and collaboration requests you send to investors will appear here."
+            : "Investment offers on your pitches and collaboration requests from investors will appear here for your review."
         }
       >
         {visible.map((o) => {
@@ -424,17 +490,19 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
               </div>
 
               <div className="space-y-1.5">
-                <h4 className="text-sm font-bold text-gray-900 leading-snug">Offer on “{o.pitchTitle}”</h4>
+                <h4 className="text-sm font-bold text-gray-900 leading-snug">
+                  {o.kind === "collaboration" ? o.pitchTitle : <>Offer on “{o.pitchTitle}”</>}
+                </h4>
                 {o.message && <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{o.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
                 <div>
-                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Offer amount</span>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Proposed amount" : "Offer amount"}</span>
                   <span className="mt-0.5 block text-xs font-bold text-gray-900">{o.amount}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Terms</span>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Participation" : "Terms"}</span>
                   <span className="mt-0.5 block text-xs font-bold text-gray-900">{o.terms || "—"}</span>
                 </div>
                 <div>
@@ -442,7 +510,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
                   <span className="mt-0.5 block text-xs font-bold text-gray-900">{o.location || "—"}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Received</span>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{direction === "sent" ? "Sent" : "Received"}</span>
                   <span className="mt-0.5 block text-xs font-medium text-gray-600">{formatRelativeTime(o.createdAt)}</span>
                 </div>
               </div>
@@ -453,7 +521,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
                   onClick={() => setSelected(o)}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
                 >
-                  <span>View offer details</span>
+                  <span>{o.kind === "collaboration" ? "View request details" : "View offer details"}</span>
                   <ArrowRight size={13} />
                 </button>
                 <div className="flex items-center gap-2 self-end sm:self-auto">{actionButtons(o)}</div>
@@ -476,20 +544,30 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         />
       )}
 
-      {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType="INVESTMENT_OFFER" mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
+      {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType={infoDialog.type} mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
 
       {selected && (
         <RequestDetailsModal
           title={`${nameOf(selected)} → ${selected.pitchTitle}`}
-          subtitle={`Received ${formatRelativeTime(selected.createdAt)}`}
+          subtitle={`${direction === "sent" ? "Sent" : "Received"} ${formatRelativeTime(selected.createdAt)}`}
           badge={<StatusBadge status={selected.status} />}
-          sections={[
-            { label: "Offer amount", value: selected.amount },
-            { label: "Terms", value: selected.terms },
-            { label: "Investor's message", value: selected.message },
-            { label: "Pitch", value: [selected.pitchTitle, selected.pitchSector, selected.pitchStage].filter(Boolean).join(" • ") },
-            { label: "Pitch target", value: selected.pitchTargetAmount },
-          ]}
+          sections={
+            selected.kind === "collaboration"
+              ? [
+                  { label: "Proposed amount", value: selected.amount },
+                  { label: "Participation", value: selected.terms },
+                  { label: "Target opportunity", value: selected.targetOpportunity },
+                  { label: direction === "sent" ? "Your message" : "Investor's message", value: selected.message },
+                  ...(selected.documentUrl ? [{ label: "Attached document", href: selected.documentUrl, hrefLabel: "Open document" }] : []),
+                ]
+              : [
+                  { label: "Offer amount", value: selected.amount },
+                  { label: "Terms", value: selected.terms },
+                  { label: "Investor's message", value: selected.message },
+                  { label: "Pitch", value: [selected.pitchTitle, selected.pitchSector, selected.pitchStage].filter(Boolean).join(" • ") },
+                  { label: "Pitch target", value: selected.pitchTargetAmount },
+                ]
+          }
           actions={actionButtons(selected)}
           onClose={() => setSelected(null)}
         />
