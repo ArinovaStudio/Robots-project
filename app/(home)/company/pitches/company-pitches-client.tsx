@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Sparkles,
@@ -9,19 +8,15 @@ import {
   Eye,
   DollarSign,
   Star,
-  Users,
   Handshake,
   CheckCircle2,
   XCircle,
-  Clock,
-  ArrowRight,
   ExternalLink,
-  Share2,
   ShieldAlert,
   Loader2,
   ChevronRight,
-  MessageSquare,
-  FileText
+  FileText,
+  Pencil,
 } from "lucide-react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -29,10 +24,8 @@ import { toast } from "sonner";
 import AddPitchModal from "@/components/modals/add-pitch-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
-import ReadMoreText from "@/components/ui/read-more-text";
 
-
-interface PitchData {
+export interface PitchData {
   id: string;
   title: string;
   tagline: string | null;
@@ -94,6 +87,7 @@ export default function CompanyPitchesClient() {
   const [pitches, setPitches] = useState<PitchData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingPitch, setEditingPitch] = useState<PitchData | null>(null);
 
   // Modals for details
   const [viewingInvestorsForPitch, setViewingInvestorsForPitch] = useState<PitchData | null>(null);
@@ -126,7 +120,7 @@ export default function CompanyPitchesClient() {
     setSharingLoading(true);
     try {
       const res = await fetch(`/api/company/pitches/${pitch.id}/share-collaboration`, {
-        method: "POST"
+        method: "POST",
       });
       const data = await res.json();
       if (data.success) {
@@ -149,7 +143,7 @@ export default function CompanyPitchesClient() {
       const res = await fetch(`/api/company/pitches/offers/${offerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action }),
       });
       const data = await res.json();
       if (data.success) {
@@ -184,62 +178,44 @@ export default function CompanyPitchesClient() {
   };
 
   const totalViews = pitches.reduce((sum, p) => sum + (p.viewCount || 0), 0);
-  const totalOffers = pitches.reduce((sum, p) => sum + (p.offerCount || 0), 0);
   const totalOfferedAmount = pitches.reduce((sum, p) => sum + (p.totalOfferAmount || 0), 0);
   const totalRatings = pitches.reduce((sum, p) => sum + (p.ratingCount || 0), 0);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-24">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#1E3A5F] p-8 text-white border border-[#1E3A5F]">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div>
-
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-              My Pitches & Funding Dashboard
-            </h1>
-            <p className="mt-2 text-sm text-slate-300 max-w-xl">
-              Add new pitches for verified investors, track investor views, review investment offers, and selectively ask other companies for help building your ideas.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-sm font-bold text-white transition shrink-0"
-          >
-            <PlusCircle size={18} />
-            <span>Add New Pitch</span>
-          </button>
-        </div>
-
+      <div>
         {/* Global Stats Overview */}
-        <div className="relative z-10 mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-white/10 pt-6">
-          <div className="rounded-xl bg-white/10 p-3.5 border border-white/10">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pitches</span>
-            <p className="text-2xl font-black text-white mt-0.5">{pitches.length}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-xl bg-white p-3.5 border border-[#E5E7EB]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Pitches</span>
+            <p className="text-2xl font-black text-[#172033] mt-0.5">{pitches.length}</p>
           </div>
-          <div className="rounded-xl bg-white/10 p-3.5 border border-white/10">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Investor Views</span>
-            <p className="text-2xl font-black text-white mt-0.5">{totalViews}</p>
+          <div className="rounded-xl bg-white p-3.5 border border-[#E5E7EB]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Investor Views</span>
+            <p className="text-2xl font-black text-[#172033] mt-0.5">{totalViews}</p>
           </div>
-          <div className="rounded-xl bg-white/10 p-3.5 border border-white/10">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Capital Offered</span>
-            <p className="text-2xl font-black text-white mt-0.5">${totalOfferedAmount.toLocaleString()}</p>
+          <div className="rounded-xl bg-white p-3.5 border border-[#E5E7EB]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Total Capital Offered</span>
+            <p className="text-2xl font-black text-[#172033] mt-0.5">${totalOfferedAmount.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl bg-white/10 p-3.5 border border-white/10">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Investor Ratings</span>
-            <p className="text-2xl font-black text-blue-200 mt-0.5">{totalRatings} ratings</p>
+          <div className="rounded-xl bg-white p-3.5 border border-[#E5E7EB]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Investor Ratings</span>
+            <p className="text-2xl font-black text-[#2563EB] mt-0.5">{totalRatings} ratings</p>
           </div>
         </div>
       </div>
 
       {/* Pitches List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-[#172033]">Your Active Pitches & Opportunities</h2>
-          {pitches.length > 0 && (
-            <span className="text-xs text-[#64748B]">{pitches.length} total</span>
-          )}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition shrink-0"
+          >
+            <PlusCircle size={16} />
+            <span>Add New Pitch</span>
+          </button>
         </div>
 
         {loading ? (
@@ -291,7 +267,7 @@ export default function CompanyPitchesClient() {
                     {/* Header Row */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className={`rounded-md border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${typeColor}`}>
                             {typeLabel}
                           </span>
@@ -324,7 +300,7 @@ export default function CompanyPitchesClient() {
                         )}
                       </div>
 
-                      {/* Financial ask / Terms & Preview button */}
+                      {/* Financial ask / Edit & Preview buttons */}
                       <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-start gap-2 shrink-0">
                         <div className="text-left sm:text-right">
                           {pitch.targetAmount && (
@@ -340,14 +316,24 @@ export default function CompanyPitchesClient() {
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setPreviewingPitch(pitch)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-blue-50/60 transition"
-                        >
-                          <Eye size={13} />
-                          <span>Preview Pitch</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPitch(pitch)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
+                          >
+                            <Pencil size={13} />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewingPitch(pitch)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-blue-50/60 transition"
+                          >
+                            <Eye size={13} />
+                            <span>Preview Pitch</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -920,6 +906,17 @@ export default function CompanyPitchesClient() {
               </span>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pitch = previewingPitch;
+                    setPreviewingPitch(null);
+                    setEditingPitch(pitch);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition"
+                >
+                  <Pencil size={14} /> Edit Pitch
+                </button>
                 {!previewingPitch.isSharedWithCompanies && (
                   <button
                     type="button"
@@ -1014,11 +1011,18 @@ export default function CompanyPitchesClient() {
         </div>
       )}
 
-      {/* Add Pitch Modal */}
-      {showAddModal && (
+      {/* Add / Edit Pitch Modal */}
+      {(showAddModal || editingPitch) && (
         <AddPitchModal
-          onClose={() => setShowAddModal(false)}
+          // When `pitch` is provided the modal should open in edit mode
+          pitch={editingPitch}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingPitch(null);
+          }}
           onSuccess={() => {
+            setShowAddModal(false);
+            setEditingPitch(null);
             fetchPitches();
           }}
         />

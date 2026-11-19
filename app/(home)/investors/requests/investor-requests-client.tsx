@@ -238,7 +238,6 @@ export default function InvestorRequestsClient() {
       message: c.overview || "",
       pitchDeckUrl: c.resourcesAvailable || "",
       status,
-      isConnected: Boolean(c.isConnected),
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       sender: {
@@ -1045,13 +1044,6 @@ export default function InvestorRequestsClient() {
                       <>
                         {/* Questions the business asked through "Ask for info" (renders nothing if there are none) */}
                         <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
-                        <Link
-                          href={`/messages/${req.senderId}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition shadow-2xs"
-                        >
-                          <MessageSquare size={13} />
-                          <span>Message Business</span>
-                        </Link>
                       </>
                     )}
 

@@ -350,30 +350,9 @@ export async function GET(req: NextRequest) {
       prisma.marketplaceCollaboration.count({ where }),
     ]);
 
-        // Flag rows whose counterparty is an accepted connection, so the UI only offers
-    // messaging to non-connections once the request has been accepted.
-    const partnerIds = Array.from(new Set(data.map((c) => (direction === "sent" ? c.recipientId : c.requesterId))));
-    const connections = partnerIds.length
-      ? await prisma.connection.findMany({
-          where: {
-            status: "ACCEPTED",
-            OR: [
-              { senderId: user.id, receiverId: { in: partnerIds } },
-              { receiverId: user.id, senderId: { in: partnerIds } },
-            ],
-          },
-          select: { senderId: true, receiverId: true },
-        })
-      : [];
-    const connectedIds = new Set(connections.map((c) => (c.senderId === user.id ? c.receiverId : c.senderId)));
-    const rows = data.map((c) => ({
-      ...c,
-      isConnected: connectedIds.has(direction === "sent" ? c.recipientId : c.requesterId),
-    }));
-
-    return NextResponse.json({
+        return NextResponse.json({
       success: true,
-      data: rows,
+      data,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
@@ -429,6 +408,9 @@ export async function PATCH(req: NextRequest) {
       await autoConnectUsers(user.id, collab.requesterId);
     }
 
+    const requester = await prisma.user.findUnique({ where: { id: collab.requesterId }, select: { accountType: true } });
+    const requesterType = requester?.accountType;
+
     // Best effort: tell the business that sent the proposal
     const responderName = user.name || "A business";
     const notice =
@@ -436,7 +418,11 @@ export async function PATCH(req: NextRequest) {
         ? { content: `${responderName} accepted your B2B collaboration proposal.`, link: `/profile/${user.id}` }
         : status === "DECLINED"
         ? { content: `${responderName} declined your B2B collaboration proposal.`, link: `/profile/${user.id}` }
-        : { content: `${responderName} asked for more information about your B2B collaboration proposal.`, link: `/messages/${user.id}` };
+        : {
+            content: `${responderName} asked for more information about your B2B collaboration proposal.`,
+            // Chat opens only after acceptance, so send the requester to their requests page instead.
+            link: requesterType === "INVESTOR" ? `/investors/requests` : `/collaboration-requests?tab=business`,
+          };
 
     await prisma.notification
       .create({

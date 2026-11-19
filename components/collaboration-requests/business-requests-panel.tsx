@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Clock,
   CheckCircle2,
@@ -43,7 +42,6 @@ export interface B2BRequest {
   existingAssets: string | null;
   overview: string;
   status: string; // PENDING | ACCEPTED | DECLINED | INFO_REQUESTED
-  isConnected?: boolean;
   createdAt: string;
   requester?: {
     id: string;
@@ -88,7 +86,6 @@ interface BusinessRequestsPanelProps {
 }
 
 export default function BusinessRequestsPanel({ onPendingCountChange }: BusinessRequestsPanelProps) {
-  const router = useRouter();
   const [requests, setRequests] = useState<B2BRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
@@ -220,10 +217,6 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
         toast.success(
           status === "ACCEPTED" ? "Request accepted!" : status === "DECLINED" ? "Request declined." : "Follow-up initiated."
         );
-        if (status === "INFO_REQUESTED") {
-          const item = requests.find((r) => r.id === id);
-          if (item?.requesterId) router.push(`/messages/${item.requesterId}`);
-        }
       } else {
         toast.error(data.message || "Failed to update request.");
       }
@@ -282,14 +275,8 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
         );
       }
       if (req.status === "INFO_REQUESTED") {
-        return (
-          <>
-            <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
-            {req.isConnected && (
-              <Link href={`/messages/${partnerId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"><MessageSquare size={13} /><span>Continue Conversation</span></Link>
-            )}
-          </>
-        );
+        // Messaging stays hidden until the recipient accepts, even for existing connections.
+        return <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />;
       }
       return null;
     }

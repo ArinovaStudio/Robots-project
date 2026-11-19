@@ -1,30 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, Sparkles, IndianRupee, Layers, Building2, Link as LinkIcon, FileText, CheckCircle2 } from "lucide-react";
+import { X, Loader2, Sparkles, IndianRupee, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatTargetAmount } from "@/lib/utils";
 
+export interface EditablePitch {
+  id: string;
+  title: string;
+  tagline: string | null;
+  type: "PITCH" | "PRODUCT" | "IDEA";
+  summary: string;
+  sector: string;
+  stage: string;
+  targetAmount: string | null;
+  equityOffered: string | null;
+  highlights: string[];
+  pitchDeckUrl: string | null;
+  websiteUrl: string | null;
+}
 
 interface AddPitchModalProps {
+  pitch?: EditablePitch | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps) {
-  const [title, setTitle] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [type, setType] = useState<"PITCH" | "PRODUCT" | "IDEA">("PITCH");
-  const [summary, setSummary] = useState("");
-  const [sector, setSector] = useState("AI & Machine Learning");
-  const [stage, setStage] = useState("Seed");
-  const [targetAmount, setTargetAmount] = useState("");
-  const [equityOffered, setEquityOffered] = useState("");
+export default function AddPitchModal({ pitch, onClose, onSuccess }: AddPitchModalProps) {
+  const isEdit = !!pitch;
+
+  const [title, setTitle] = useState(pitch?.title ?? "");
+  const [tagline, setTagline] = useState(pitch?.tagline ?? "");
+  const [type, setType] = useState<"PITCH" | "PRODUCT" | "IDEA">(pitch?.type ?? "PITCH");
+  const [summary, setSummary] = useState(pitch?.summary ?? "");
+  const [sector, setSector] = useState(pitch?.sector ?? "AI & Machine Learning");
+  const [stage, setStage] = useState(pitch?.stage ?? "Seed");
+  const [targetAmount, setTargetAmount] = useState(pitch?.targetAmount ?? "");
+  const [equityOffered, setEquityOffered] = useState(pitch?.equityOffered ?? "");
   const [highlightInput, setHighlightInput] = useState("");
-  const [highlights, setHighlights] = useState<string[]>([]);
-  const [pitchDeckUrl, setPitchDeckUrl] = useState("");
+  const [highlights, setHighlights] = useState<string[]>(pitch?.highlights ?? []);
+  const [pitchDeckUrl, setPitchDeckUrl] = useState(pitch?.pitchDeckUrl ?? "");
   const [pitchDeckFile, setPitchDeckFile] = useState<File | null>(null);
-  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState(pitch?.websiteUrl ?? "");
   const [loading, setLoading] = useState(false);
 
   const addHighlight = () => {
@@ -79,14 +96,17 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
       formData.append("websiteUrl", websiteUrl.trim());
       if (pitchDeckFile) formData.append("pitchDeck", pitchDeckFile);
 
-      const res = await fetch("/api/company/pitches", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        isEdit ? `/api/company/pitches/${pitch!.id}` : "/api/company/pitches",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          body: formData,
+        }
+      );
 
       const data = await res.json();
       if (data.success) {
-        toast.success("Pitch submitted successfully!");
+        toast.success(isEdit ? "Pitch updated successfully!" : "Pitch submitted successfully!");
         onSuccess();
         onClose();
       } else {
@@ -106,10 +126,14 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Add New Pitch / Opportunity</h3>
+              <h3 className="text-lg font-bold text-gray-900">
+                {isEdit ? "Edit Pitch / Opportunity" : "Add New Pitch / Opportunity"}
+              </h3>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              Publish an idea, live product, or formal investment pitch to verified investors.
+              {isEdit
+                ? "Update the details of your pitch. Changes are visible to investors immediately."
+                : "Publish an idea, live product, or formal investment pitch to verified investors."}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition">
@@ -292,7 +316,7 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
                 className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <label className="mt-3 block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Or upload PDF (up to 10 MB)
+                {isEdit ? "Replace with new PDF (up to 10 MB)" : "Or upload PDF (up to 10 MB)"}
               </label>
               <input
                 type="file"
@@ -345,7 +369,7 @@ export default function AddPitchModal({ onClose, onSuccess }: AddPitchModalProps
               className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm flex items-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
-              Publish Pitch
+              {isEdit ? "Save Changes" : "Publish Pitch"}
             </button>
           </div>
         </form>
