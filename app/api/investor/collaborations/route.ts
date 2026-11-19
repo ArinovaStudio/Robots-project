@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads";
 import { formatTargetAmount } from "@/lib/utils";
 import { autoConnectUsers } from "@/lib/auto-connect";
+import { checkRequestQuota, recordRequestAttempt, releaseRequestAttempt, quotaMessage } from "@/lib/request-quota";
 import { COLLABORATION_DOCUMENTS, COLLABORATION_TYPES, DEAL_STAGES } from "@/lib/investor-options";
 
 const LIMITS = { targetCompany: 120, proposedAmount: 60, participation: 60, message: 1000 } as const;
@@ -77,6 +78,14 @@ export async function POST(req: NextRequest) {
       });
       if (pending) return fail("You already have a pending collaboration request with this investor.", 409);
 
+      const quota = await checkRequestQuota("INVESTOR_COLLABORATION", user.id, collaboratorId);
+      if (quota.blocked) {
+        return NextResponse.json(
+          { success: false, message: quotaMessage("collaboration request", "investor", quota), retryAt: quota.retryAt },
+          { status: 429 }
+        );
+      }
+
       // Validate and upload the optional documents
       const urls: Record<string, string | null> = {};
       for (const doc of COLLABORATION_DOCUMENTS) {
@@ -98,7 +107,10 @@ export async function POST(req: NextRequest) {
         urls[doc.key] = await uploadFile(file, "investor-collaborations");
       }
 
-      const created = await prisma.investorCollaboration.create({
+      const created = await prisma.$transaction(async (tx) => {
+        const raceQuota = await checkRequestQuota("INVESTOR_COLLABORATION", user.id, collaboratorId, tx);
+        if (raceQuota.blocked) throw new Error("COLLAB_QUOTA_EXCEEDED");
+        const row = await tx.investorCollaboration.create({
         data: {
           requesterId: user.id,
           collaboratorId,
@@ -114,7 +126,20 @@ export async function POST(req: NextRequest) {
           otherDocumentsUrl: urls.otherDocuments,
         },
         select: { id: true },
+        });
+        await recordRequestAttempt(tx, "INVESTOR_COLLABORATION", user.id, collaboratorId, row.id);
+        return row;
+      }).catch(async (txError: any) => {
+        if (txError?.message !== "COLLAB_QUOTA_EXCEEDED") throw txError;
+        return null;
       });
+      if (!created) {
+        const blockedQuota = await checkRequestQuota("INVESTOR_COLLABORATION", user.id, collaboratorId);
+        return NextResponse.json(
+          { success: false, message: quotaMessage("collaboration request", "investor", blockedQuota), retryAt: blockedQuota.retryAt },
+          { status: 429 }
+        );
+      }
 
       try {
         const requesterProfile = await prisma.investorProfile.findUnique({
@@ -210,10 +235,20 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return fail("Missing id");
 
-    const result = await prisma.investorCollaboration.deleteMany({
+    const collab = await prisma.investorCollaboration.findFirst({
       where: { id, OR: [{ requesterId: user.id }, { collaboratorId: user.id }] },
+      select: { requesterId: true, status: true },
     });
-    if (!result.count) return fail("Collaboration request not found", 404);
+    if (!collab) return fail("Collaboration request not found", 404);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.investorCollaboration.deleteMany({ where: { id } });
+      // Withdrawing your own request before it has been accepted or declined gives the attempt back.
+      // Deleting a decided request, or one you received, does not.
+      if (collab.requesterId === user.id && (collab.status === "PENDING" || collab.status === "REVIEWED")) {
+        await releaseRequestAttempt(tx, "INVESTOR_COLLABORATION", id);
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

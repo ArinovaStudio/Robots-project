@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { autoConnectUsers } from "@/lib/auto-connect";
 import { prisma } from "@/lib/prisma";
+import { checkRequestQuota, recordRequestAttempt, quotaMessage } from "@/lib/request-quota";
 
 export async function POST(req: NextRequest) {
   try {
@@ -132,9 +133,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const quota = await checkRequestQuota("MARKETPLACE_COLLABORATION", user.id, recipientId);
+    if (quota.blocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: quotaMessage("collaboration request", recipient.accountType === "INVESTOR" ? "investor" : "business", quota),
+          retryAt: quota.retryAt,
+        },
+        { status: 429 }
+      );
+    }
+
     const collabId = crypto.randomUUID();
 
-    await prisma.$executeRawUnsafe(
+    await prisma.$transaction(async (tx) => {
+      // Re-check inside the transaction so two simultaneous sends can't both slip past the limit.
+      const raceQuota = await checkRequestQuota("MARKETPLACE_COLLABORATION", user.id, recipientId, tx);
+      if (raceQuota.blocked) throw new Error("COLLAB_QUOTA_EXCEEDED");
+      await tx.$executeRawUnsafe(
       `INSERT INTO "MarketplaceCollaboration" (
         "id", "requesterId", "recipientId", "expectations", "offerings",
         "contributionDesc", "resourcesAvailable", "expertiseCapabilities", "existingAssets",
@@ -150,7 +167,9 @@ export async function POST(req: NextRequest) {
       expertiseCapabilities ? String(expertiseCapabilities).trim() : null,
       existingAssets ? String(existingAssets).trim() : null,
       overview.trim()
-    );
+      );
+      await recordRequestAttempt(tx, "MARKETPLACE_COLLABORATION", user.id, recipientId, collabId);
+    });
 
     // Send notification to recipient
     const senderName = user.name || (user.accountType === "INVESTOR" ? "An investor" : "A business partner");
@@ -173,7 +192,13 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "COLLAB_QUOTA_EXCEEDED") {
+      return NextResponse.json(
+        { success: false, message: "You have reached the request limit for this recipient. Please try again later." },
+        { status: 429 }
+      );
+    }
     console.error("Collaborate submission error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to submit collaboration request." },
@@ -226,12 +251,18 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await prisma.$executeRaw`
-      DELETE FROM "MarketplaceCollaboration"
-      WHERE "requesterId" = ${user.id}
-        AND "recipientId" = ${recipientId}
-        AND "status" = 'PENDING'
-    `;
+    // Withdrawing a request nobody has answered yet gives the attempt back.
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        DELETE FROM "MarketplaceCollaboration"
+        WHERE "requesterId" = ${user.id}
+          AND "recipientId" = ${recipientId}
+          AND "status" = 'PENDING'
+      `;
+      await tx.requestAttempt.deleteMany({
+        where: { kind: "MARKETPLACE_COLLABORATION", requestId: { in: pending.map((r) => r.id) } },
+      });
+    });
 
     // Best effort: remove the "submitted a proposal" notification we sent them
     const earliest = pending.reduce((min, r) => (r.createdAt < min ? r.createdAt : min), pending[0].createdAt);
@@ -319,9 +350,30 @@ export async function GET(req: NextRequest) {
       prisma.marketplaceCollaboration.count({ where }),
     ]);
 
+        // Flag rows whose counterparty is an accepted connection, so the UI only offers
+    // messaging to non-connections once the request has been accepted.
+    const partnerIds = Array.from(new Set(data.map((c) => (direction === "sent" ? c.recipientId : c.requesterId))));
+    const connections = partnerIds.length
+      ? await prisma.connection.findMany({
+          where: {
+            status: "ACCEPTED",
+            OR: [
+              { senderId: user.id, receiverId: { in: partnerIds } },
+              { receiverId: user.id, senderId: { in: partnerIds } },
+            ],
+          },
+          select: { senderId: true, receiverId: true },
+        })
+      : [];
+    const connectedIds = new Set(connections.map((c) => (c.senderId === user.id ? c.receiverId : c.senderId)));
+    const rows = data.map((c) => ({
+      ...c,
+      isConnected: connectedIds.has(direction === "sent" ? c.recipientId : c.requesterId),
+    }));
+
     return NextResponse.json({
       success: true,
-      data,
+      data: rows,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {

@@ -42,9 +42,11 @@ interface ReceivedOffer {
   documentUrl?: string | null;
 }
 
-type InfoType = "INVESTMENT_OFFER" | "BUSINESS_COLLABORATION";
-const infoTypeOf = (o: Pick<ReceivedOffer, "kind">): InfoType =>
-  o.kind === "collaboration" ? "BUSINESS_COLLABORATION" : "INVESTMENT_OFFER";
+type InfoType = "INVESTMENT_OFFER" | "PITCH_REQUEST" | "BUSINESS_COLLABORATION";
+// Questions are stored under the type of the request they belong to. A pitch request this business
+// sent is the only row carrying `pitchRequest`, and its questions live under PITCH_REQUEST.
+const infoTypeOf = (o: Pick<ReceivedOffer, "kind" | "pitchRequest">): InfoType =>
+  o.kind === "collaboration" ? "BUSINESS_COLLABORATION" : o.pitchRequest ? "PITCH_REQUEST" : "INVESTMENT_OFFER";
 
 function offeringOf(offerings: unknown, label: string): string {
   const list = Array.isArray(offerings) ? offerings : [];
@@ -323,31 +325,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       }
       if (o.status === "ACCEPTED") return message;
       if (o.status === "INFO_REQUESTED") {
-        return (
-          <>
-            <InfoRequestAction requestId={o.id} requestType={infoTypeOf(o)} />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => cancelPitch(o.id)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-            >
-              {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
-              <span>Cancel</span>
-            </button>
-            {o.pitchRequest && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(o)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-            >
-              <Pencil size={13} />
-              <span>Edit</span>
-            </button>
-            )}
-          </>
-        );
+        // The investor has responded, so the API no longer allows editing or cancelling this request.
+        return <InfoRequestAction requestId={o.id} requestType={infoTypeOf(o)} />;
       }
       return null;
     }

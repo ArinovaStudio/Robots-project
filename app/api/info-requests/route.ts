@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       if (requestType === "BUSINESS_COLLABORATION") await tx.marketplaceCollaboration.update({ where: { id: requestId }, data: { status } });
       return info;
     });
-    await prisma.notification.create({ data: { userId: participants.second, actorId: user.id, type: "SYSTEM", content: `${user.name || "A user"} sent you questions in information request round ${roundNumber}.`, link: requestType === "PITCH_REQUEST" || requestType === "INVESTOR_COLLABORATION" ? `/investors/requests` : `/collaboration-requests` } }).catch((e) => console.error("Info request notification failed:", e));
+    await prisma.notification.create({ data: { userId: participants.second, actorId: user.id, type: "SYSTEM", content: `${user.name || "A user"} sent you questions in information request round ${roundNumber}.`, link: requestType === "INVESTOR_COLLABORATION" ? `/investors/requests` : requestType === "PITCH_REQUEST" ? `/collaboration-requests?tab=investor` : `/collaboration-requests` } }).catch((e) => console.error("Info request notification failed:", e));
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (e: any) {
     if (e?.code === "P2002") return fail("Another information request round was created at the same time. Refresh and try again.", 409);

@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -239,6 +238,7 @@ export default function InvestorRequestsClient() {
       message: c.overview || "",
       pitchDeckUrl: c.resourcesAvailable || "",
       status,
+      isConnected: Boolean(c.isConnected),
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       sender: {
@@ -1055,8 +1055,37 @@ export default function InvestorRequestsClient() {
                       </>
                     )}
 
-                    {req.status === "REVIEWED" && !isBizCollab && (
-                      <InfoRequestAction requestId={req.id} requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"} />
+                                      {req.status === "REVIEWED" && !isBizCollab && (
+                      <>
+                        <InfoRequestAction requestId={req.id} requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"} />
+                        {/* Once questions have been asked/answered, the recipient must still be able to decide. */}
+                        {direction === "received" && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => handleUpdateStatus(req.id, "DECLINED")}
+                              className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                            >
+                              <X size={13} className="text-red-500" />
+                              <span>Reject</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => handleUpdateStatus(req.id, "ACCEPTED")}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                            >
+                              {isProcessing ? (
+                                <Loader2 size={13} className="animate-spin text-emerald-600" />
+                              ) : (
+                                <Check size={13} strokeWidth={2.5} className="text-emerald-500" />
+                              )}
+                              <span>Accept</span>
+                            </button>
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

@@ -43,6 +43,7 @@ export interface B2BRequest {
   existingAssets: string | null;
   overview: string;
   status: string; // PENDING | ACCEPTED | DECLINED | INFO_REQUESTED
+  isConnected?: boolean;
   createdAt: string;
   requester?: {
     id: string;
@@ -284,7 +285,9 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
         return (
           <>
             <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
-            <Link href={`/messages/${partnerId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"><MessageSquare size={13} /><span>Continue Conversation</span></Link>
+            {req.isConnected && (
+              <Link href={`/messages/${partnerId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition shadow-2xs"><MessageSquare size={13} /><span>Continue Conversation</span></Link>
+            )}
           </>
         );
       }

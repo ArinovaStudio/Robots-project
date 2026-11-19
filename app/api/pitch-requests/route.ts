@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { autoConnectUsers } from "@/lib/auto-connect";
 import { uploadFile } from "@/lib/uploads";
 import { formatTargetAmount } from "@/lib/utils";
+import { checkRequestQuota, recordRequestAttempt, releaseRequestAttempt, quotaMessage } from "@/lib/request-quota";
 
 const MAX_PDF_BYTES = 120 * 1024 * 1024;
 
@@ -95,20 +96,21 @@ export async function POST(req: NextRequest) {
       if (!investor || investor.accountType !== "INVESTOR" || investor.status !== "ACTIVE") {
         return NextResponse.json({ success: false, message: "Investor not found." }, { status: 404 });
       }
-      const existing = await prisma.pitchRequest.findFirst({
-        where: { senderId: user.id, investorId },
-        select: { id: true, status: true },
+      const pending = await prisma.pitchRequest.findFirst({
+        where: { senderId: user.id, investorId, status: "PENDING" },
+        select: { id: true },
       });
-      if (existing) {
+      if (pending) {
         return NextResponse.json(
-          {
-            success: false,
-            message:
-              existing.status === "PENDING"
-                ? "You already have a pending pitch request with this investor."
-                : "You can only send at most one pitch request to this investor.",
-          },
+          { success: false, message: "You already have a pending pitch request with this investor." },
           { status: 409 }
+        );
+      }
+      const quota = await checkRequestQuota("PITCH_REQUEST", user.id, investorId);
+      if (quota.blocked) {
+        return NextResponse.json(
+          { success: false, message: quotaMessage("pitch request", "investor", quota), retryAt: quota.retryAt },
+          { status: 429 }
         );
       }
       const file = pitchDeckFile as File;
@@ -131,14 +133,18 @@ export async function POST(req: NextRequest) {
       let pitchRequest;
       try {
         pitchRequest = await prisma.$transaction(async (tx) => {
-          const raceExisting = await tx.pitchRequest.findFirst({
-            where: { senderId: user.id, investorId },
+          const racePending = await tx.pitchRequest.findFirst({
+            where: { senderId: user.id, investorId, status: "PENDING" },
             select: { id: true },
           });
-          if (raceExisting) {
+          if (racePending) {
             throw new Error("PITCH_ALREADY_EXISTS");
           }
-          return await tx.pitchRequest.create({
+          const raceQuota = await checkRequestQuota("PITCH_REQUEST", user.id, investorId, tx);
+          if (raceQuota.blocked) {
+            throw new Error("PITCH_QUOTA_EXCEEDED");
+          }
+          const createdPitch = await tx.pitchRequest.create({
             data: {
               senderId: user.id,
               investorId,
@@ -152,12 +158,21 @@ export async function POST(req: NextRequest) {
             },
             select: { id: true },
           });
+          await recordRequestAttempt(tx, "PITCH_REQUEST", user.id, investorId, createdPitch.id);
+          return createdPitch;
         });
       } catch (txError: any) {
         if (txError?.message === "PITCH_ALREADY_EXISTS") {
           return NextResponse.json(
-            { success: false, message: "You can only send at most one pitch request to this investor." },
+            { success: false, message: "You already have a pending pitch request with this investor." },
             { status: 409 }
+          );
+        }
+        if (txError?.message === "PITCH_QUOTA_EXCEEDED") {
+          const quota = await checkRequestQuota("PITCH_REQUEST", user.id, investorId);
+          return NextResponse.json(
+            { success: false, message: quotaMessage("pitch request", "investor", quota), retryAt: quota.retryAt },
+            { status: 429 }
           );
         }
         throw txError;
@@ -394,7 +409,7 @@ export async function PUT(req: NextRequest) {
         await tx.notification.deleteMany({
           where: { userId: existing.investorId, actorId: user.id, link: { contains: `pitchRequestId=${id}` } },
         });
-        return tx.pitchRequest.create({
+        const recreated = await tx.pitchRequest.create({
           data: {
             senderId: user.id,
             investorId: existing.investorId,
@@ -408,6 +423,13 @@ export async function PUT(req: NextRequest) {
           },
           select: { id: true },
         });
+        // Editing re-creates the row, but it is the same request: keep its original attempt.
+        const moved = await tx.requestAttempt.updateMany({
+          where: { kind: "PITCH_REQUEST", requestId: id },
+          data: { requestId: recreated.id },
+        });
+        if (moved.count === 0) await recordRequestAttempt(tx, "PITCH_REQUEST", user.id, existing.investorId, recreated.id);
+        return recreated;
       });
     } catch (txError: any) {
       if (txError?.message === "PITCH_NOT_EDITABLE") {
@@ -471,12 +493,17 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await prisma.$transaction([
-      prisma.pitchRequest.delete({ where: { id } }),
-      prisma.notification.deleteMany({
+    await prisma.$transaction(async (tx) => {
+      await tx.pitchRequest.delete({ where: { id } });
+      await tx.notification.deleteMany({
         where: { userId: pitch.investorId, actorId: pitch.senderId, link: { contains: `pitchRequestId=${id}` } },
-      }),
-    ]);
+      });
+      // Only the sender withdrawing their own pending request frees the attempt;
+      // an investor deleting a request they received does not.
+      if (pitch.senderId === user.id && pitch.status === "PENDING") {
+        await releaseRequestAttempt(tx, "PITCH_REQUEST", id);
+      }
+    });
 
     return NextResponse.json({ success: true, message: "Pitch request deleted" });
   } catch (error) {

@@ -113,6 +113,10 @@ services:
       # Ollama (points to the ollama container)
       OLLAMA_HOST: http://ollama:11434
 
+      # Pitch / investor-collaboration request limits (per sender -> recipient)
+      REQUEST_MAX_ATTEMPTS: ${REQUEST_MAX_ATTEMPTS:-3}
+      REQUEST_COOLDOWN_DAYS: ${REQUEST_COOLDOWN_DAYS:-7}
+
       # Server
       PORT: 3000
       NODE_ENV: production

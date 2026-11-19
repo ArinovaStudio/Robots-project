@@ -90,6 +90,8 @@ model User {
   sentPitchRequests PitchRequest[] @relation("PitchRequestSender")
   receivedPitchRequests PitchRequest[] @relation("PitchRequestInvestor")
   sentInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabRequester")
+  sentRequestAttempts RequestAttempt[] @relation("RequestAttemptSender")
+  receivedRequestAttempts RequestAttempt[] @relation("RequestAttemptRecipient")
   receivedInvestorCollaborations InvestorCollaboration[] @relation("InvestorCollabCollaborator")
   infoRequestsAsked InfoRequest[] @relation("InfoRequestAskedBy")
   infoRequestsToAnswer InfoRequest[] @relation("InfoRequestAnsweringUser")
@@ -939,4 +941,23 @@ model InfoRequest {
   @@index([askedById])
   @@index([answeringUserId])
   @@index([status])
+}
+
+// One row per pitch request / investor collaboration request a user sends to a specific recipient.
+// Used for the per-recipient send limit and cooling period (see lib/request-quota.ts).
+// Rows are removed only when the SENDER withdraws a not-yet-answered request, so a recipient
+// deleting a request does not give the sender an attempt back.
+model RequestAttempt {
+  id String @id @default(uuid())
+  kind String // PITCH_REQUEST | INVESTOR_COLLABORATION
+  senderId String
+  recipientId String
+  requestId String
+  createdAt DateTime @default(now())
+
+  sender User @relation("RequestAttemptSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("RequestAttemptRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([kind, requestId])
+  @@index([kind, senderId, recipientId, createdAt])
 }
