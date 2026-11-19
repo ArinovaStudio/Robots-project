@@ -1049,9 +1049,11 @@ export default function InvestorRequestsClient() {
 
                                       {req.status === "REVIEWED" && !isBizCollab && (
                       <>
-                        <InfoRequestAction requestId={req.id} requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"} />
-                        {/* Once questions have been asked/answered, the recipient must still be able to decide. */}
-                        {direction === "received" && (
+                        <InfoRequestAction
+                          requestId={req.id}
+                          requestType={collab ? "INVESTOR_COLLABORATION" : "PITCH_REQUEST"}
+                          /* Flow: questions sent -> "Pending for reply" -> answers received -> "View answers" + Reject / Accept. */
+                          decisionButtons={direction === "received" ? (
                           <>
                             <button
                               type="button"
@@ -1076,7 +1078,8 @@ export default function InvestorRequestsClient() {
                               <span>Accept</span>
                             </button>
                           </>
-                        )}
+                          ) : undefined}
+                        />
                       </>
                     )}
                   </div>

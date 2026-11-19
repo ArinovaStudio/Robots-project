@@ -326,28 +326,34 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
       );
     }
     if (req.status === "INFO_REQUESTED") {
+      // Flow: questions sent -> "Pending for reply" -> answers received -> "View answers" + Reject / Accept.
       return (
-        <>
-          <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => updateStatus(req.id, "DECLINED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-          >
-            <X size={13} className="text-red-500" />
-            <span>Reject</span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => updateStatus(req.id, "ACCEPTED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-          >
-            {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
-            <span>Accept</span>
-          </button>
-        </>
+        <InfoRequestAction
+          requestId={req.id}
+          requestType="BUSINESS_COLLABORATION"
+          decisionButtons={
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => updateStatus(req.id, "DECLINED")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+              >
+                <X size={13} className="text-red-500" />
+                <span>Reject</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => updateStatus(req.id, "ACCEPTED")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+              >
+                {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+                <span>Accept</span>
+              </button>
+            </>
+          }
+        />
       );
     }
     return null;

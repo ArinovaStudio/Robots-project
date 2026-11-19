@@ -331,28 +331,34 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       return null;
     }
     if (o.status === "INFO_REQUESTED") {
+      // Flow: questions sent -> "Pending for reply" -> answers received -> "View answers" + Decline / Accept.
       return (
-        <>
-          <InfoRequestAction requestId={o.id} requestType={infoTypeOf(o)} />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => respond(o.id, "DECLINED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-          >
-            <X size={13} />
-            <span>Decline</span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => respond(o.id, "ACCEPTED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-          >
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} />}
-            <span>Accept</span>
-          </button>
-        </>
+        <InfoRequestAction
+          requestId={o.id}
+          requestType={infoTypeOf(o)}
+          decisionButtons={
+            <>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => respond(o.id, "DECLINED")}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+      >
+        <X size={13} />
+        <span>Decline</span>
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => respond(o.id, "ACCEPTED")}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+      >
+        {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} />}
+        <span>Accept</span>
+      </button>
+            </>
+          }
+        />
       );
     }
     if (o.status === "PENDING") {
