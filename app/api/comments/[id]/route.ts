@@ -3,6 +3,7 @@ import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { validateTextContent } from "@/lib/textFilter";
+import { getPendingComment, updatePendingComment, deletePendingComment } from "@/lib/interaction-write-behind";
 
 const updateSchema = z.object({
   content: z.string().min(1, "Comment cannot be empty").max(1000, "Comment is too long"),
@@ -23,12 +24,14 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: validation.error.issues[0].message }, { status: 400 });
     }
 
-    const existingComment = await prisma.comment.findUnique({ where: { id: commentId } });
-    if (!existingComment) {
+    const [existingComment, pendingComment] = await Promise.all([
+      prisma.comment.findUnique({ where: { id: commentId } }),
+      getPendingComment(commentId),
+    ]);
+    if (!existingComment && !pendingComment) {
       return NextResponse.json({ success: false, message: "Comment not found" }, { status: 404 });
     }
-    
-    if (existingComment.authorId !== user.id) {
+    if ((existingComment?.authorId || pendingComment?.authorId) !== user.id) {
       return NextResponse.json({ success: false, message: "You can only edit your own comments" }, { status: 403 });
     }
 
@@ -45,10 +48,14 @@ export async function PUT( req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    await prisma.comment.update({
-      where: { id: commentId },
-      data: { content: content, isEdited: true },
-    });
+    if (pendingComment) {
+      await updatePendingComment(pendingComment, content);
+    } else {
+      await prisma.comment.update({
+        where: { id: commentId },
+        data: { content: content, isEdited: true },
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Comment updated successfully" }, { status: 200 });
 
@@ -66,17 +73,21 @@ export async function DELETE( req: NextRequest, { params }: { params: Promise<{ 
 
     const { id: commentId } = await params;
 
-    const existingComment = await prisma.comment.findUnique({ where: { id: commentId } });
-    
-    if (!existingComment) {
+    const [existingComment, pendingComment] = await Promise.all([
+      prisma.comment.findUnique({ where: { id: commentId } }),
+      getPendingComment(commentId),
+    ]);
+    if (!existingComment && !pendingComment) {
       return NextResponse.json({ success: false, message: "Comment not found" }, { status: 404 });
     }
-    
-    if (existingComment.authorId !== user.id) {
+    if ((existingComment?.authorId || pendingComment?.authorId) !== user.id) {
       return NextResponse.json({ success: false, message: "You can only delete your own comments" }, { status: 403 });
     }
-
-    await prisma.comment.delete({ where: { id: commentId } });
+    if (pendingComment) {
+      await deletePendingComment(pendingComment);
+    } else {
+      await prisma.comment.delete({ where: { id: commentId } });
+    }
 
     return NextResponse.json({ success: true, message: "Comment deleted successfully" }, { status: 200 });
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { POST_REACTION_TYPES } from "@/lib/reactions";
 import { z } from "zod";
 import { notifyPostReaction } from "@/lib/notify";
+import { enqueuePostReaction, getPendingReactionStates, PENDING_REMOVED_REACTION } from "@/lib/interaction-write-behind";
 
 const reactionSchema = z.object({
   type: z.enum(POST_REACTION_TYPES),
@@ -39,16 +40,24 @@ export async function POST( req: NextRequest, { params }: { params: Promise<{ id
       where: { postId_userId: { postId, userId: user.id } },
     });
 
-    await prisma.postReaction.upsert({
-      where: { postId_userId: { postId, userId: user.id } },
-      create: { postId, userId: user.id, type },
-      update: { type },
-    });
+    const pending = (await getPendingReactionStates("POST_REACTION", [postId]))[postId] || {};
+    const hasPendingState = Object.prototype.hasOwnProperty.call(pending, user.id);
+    const effectiveType = hasPendingState
+      ? (pending[user.id] === PENDING_REMOVED_REACTION ? null : pending[user.id])
+      : existing?.type ?? null;
 
-    if (!existing) await notifyPostReaction(postId, user.id);
+    if (effectiveType !== type) {
+      await enqueuePostReaction(postId, user.id, type);
+    }
 
-    const status = existing ? 200 : 201;
-    const message = !existing ? "Reaction added successfully" : existing.type === type ? "Reaction unchanged" : "Reaction changed successfully";
+    if (effectiveType === null) await notifyPostReaction(postId, user.id);
+
+    const status = effectiveType === null ? 201 : 200;
+    const message = effectiveType === null
+      ? "Reaction added successfully"
+      : effectiveType === type
+        ? "Reaction unchanged"
+        : "Reaction changed successfully";
     return NextResponse.json({ success: true, message, type }, { status });
 
   } catch {
@@ -65,7 +74,17 @@ export async function DELETE( _req: NextRequest, { params }: { params: Promise<{
     }
 
     const { id: postId } = await params;
-    await prisma.postReaction.deleteMany({ where: { postId, userId: user.id } });
+    const [existing, pendingByPost] = await Promise.all([
+      prisma.postReaction.findUnique({ where: { postId_userId: { postId, userId: user.id } } }),
+      getPendingReactionStates("POST_REACTION", [postId]),
+    ]);
+    const pending = pendingByPost[postId] || {};
+    const hasPendingState = Object.prototype.hasOwnProperty.call(pending, user.id);
+    const effectiveType = hasPendingState
+      ? (pending[user.id] === PENDING_REMOVED_REACTION ? null : pending[user.id])
+      : existing?.type ?? null;
+
+    if (effectiveType !== null) await enqueuePostReaction(postId, user.id, null);
 
     return NextResponse.json({ success: true, message: "Reaction removed successfully" });
 

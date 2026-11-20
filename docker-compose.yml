@@ -27,6 +27,8 @@ services:
     image: redis:7-alpine
     container_name: connecto_redis
     restart: unless-stopped
+    # Keep the write-behind queue durable across Redis/container restarts.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     ports:
       - "6379:6379"
     volumes:

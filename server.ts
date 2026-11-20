@@ -7,6 +7,7 @@ import { createServer } from "http";
 import next from "next";
 import { Server } from "socket.io";
 import registerDirectChatHandlers from "./socket/directChatHandler";
+import { startInteractionFlushWorker } from "./lib/interaction-write-behind";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = dev ? "localhost" : "0.0.0.0";
@@ -18,6 +19,8 @@ const handle = app.getRequestHandler();
 const onlineUsers = new Map<string, Set<string>>();
 
 app.prepare().then(() => {
+  // Persist Redis-buffered likes and comments every 30 seconds.
+  startInteractionFlushWorker();
 
   const httpServer = createServer((req, res) => {
     handle(req, res); 

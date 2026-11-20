@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { summarizeReactions } from "@/lib/reactions";
+import { getPendingReactionStates, getPendingCommentCounts, PENDING_REMOVED_REACTION } from "@/lib/interaction-write-behind";
 import { visibleToViewer, withCanComment, withHasReposted, withIsFollowing, notHiddenBy, repostOfInclude } from "@/lib/post-visibility";
 
 export async function GET(req: NextRequest) {
@@ -88,6 +89,40 @@ export async function GET(req: NextRequest) {
       where: { postId: { in: postIds } },
       _count: { type: true }
     }) : [];
+
+    // Merge unflushed Redis reactions over the persisted aggregate so Explore remains current.
+    const [pendingPostReactions, pendingCommentCounts] = await Promise.all([
+      getPendingReactionStates("POST_REACTION", postIds),
+      getPendingCommentCounts(postIds),
+    ]);
+    const pendingReactionUsers = Array.from(new Set<string>(
+      Object.values(pendingPostReactions).flatMap((states: Record<string, string>) => Object.keys(states))
+    ));
+    const persistedPendingReactions = postIds.length && pendingReactionUsers.length
+      ? await prisma.postReaction.findMany({
+          where: { postId: { in: postIds }, userId: { in: pendingReactionUsers } },
+          select: { postId: true, userId: true, type: true },
+        })
+      : [];
+    const persistedByKey = new Map<string, string>(
+      persistedPendingReactions.map((row) => [`${row.postId}:${row.userId}`, String(row.type)] as [string, string])
+    );
+    const effectiveCountsByPost = new Map<string, Map<string, number>>();
+    for (const row of reactionCounts) {
+      const counts = effectiveCountsByPost.get(row.postId) || new Map<string, number>();
+      counts.set(row.type, row._count.type);
+      effectiveCountsByPost.set(row.postId, counts);
+    }
+    for (const [postId, states] of Object.entries(pendingPostReactions)) {
+      const counts = effectiveCountsByPost.get(postId) || new Map<string, number>();
+      for (const [userId, nextType] of Object.entries(states)) {
+        const previousType = persistedByKey.get(`${postId}:${userId}`);
+        if (previousType) counts.set(previousType, Math.max(0, (counts.get(previousType) || 0) - 1));
+        if (nextType !== PENDING_REMOVED_REACTION) counts.set(nextType, (counts.get(nextType) || 0) + 1);
+      }
+      effectiveCountsByPost.set(postId, counts);
+    }
+
     const activityByPost = new Map<string, { type: "COMMENTED" | "REACTED"; name: string; image: string | null }>();
     if (!targetUserId && tab === "foryou" && postIds.length > 0 && connectionIds.length > 0) {
       const nameSelect = { select: { name: true, image: true, investor: { select: { firmName: true } }, company: { select: { companyName: true } } } };
@@ -118,7 +153,18 @@ export async function GET(req: NextRequest) {
     }
 
     const formattedPosts = posts.map(post => {
-      const { likesCount, reactionCounts: reactionBreakdown } = summarizeReactions(reactionCounts.filter(r => r.postId === post.id));
+      const effectiveGroups = Array.from(effectiveCountsByPost.get(post.id)?.entries() || [])
+        .filter(([, count]) => count > 0)
+        .map(([type, count]) => ({ type, _count: { type: count } }));
+      const { likesCount, reactionCounts: reactionBreakdown } = summarizeReactions(effectiveGroups);
+      const hasPendingViewerReaction = Object.prototype.hasOwnProperty.call(
+        pendingPostReactions[post.id] || {},
+        user.id
+      );
+      const pendingViewerReaction = pendingPostReactions[post.id]?.[user.id];
+      const userReaction = hasPendingViewerReaction
+        ? (pendingViewerReaction === PENDING_REMOVED_REACTION ? null : pendingViewerReaction)
+        : post.reactions[0]?.type || null;
 
       if (post.author && post.author.company) {
         post.author.company.logoUrl = post.author.company.logoUrl || post.author.image;
@@ -127,8 +173,12 @@ export async function GET(req: NextRequest) {
       return {
         ...post,
         connectionActivity: activityByPost.get(post.id) || null,
-        userReaction: post.reactions[0]?.type || null, 
+        userReaction,
         isSaved: post.savedBy?.length > 0,
+        _count: {
+          ...post._count,
+          comments: post._count.comments + (pendingCommentCounts[post.id] || 0),
+        },
         likesCount,
         reactionCounts: reactionBreakdown
       };
