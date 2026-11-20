@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Image as ImageIcon, Video, FileText } from "lucide-react";
+import { X, Loader2, Image as ImageIcon, Video, FileText, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditPostModal({ post, onClose, onSuccess }: any) {
@@ -12,6 +12,8 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const replaceTargetRef = useRef<{ id: string; type: string } | null>(null);
 
   const [content, setContent] = useState(post.content || "");
   const [existingMedia, setExistingMedia] = useState<any[]>(post.media || []);
@@ -58,6 +60,37 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
     
     // Reset the input so the user can select the same file again if they deleted it
     e.target.value = ""; 
+  };
+
+  const handleReplaceClick = (m: any) => {
+    replaceTargetRef.current = { id: m.id, type: m.type };
+    if (replaceInputRef.current) {
+      replaceInputRef.current.accept =
+        m.type === "IMAGE" ? "image/*" : m.type === "VIDEO" ? "video/*" : "application/pdf";
+      replaceInputRef.current.click();
+    }
+  };
+
+  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const target = replaceTargetRef.current;
+    e.target.value = "";
+    replaceTargetRef.current = null;
+    if (!file || !target) return;
+
+    const ok =
+      (target.type === "IMAGE" && file.type.startsWith("image/")) ||
+      (target.type === "VIDEO" && file.type.startsWith("video/")) ||
+      (target.type === "DOCUMENT" && file.type === "application/pdf");
+    if (!ok) return toast.error("Please choose a file of the same type to replace it.");
+
+    // Old item is removed (sent in deletedMediaIds) and the new file is uploaded in its place.
+    handleRemoveExistingMedia(target.id);
+    setNewFiles((prev) => [...prev, file]);
+    setNewPreviews((prev) => [
+      ...prev,
+      { url: URL.createObjectURL(file), type: target.type === "DOCUMENT" ? "DOCUMENT" : file.type },
+    ]);
   };
 
   const handleRemoveNewMedia = (index: number) => {
@@ -145,7 +178,10 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
                       <span className="text-[10px] mt-2 font-medium uppercase tracking-wide">PDF Document</span>
                     </div>
                   )}
-                  <button onClick={() => handleRemoveExistingMedia(m.id)} className="absolute top-2 right-2 bg-slate-900/60 hover:bg-red-500 text-white p-1.5 rounded-full transition opacity-0 group-hover:opacity-100">
+                  <button type="button" aria-label="Replace" title="Replace" onClick={() => handleReplaceClick(m)} className="absolute top-2 left-2 bg-slate-900/60 hover:bg-blue-600 text-white p-1.5 rounded-full transition">
+                    <RefreshCw size={14} />
+                  </button>
+                  <button type="button" aria-label="Delete" title="Delete" onClick={() => handleRemoveExistingMedia(m.id)} className="absolute top-2 right-2 bg-slate-900/60 hover:bg-red-500 text-white p-1.5 rounded-full transition">
                     <X size={14} />
                   </button>
                 </div>
@@ -164,7 +200,7 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
                       <span className="text-[10px] mt-2 font-medium uppercase tracking-wide">New PDF</span>
                     </div>
                   )}
-                  <button onClick={() => handleRemoveNewMedia(idx)} className="absolute top-2 right-2 bg-slate-900/60 hover:bg-red-500 text-white p-1.5 rounded-full transition opacity-0 group-hover:opacity-100">
+                  <button type="button" aria-label="Remove" title="Remove" onClick={() => handleRemoveNewMedia(idx)} className="absolute top-2 right-2 bg-slate-900/60 hover:bg-red-500 text-white p-1.5 rounded-full transition">
                     <X size={14} />
                   </button>
                 </div>
@@ -179,6 +215,7 @@ export default function EditPostModal({ post, onClose, onSuccess }: any) {
             <input type="file" accept="video/*" multiple className="hidden" ref={videoInputRef} onChange={(e) => handleFileChange(e, "VIDEO")} />
             <input type="file" accept="image/*" multiple className="hidden" ref={imageInputRef} onChange={(e) => handleFileChange(e, "IMAGE")} />
             <input type="file" accept="application/pdf" multiple className="hidden" ref={docInputRef} onChange={(e) => handleFileChange(e, "DOCUMENT")} />
+            <input type="file" className="hidden" ref={replaceInputRef} onChange={handleReplaceChange} />
             
             <button type="button" onClick={() => videoInputRef.current?.click()} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
               <Video size={16} /> Video

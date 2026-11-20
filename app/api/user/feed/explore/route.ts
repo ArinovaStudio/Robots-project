@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
                 id: true,
                 name: true,
                 image: true,
+                investor: { select: { firmName: true } },
                 verificationStatus: true,
                 company: { 
                   select: { 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
     }) : [];
     const activityByPost = new Map<string, { type: "COMMENTED" | "REACTED"; name: string; image: string | null }>();
     if (!targetUserId && tab === "foryou" && postIds.length > 0 && connectionIds.length > 0) {
-      const nameSelect = { select: { name: true, image: true, company: { select: { companyName: true } } } };
+      const nameSelect = { select: { name: true, image: true, investor: { select: { firmName: true } }, company: { select: { companyName: true } } } };
       const [connComments, connReactions] = await Promise.all([
         prisma.comment.findMany({
           where: { postId: { in: postIds }, authorId: { in: connectionIds } },
@@ -102,8 +103,8 @@ export async function GET(req: NextRequest) {
           select: { postId: true, user: nameSelect },
         }),
       ]);
-      const displayName = (u: { name: string | null; company: { companyName: string } | null }) =>
-        u.company?.companyName || u.name || "A connection";
+      const displayName = (u: { name: string | null; company: { companyName: string } | null; investor: { firmName: string | null } | null }) =>
+        u.company?.companyName || u.name || u.investor?.firmName || "A connection";
 
       connReactions.forEach((r) => {
         if (!activityByPost.has(r.postId)) activityByPost.set(r.postId, { type: "REACTED", name: displayName(r.user), image: r.user.image ?? null });

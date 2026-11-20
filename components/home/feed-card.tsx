@@ -67,7 +67,7 @@ export default function FeedCard({ post, currentUser, onUnsave }: { post: any, c
   }, [showDropdown]);
 
   const isAuthor = currentUser?.id === currentPost?.authorId;
-  const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || "Independent Professional";
+  const authorName = currentPost?.author?.company?.companyName || currentPost?.author?.name || currentPost?.author?.investor?.firmName || "Independent Professional";
   const authorInitials = authorName.charAt(0).toUpperCase();
   const authorImage = currentPost?.author?.company?.logoUrl || currentPost?.author?.image;
 

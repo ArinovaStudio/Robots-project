@@ -72,7 +72,7 @@ export default function EmbeddedPost({ post, compact = false }: { post: any; com
     );
   }
 
-  const name = post.author?.company?.companyName || post.author?.name || "Independent Professional";
+  const name = post.author?.company?.companyName || post.author?.name || post.author?.investor?.firmName || "Independent Professional";
   const image = post.author?.company?.logoUrl || post.author?.image;
   const hasMedia = Array.isArray(post.media) && post.media.length > 0;
 

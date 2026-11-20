@@ -39,7 +39,8 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
 
   const [timeDisplay, setTimeDisplay] = useState("");
 
-  const authorName = comment.author?.company?.companyName || comment.author?.name || "User";
+  const authorName = comment.author?.company?.companyName || comment.author?.name || comment.author?.investor?.firmName || "User";
+  const authorImage = comment.author?.company?.logoUrl || comment.author?.image;
   const isOwner = currentUser?.id === comment.authorId;
 
   const handleReact = async (type: "LIKE") => {
@@ -166,9 +167,9 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   return (
     <div className="flex gap-3 text-sm">
       {/* Avatar */}
-      {comment.author?.company?.logoUrl ? (
+      {authorImage ? (
         <img 
-          src={comment.author.company.logoUrl} 
+          src={authorImage} 
           alt={authorName} 
           className="h-8 w-8 shrink-0 rounded-full object-cover border border-slate-100" 
         />

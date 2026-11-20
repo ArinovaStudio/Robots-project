@@ -44,6 +44,7 @@ export async function GET() {
             name: true,
             image: true,
             company: { select: { logoUrl: true, companyName: true } },
+            investor: { select: { firmName: true } },
           },
         })
       : [];
@@ -53,7 +54,7 @@ export async function GET() {
         a.id,
         {
           id: a.id,
-          name: a.company?.companyName || a.name || "User",
+          name: a.company?.companyName || a.name || a.investor?.firmName || "User",
           image: a.company?.logoUrl || a.image || null,
         },
       ])

@@ -26,6 +26,8 @@ export async function GET( req: NextRequest, { params }: { params: Promise<{ id:
           select: {
             id: true,
             name: true,
+            image: true,
+            investor: { select: { firmName: true } },
             company: { 
               select: { 
                 companyName: true, 

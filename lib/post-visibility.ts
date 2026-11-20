@@ -61,6 +61,7 @@ export const repostOfInclude = {
         id: true,
         name: true,
         image: true,
+        investor: { select: { firmName: true } },
         verificationStatus: true,
         company: { select: { companyName: true, logoUrl: true } },
       },

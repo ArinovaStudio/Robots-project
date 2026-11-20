@@ -4,10 +4,10 @@ import { prisma } from "./prisma";
 const FANOUT_CAP = 100;
 const MAX_MENTIONS = 5;
 
-type NamedUser = { name: string | null; company?: { companyName: string } | null } | null | undefined;
-const nameOf = (u: NamedUser, fallback: string) => u?.company?.companyName || u?.name || fallback;
+type NamedUser = { name: string | null; company?: { companyName: string } | null; investor?: { firmName: string | null } | null } | null | undefined;
+const nameOf = (u: NamedUser, fallback: string) => u?.company?.companyName || u?.name || u?.investor?.firmName || fallback;
 
-const actorSelect = { name: true, company: { select: { companyName: true } } } as const;
+const actorSelect = { name: true, company: { select: { companyName: true } }, investor: { select: { firmName: true } } } as const;
 
 /**
  * A new reaction on a post:
