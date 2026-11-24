@@ -33,6 +33,24 @@ export default function MenuCard() {
   const { user } = useUserStore();
   const isInvestor = user?.accountType === "INVESTOR";
   const [pendingRequestsCount, setPendingRequestsCount] = useState<number | null>(null);
+  // Pending investment offers investors sent to this business's pitches
+  const [pendingOffersCount, setPendingOffersCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (user?.accountType !== "BUSINESS" || !user?.id) return;
+    let active = true;
+    fetch("/api/company/pitches/offers")
+      .then((res) => res.json())
+      .then((json) => {
+        if (active && json.success && Array.isArray(json.data)) {
+          setPendingOffersCount(json.data.filter((o: any) => o.status === "PENDING").length);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [user?.accountType, user?.id]);
 
   useEffect(() => {
     if (!isInvestor || !user?.id) return;
@@ -72,7 +90,14 @@ export default function MenuCard() {
     {
       icon: Mailbox,
       label: "Collaboration Requests",
-      href: "/collaboration-requests",
+      href:
+        pendingOffersCount && pendingOffersCount > 0
+          ? "/collaboration-requests?tab=investor"
+          : "/collaboration-requests",
+      badge:
+        pendingOffersCount && pendingOffersCount > 0
+          ? String(pendingOffersCount)
+          : undefined,
     },
   ];
 

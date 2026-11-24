@@ -374,7 +374,12 @@ export default function CompanyPitchesClient() {
           companyName={offerTarget.company.companyName}
           targetAmount={offerTarget.targetAmount}
           onClose={() => setOfferTarget(null)}
-          onSuccess={() => setOfferTarget(null)}
+          onSuccess={() => {
+            const sentId = offerTarget.id;
+            setPitches((prev) => prev.filter((p) => p.id !== sentId));
+            setDetailsTarget(null);
+            setOfferTarget(null);
+          }}
         />
       )}
     </div>

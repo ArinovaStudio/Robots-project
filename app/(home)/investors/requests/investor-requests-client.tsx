@@ -101,7 +101,6 @@ export default function InvestorRequestsClient() {
   const [direction, setDirection] = useState<"received" | "sent">("received");
   const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
-  const [investorOffers, setInvestorOffers] = useState<any[]>([]);
   const [collabSent, setCollabSent] = useState<any[]>([]);
   const [collabReceived, setCollabReceived] = useState<any[]>([]);
   // Collaboration proposals this investor sent to BUSINESSES (MarketplaceCollaboration rows)
@@ -118,21 +117,14 @@ export default function InvestorRequestsClient() {
     let active = true;
     const fetchRequests = async () => {
       try {
-        const [pitchRes, myPitchesRes, collabRes, bizCollabRes] = await Promise.all([
+        const [pitchRes, collabRes, bizCollabRes] = await Promise.all([
           fetch("/api/pitch-requests"),
-          fetch("/api/investor/my-pitches").catch(() => null),
           fetch("/api/investor/collaborations").catch(() => null),
           fetch("/api/marketplace/collaborate?direction=sent&counterparty=business&limit=100").catch(() => null),
         ]);
         const json = await pitchRes.json();
         if (active && json.success && Array.isArray(json.data)) {
           setRequests(json.data);
-        }
-        if (myPitchesRes && myPitchesRes.ok) {
-          const myPitchesJson = await myPitchesRes.json();
-          if (active && myPitchesJson.success && Array.isArray(myPitchesJson.data?.offers)) {
-            setInvestorOffers(myPitchesJson.data.offers);
-          }
         }
         if (collabRes && collabRes.ok) {
           const collabJson = await collabRes.json();
@@ -282,37 +274,10 @@ export default function InvestorRequestsClient() {
     }
     if (direction === "sent") {
       const collabs = collabSent.map((c) => mapCollab(c, c.collaborator));
-      const offers = investorOffers.map((o) => ({
-        id: o.id,
-        senderId: o.founderId || "",
-        investorId: user?.id || "",
-        companyName: o.companyName || o.pitchTitle || "Company",
-        problemStatement: o.pitchTitle ? `Investment offer on "${o.pitchTitle}"` : "Investment offer",
-        proposedSolution: o.terms || o.message || "Terms not specified",
-        fundingRequirement: o.amount || "$0",
-        equityOffered: o.terms || null,
-        message: o.message || "",
-        pitchDeckUrl: "",
-        status: o.status,
-        createdAt: o.createdAt,
-        updatedAt: o.createdAt,
-        sender: {
-          id: o.founderId || "",
-          name: o.founderName || "Founder",
-          image: null,
-          verificationStatus: "VERIFIED",
-          company: {
-            companyName: o.companyName || null,
-            logoUrl: o.logoUrl || null,
-            type: o.pitchType || o.stage || "Startup",
-            location: o.location || null,
-          },
-        },
-      })) as PitchRequestItem[];
-      return [...collabs, ...offers];
+      return collabs;
     }
     return [];
-  }, [division, direction, requests, investorOffers, collabSent, collabReceived, bizCollabSent, user?.id]);
+  }, [division, direction, requests, collabSent, collabReceived, bizCollabSent, user?.id]);
 
   // Compute stat counts
   const stats = useMemo(() => {

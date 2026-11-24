@@ -45,6 +45,12 @@ export async function POST(
     if (pitchOwnerId === user.id) {
       return NextResponse.json({ success: false, message: "You cannot make an offer on your own pitch." }, { status: 400 });
     }
+    const existing = await prisma.$queryRaw<any[]>`
+      SELECT id FROM "CompanyPitchOffer" WHERE "pitchId" = ${pitchId} AND "investorId" = ${user.id} LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return NextResponse.json({ success: false, message: "You have already sent an offer request for this pitch." }, { status: 409 });
+    }
     const offerId = crypto.randomUUID();
 
     await prisma.$transaction(async (tx) => {
