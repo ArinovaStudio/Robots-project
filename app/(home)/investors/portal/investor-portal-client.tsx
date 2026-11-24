@@ -737,7 +737,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                             <DropdownMenuContent align="end" className="w-52">
                               {pitch.connectionStatus === "ACCEPTED" ? (
                                 <>
-                                  <DropdownMenuItem disabled className="gap-2 font-semibold text-emerald-600 opacity-100">
+                                  <DropdownMenuItem disabled className="gap-2 font-semibold text-blue-600 opacity-100">
                                     <UserCheck size={14} /> Connected
                                   </DropdownMenuItem>
                                   <DropdownMenuItem asChild className="gap-2 cursor-pointer">
@@ -792,7 +792,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                                     companyName: pitch.company.companyName,
                                   });
                                 }}
-                                className="gap-2 cursor-pointer text-emerald-700 font-semibold"
+                                className="gap-2 cursor-pointer text-blue-600 font-semibold"
                               >
                                 <DollarSign size={14} /> Make Offer
                               </DropdownMenuItem>
@@ -1326,7 +1326,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                   });
                   setSelectedPitch(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500 bg-white px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500 bg-white px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50"
               >
                 <DollarSign size={14} /> Make an offer
               </button>

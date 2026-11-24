@@ -171,7 +171,7 @@ export default function MakeOfferModal({
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4FD7] disabled:opacity-60"
+              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               Send offer request

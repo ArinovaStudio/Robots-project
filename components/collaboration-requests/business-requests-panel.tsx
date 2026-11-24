@@ -306,9 +306,9 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
             type="button"
             disabled={busy}
             onClick={() => updateStatus(req.id, "ACCEPTED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
-            {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+            {busy ? <Loader2 size={13} className="animate-spin text-blue-500" /> : <Check size={13} strokeWidth={2.5} className="text-blue-500" />}
             <span>Accept</span>
           </button>
         </>
@@ -346,9 +346,9 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
                 type="button"
                 disabled={busy}
                 onClick={() => updateStatus(req.id, "ACCEPTED")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
               >
-                {busy ? <Loader2 size={13} className="animate-spin text-emerald-500" /> : <Check size={13} strokeWidth={2.5} className="text-emerald-500" />}
+                {busy ? <Loader2 size={13} className="animate-spin text-blue-500" /> : <Check size={13} strokeWidth={2.5} className="text-blue-500" />}
                 <span>Accept</span>
               </button>
             </>
@@ -495,7 +495,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
                     </span>
                   ))}
                   {req.offerings.slice(0, 4).map((o) => (
-                    <span key={`o-${o}`} className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    <span key={`o-${o}`} className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
                       Offers: {o}
                     </span>
                   ))}

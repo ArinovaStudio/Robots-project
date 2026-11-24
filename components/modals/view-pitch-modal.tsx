@@ -106,7 +106,7 @@ export default function ViewPitchModal({
     switch (status) {
       case "ACCEPTED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-300">
             <CheckCircle2 className="w-3.5 h-3.5" /> Accepted
           </span>
         );
@@ -281,9 +281,9 @@ export default function ViewPitchModal({
                 type="button"
                 disabled={updating}
                 onClick={() => handleUpdateStatus("ACCEPTED")}
-                className="rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-xs"
+                className="rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition disabled:opacity-50 cursor-pointer shadow-xs"
               >
-                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" /> : "Accept Collaboration"}
+                {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> : "Accept Collaboration"}
               </button>
             </div>
           )}

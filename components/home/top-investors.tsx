@@ -84,16 +84,11 @@ export default function TopInvestors() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-3.5">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <TrendingUp size={16} />
-          </div>
-          <h3 className="text-sm font-bold text-gray-900 tracking-tight">Top Investors</h3>
+      <div className="mb-3.5 flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <TrendingUp size={16} />
         </div>
-        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
-          Active
-        </span>
+        <h3 className="text-sm font-bold text-gray-900 tracking-tight">Top Investors</h3>
       </div>
 
       <div className="space-y-3.5">

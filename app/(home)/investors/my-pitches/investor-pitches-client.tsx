@@ -478,7 +478,7 @@ export default function InvestorPitchesClient() {
                               <span>Pending</span>
                             </button>
                           ) : (
-                            <span className={`shrink-0 text-xs font-semibold ${offer.status === "ACCEPTED" ? "text-emerald-700" : "text-red-700"}`}>
+                            <span className={`shrink-0 text-xs font-semibold ${offer.status === "ACCEPTED" ? "text-blue-700" : "text-red-700"}`}>
                               {offer.status}
                             </span>
                           )}

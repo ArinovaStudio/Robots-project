@@ -566,7 +566,7 @@ export default function InvestorRequestsClient() {
             </p>
             <span className="text-xs text-gray-400 mt-1 block">Needs your decision</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
             <Clock size={18} />
           </div>
         </div>
@@ -580,7 +580,7 @@ export default function InvestorRequestsClient() {
             </p>
             <span className="text-xs text-gray-400 mt-1 block">Ready to connect</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
             <CheckCircle2 size={18} />
           </div>
         </div>
@@ -811,7 +811,7 @@ export default function InvestorRequestsClient() {
               switch (req.status) {
                 case "ACCEPTED":
                   return (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
                       Accepted
                     </span>
                   );
@@ -1056,12 +1056,12 @@ export default function InvestorRequestsClient() {
                             type="button"
                             disabled={isProcessing}
                             onClick={() => handleUpdateStatus(req.id, "ACCEPTED")}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                           >
                             {isProcessing ? (
-                              <Loader2 size={13} className="animate-spin text-emerald-600" />
+                              <Loader2 size={13} className="animate-spin text-blue-600" />
                             ) : (
-                              <Check size={13} strokeWidth={2.5} className="text-emerald-500" />
+                              <Check size={13} strokeWidth={2.5} className="text-blue-500" />
                             )}
                             <span>Accept</span>
                           </button>
@@ -1107,12 +1107,12 @@ export default function InvestorRequestsClient() {
                               type="button"
                               disabled={isProcessing}
                               onClick={() => handleUpdateStatus(req.id, "ACCEPTED")}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                             >
                               {isProcessing ? (
-                                <Loader2 size={13} className="animate-spin text-emerald-600" />
+                                <Loader2 size={13} className="animate-spin text-blue-600" />
                               ) : (
-                                <Check size={13} strokeWidth={2.5} className="text-emerald-500" />
+                                <Check size={13} strokeWidth={2.5} className="text-blue-500" />
                               )}
                               <span>Accept</span>
                             </button>

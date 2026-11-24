@@ -8,7 +8,7 @@ export default function StatusBadge({ status, pendingLabel = "Pending review" }:
 
   switch (status) {
     case "ACCEPTED":
-      return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>Accepted</span>;
+      return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>Accepted</span>;
     case "REVIEWED":
     case "INFO_REQUESTED":
       return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>Ask info</span>;

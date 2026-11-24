@@ -28,7 +28,7 @@ export default function SavedPostsPage() {
             </h1>
             <p className="text-xs text-slate-500 font-medium">Posts you've bookmarked for later</p>
           </div>
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
             <Bookmark size={24} />
           </div>
         </div>

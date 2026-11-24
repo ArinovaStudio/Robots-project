@@ -351,7 +351,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
         type="button"
         disabled={busy}
         onClick={() => respond(o.id, "ACCEPTED")}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
       >
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} />}
         <span>Accept</span>
@@ -386,7 +386,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
             type="button"
             disabled={busy}
             onClick={() => respond(o.id, "ACCEPTED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-white px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} strokeWidth={2.5} />}
             <span>Accept</span>

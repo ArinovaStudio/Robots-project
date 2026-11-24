@@ -803,7 +803,7 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
                     {companyForm.lookingFor.map((tag: string) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 rounded-lg text-xs font-semibold"
+                        className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1 rounded-lg text-xs font-semibold"
                       >
                         {tag}
                         <button
@@ -811,7 +811,7 @@ export default function EditProfileModal({ profile, onClose, onSuccess }: any) {
                           onClick={() =>
                             handleRemoveCompanyTag("lookingFor", tag)
                           }
-                          className="text-emerald-400 hover:text-red-600 transition"
+                          className="text-blue-400 hover:text-red-600 transition"
                         >
                           <X size={13} />
                         </button>

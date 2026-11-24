@@ -57,7 +57,7 @@ export default function ExchangeCard({ company }: { company: any }) {
       <div className="mt-4 pt-4 border-t border-gray-100">
         <div className="flex justify-between items-center mb-4">
           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Partner Stats</span>
-          <span className="px-2 py-1 bg-green-50 text-green-700 text-[11px] font-bold rounded">
+          <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[11px] font-bold rounded border border-blue-200/60">
             {company.matchPercentage}% Compatibility
           </span>
         </div>

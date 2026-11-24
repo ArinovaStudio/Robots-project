@@ -49,7 +49,7 @@ interface RequestsBoardProps {
 }
 
 const TONES = {
-  emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  emerald: "bg-blue-50 text-blue-600 border-blue-100",
   amber: "bg-amber-50 text-amber-600 border-amber-100",
 } as const;
 

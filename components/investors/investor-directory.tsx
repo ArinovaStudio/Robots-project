@@ -46,7 +46,7 @@ const selectCls =
 function scoreStyle(score: number) {
   if (score < 40) return "bg-red-50 text-red-700 border-red-200";
   if (score < 70) return "bg-yellow-50 text-yellow-700 border-yellow-200";
-  return "bg-green-50 text-green-700 border-green-200";
+  return "bg-blue-50 text-blue-700 border-blue-200";
 }
 
 function BioText({ bio }: { bio: string | null }) {
@@ -320,7 +320,7 @@ export default function InvestorDirectory() {
                     <DropdownMenuContent align="end" className="w-52">
                       {inv.connectionStatus === "CONNECTED" ? (
                         <>
-                          <DropdownMenuItem disabled className="gap-2 font-semibold text-emerald-600 opacity-100">
+                          <DropdownMenuItem disabled className="gap-2 font-semibold text-blue-600 opacity-100">
                             <UserCheck size={14} /> Connected
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild className="gap-2 cursor-pointer">

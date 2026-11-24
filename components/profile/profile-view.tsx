@@ -915,7 +915,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     type="button"
                     onClick={() => handleSelectTab(tab.id)}
                     className={`rounded-full px-3.5 py-1 text-sm font-semibold transition cursor-pointer ${isActive
-                        ? "bg-[#01754f] text-white"
+                        ? "bg-blue-600 text-white"
                         : "border border-gray-300 text-gray-700 hover:bg-gray-100"
                       }`}
                   >
@@ -1335,7 +1335,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               {secondPillItems.map((item: string) => (
                 <span
                   key={item}
-                  className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-3.5 py-1.5 text-sm font-medium"
+                  className="rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 px-3.5 py-1.5 text-sm font-medium"
                 >
                   {item}
                 </span>
@@ -1371,7 +1371,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
               {investor.openTo.slice(0, 1).map((item: string) => (
                 <span
                   key={item}
-                  className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-3.5 py-1.5 text-sm font-medium"
+                  className="rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 px-3.5 py-1.5 text-sm font-medium"
                 >
                   {item}
                 </span>
@@ -1386,9 +1386,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Briefcase size={18} className="text-emerald-600" />
+                <Briefcase size={18} className="text-blue-600" />
                 <h2 className="text-lg font-bold text-gray-900">Portfolio &amp; Companies Invested In</h2>
-                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
                   {stats.investedIn ?? 0} invested
                 </span>
               </div>
@@ -1396,7 +1396,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowRecordInvestmentModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-semibold transition"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 text-xs font-semibold transition"
                 >
                   <PlusCircle size={14} /> Record investment
                 </button>
@@ -1410,7 +1410,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 pr-2">
                         <h4 className="font-bold text-gray-900 text-sm truncate">{inv.companyName}</h4>
-                        <span className="mt-1 inline-block rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <span className="mt-1 inline-block rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
                           {inv.stage}
                         </span>
                       </div>
@@ -1467,7 +1467,7 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                   <button
                     type="button"
                     onClick={() => setShowRecordInvestmentModal(true)}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:underline"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline"
                   >
                     <PlusCircle size={14} /> Add your first invested company
                   </button>
