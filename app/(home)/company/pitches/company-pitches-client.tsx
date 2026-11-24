@@ -115,6 +115,9 @@ export default function CompanyPitchesClient() {
     useState<PitchData | null>(null);
 
   const [sharingLoading, setSharingLoading] = useState(false);
+  const [confirmingUnpublishPitch, setConfirmingUnpublishPitch] =
+    useState<PitchData | null>(null);
+  const [unpublishingLoading, setUnpublishingLoading] = useState(false);
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(
     null
   );
@@ -140,6 +143,29 @@ export default function CompanyPitchesClient() {
   useEffect(() => {
     fetchPitches();
   }, []);
+
+  // Close the three-dot menu when the user clicks/taps outside any pitch menu.
+  useEffect(() => {
+    if (!openMenuPitchId) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest("[data-pitch-menu]")) {
+        setOpenMenuPitchId(null);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMenuPitchId(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuPitchId]);
 
   // Publish pitch for company collaboration
   const handleShareCollaboration = async (pitch: PitchData) => {
@@ -168,6 +194,30 @@ export default function CompanyPitchesClient() {
       toast.error("An error occurred while publishing.");
     } finally {
       setSharingLoading(false);
+    }
+  };
+
+  // Unpublish a pitch from investor discovery and the public feed.
+  const handleUnpublishPitch = async (pitch: PitchData) => {
+    setUnpublishingLoading(true);
+    try {
+      const res = await fetch(
+        `/api/company/pitches/${pitch.id}/share-collaboration`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success(data.message || "Pitch unpublished successfully.");
+        setConfirmingUnpublishPitch(null);
+        await fetchPitches();
+      } else {
+        toast.error(data.message || "Could not unpublish this pitch.");
+      }
+    } catch {
+      toast.error("An error occurred while unpublishing the pitch.");
+    } finally {
+      setUnpublishingLoading(false);
     }
   };
 
@@ -471,7 +521,7 @@ export default function CompanyPitchesClient() {
                         </div>
 
                         {/* THREE DOT MENU */}
-                        <div className="relative">
+                        <div className="relative" data-pitch-menu>
                           <button
                             type="button"
                             disabled={deletingPitchId === pitch.id}
@@ -696,11 +746,11 @@ export default function CompanyPitchesClient() {
                         {pitch.isSharedWithCompanies ? (
                           <button
                             type="button"
-                            disabled
-                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-700 cursor-not-allowed"
+                            onClick={() => setConfirmingUnpublishPitch(pitch)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition"
                           >
-                            <CheckCircle2 size={15} />
-                            <span>Published</span>
+                            <XCircle size={15} />
+                            <span>Unpublish</span>
                           </button>
                         ) : (
                           <button
@@ -812,6 +862,60 @@ export default function CompanyPitchesClient() {
                   <>
                     <CheckCircle2 size={15} />
                     Publish Now
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNPUBLISH CONFIRMATION MODAL */}
+      {confirmingUnpublishPitch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 border border-gray-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-amber-100 p-3 text-amber-700 shrink-0">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Unpublish this pitch?
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  <strong>{confirmingUnpublishPitch.title}</strong> will no
+                  longer appear in investor/company collaboration discovery.
+                  Its linked collaboration request will be closed. Your pitch
+                  and existing investor offers, views, and ratings will remain
+                  in your account.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={unpublishingLoading}
+                onClick={() => setConfirmingUnpublishPitch(null)}
+                className="rounded-xl border border-gray-200 px-5 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={unpublishingLoading}
+                onClick={() => handleUnpublishPitch(confirmingUnpublishPitch)}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {unpublishingLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Unpublishing...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={15} />
+                    Yes, Unpublish
                   </>
                 )}
               </button>

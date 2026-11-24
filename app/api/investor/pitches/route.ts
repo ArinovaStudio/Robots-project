@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
       FROM "CompanyPitch" p
       INNER JOIN "User" u ON p."userId" = u.id
       LEFT JOIN "CompanyProfile" cp ON p."userId" = cp."userId"
-      WHERE p.status = 'ACTIVE' AND u."accountType" = 'BUSINESS' AND p."userId" != $1
+      WHERE p.status = 'ACTIVE' AND p."isSharedWithCompanies" = true
+        AND u."accountType" = 'BUSINESS' AND p."userId" != $1
         AND NOT EXISTS (
           SELECT 1 FROM "CompanyPitchOffer" o
           WHERE o."pitchId" = p.id AND o."investorId" = $1
