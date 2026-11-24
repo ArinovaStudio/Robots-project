@@ -105,6 +105,8 @@ export default function InvestorRequestsClient() {
   const [collabReceived, setCollabReceived] = useState<any[]>([]);
   // Collaboration proposals this investor sent to BUSINESSES (MarketplaceCollaboration rows)
   const [bizCollabSent, setBizCollabSent] = useState<any[]>([]);
+  // Investment offers this investor sent from Company Pitches (CompanyPitchOffer rows)
+  const [offersSent, setOffersSent] = useState<any[]>([]);
   const [expandedCollabId, setExpandedCollabId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("PENDING");
@@ -117,10 +119,11 @@ export default function InvestorRequestsClient() {
     let active = true;
     const fetchRequests = async () => {
       try {
-        const [pitchRes, collabRes, bizCollabRes] = await Promise.all([
+        const [pitchRes, collabRes, bizCollabRes, offersRes] = await Promise.all([
           fetch("/api/pitch-requests"),
           fetch("/api/investor/collaborations").catch(() => null),
           fetch("/api/marketplace/collaborate?direction=sent&counterparty=business&limit=100").catch(() => null),
+          fetch("/api/investor/my-pitches").catch(() => null),
         ]);
         const json = await pitchRes.json();
         if (active && json.success && Array.isArray(json.data)) {
@@ -137,6 +140,12 @@ export default function InvestorRequestsClient() {
           const bizJson = await bizCollabRes.json();
           if (active && bizJson.success && Array.isArray(bizJson.data)) {
             setBizCollabSent(bizJson.data);
+          }
+        }
+        if (offersRes && offersRes.ok) {
+          const offersJson = await offersRes.json();
+          if (active && offersJson.success && Array.isArray(offersJson.data?.offers)) {
+            setOffersSent(offersJson.data.offers);
           }
         }
       } catch (err) {
@@ -259,6 +268,53 @@ export default function InvestorRequestsClient() {
     } as unknown as PitchRequestItem & { kind: "collaboration" };
   };
 
+  // Maps an investment offer I sent from Company Pitches (CompanyPitchOffer) to the card shape.
+  const mapPitchOffer = (o: any): PitchRequestItem & { kind: "collaboration" } => {
+    const name = o.companyName || o.founderName || "Business";
+    // The business side's "asked for more info" is stored as INFO_REQUESTED; this page calls it REVIEWED.
+    const status = o.status === "INFO_REQUESTED" ? "REVIEWED" : o.status;
+    return {
+      kind: "collaboration",
+      id: o.id,
+      senderId: o.founderId || "",
+      investorId: user?.id || "",
+      companyName: name,
+      problemStatement: `Investment offer on ${o.pitchTitle || "pitch"}`,
+      proposedSolution: o.terms || "",
+      fundingRequirement: o.amount || "",
+      equityOffered: null,
+      message: o.message || "",
+      pitchDeckUrl: "",
+      status,
+      createdAt: o.createdAt,
+      updatedAt: o.createdAt,
+      sender: {
+        id: o.founderId || "",
+        name: o.founderName || null,
+        image: null,
+        company: {
+          companyName: name,
+          logoUrl: o.logoUrl || null,
+          type: o.sector || "Business",
+          location: o.location || null,
+        },
+      },
+      collab: {
+        isBusinessCollab: true,
+        isPitchOffer: true,
+        collaborationType: "Investment offer",
+        proposedAmount: o.amount || "",
+        targetCompany: o.pitchTitle || "—",
+        participation: o.terms || "",
+        message: o.message || "",
+        pitchDeckUrl: null,
+        businessPlanUrl: null,
+        financialsUrl: null,
+        otherDocumentsUrl: null,
+      },
+    } as unknown as PitchRequestItem & { kind: "collaboration" };
+  };
+
   // Active requests depending on division (Business vs Investor) & direction (received vs sent)
   const activeRequests = useMemo(() => {
     if (division === "business") {
@@ -266,7 +322,7 @@ export default function InvestorRequestsClient() {
         return user?.id ? requests.filter((r) => r.investorId === user.id) : requests;
       }
       const sentPitchRequests = user?.id ? requests.filter((r) => r.senderId === user.id) : [];
-      return [...bizCollabSent.map(mapBizCollab), ...sentPitchRequests];
+      return [...offersSent.map(mapPitchOffer), ...bizCollabSent.map(mapBizCollab), ...sentPitchRequests];
     }
     // Investor division
     if (direction === "received") {
@@ -277,7 +333,7 @@ export default function InvestorRequestsClient() {
       return collabs;
     }
     return [];
-  }, [division, direction, requests, collabSent, collabReceived, bizCollabSent, user?.id]);
+  }, [division, direction, requests, collabSent, collabReceived, bizCollabSent, offersSent, user?.id]);
 
   // Compute stat counts
   const stats = useMemo(() => {
@@ -369,6 +425,24 @@ export default function InvestorRequestsClient() {
 
   const handleDelete = async (id: string) => {
     setProcessingId(id);
+    if (offersSent.some((o) => o.id === id)) {
+      // Offers can only be cancelled while pending.
+      try {
+        const res = await fetch(`/api/company/pitches/offers/${id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.success) {
+          setOffersSent((prev) => prev.filter((o) => o.id !== id));
+          toast.success("Offer request cancelled.");
+        } else {
+          toast.error(data?.message || "Failed to cancel offer request.");
+        }
+      } catch {
+        toast.error("An error occurred while cancelling.");
+      } finally {
+        setProcessingId(null);
+      }
+      return;
+    }
     const bizCollab = bizCollabSent.find((c) => c.id === id);
     if (bizCollab) {
       // Proposals to businesses can only be cancelled while pending, by recipient id.
@@ -796,7 +870,7 @@ export default function InvestorRequestsClient() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {isBizCollab ? `${founderName} • Business` : collab ? `${founderName} • Investor` : `${founderName} • Co-founder & CEO`}
+                        {collab?.isPitchOffer ? `${founderName} • Company pitch offer` : isBizCollab ? `${founderName} • Business` : collab ? `${founderName} • Investor` : `${founderName} • Co-founder & CEO`}
                       </p>
                     </div>
                   </div>
@@ -911,8 +985,8 @@ export default function InvestorRequestsClient() {
 
                 {collab && expandedCollabId === req.id && (
                   <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-xs text-gray-700 space-y-2">
-                    <p><span className="font-semibold">{isBizCollab ? "Target opportunity:" : "Target company:"}</span> {collab.targetCompany}</p>
-                    <p><span className="font-semibold">Participation:</span> {collab.participation}</p>
+                    <p><span className="font-semibold">{collab.isPitchOffer ? "Pitch:" : isBizCollab ? "Target opportunity:" : "Target company:"}</span> {collab.targetCompany}</p>
+                    <p><span className="font-semibold">{collab.isPitchOffer ? "Terms:" : "Participation:"}</span> {collab.participation}</p>
                     <p className="whitespace-pre-wrap"><span className="font-semibold">Message:</span> {collab.message}</p>
                     <div className="flex flex-wrap gap-3 pt-1">
                       {([
@@ -1008,7 +1082,7 @@ export default function InvestorRequestsClient() {
                     {req.status === "REVIEWED" && isBizCollab && (
                       <>
                         {/* Questions the business asked through "Ask for info" (renders nothing if there are none) */}
-                        <InfoRequestAction requestId={req.id} requestType="BUSINESS_COLLABORATION" />
+                        <InfoRequestAction requestId={req.id} requestType={collab?.isPitchOffer ? "INVESTMENT_OFFER" : "BUSINESS_COLLABORATION"} />
                       </>
                     )}
 
