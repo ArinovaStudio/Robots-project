@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Inbox,
   Mailbox,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,11 @@ export default function MenuCard() {
       icon: Sparkles,
       label: "Business collaboration (I2B)",
       href: "/investors/portal",
+    },
+    {
+      icon: Building2,
+      label: "Company Pitches",
+      href: "/investors/company-pitches",
     },
     {
       icon: TrendingUp,
