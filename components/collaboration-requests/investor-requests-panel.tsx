@@ -476,18 +476,18 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
 
               <div className="space-y-1.5">
                 <h4 className="text-sm font-bold text-gray-900 leading-snug">
-                  {o.kind === "collaboration" ? o.pitchTitle : <>Offer on “{o.pitchTitle}”</>}
+                  {o.kind === "collaboration" ? o.pitchTitle : <>Offer request on “{o.pitchTitle}”</>}
                 </h4>
                 {o.message && <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{o.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
                 <div>
-                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Proposed amount" : "Offer amount"}</span>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Proposed amount" : "Proposed investment"}</span>
                   <span className="mt-0.5 block text-xs font-bold text-gray-900">{o.amount}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Participation" : "Terms"}</span>
+                  <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{o.kind === "collaboration" ? "Participation" : "Suggested terms"}</span>
                   <span className="mt-0.5 block text-xs font-bold text-gray-900">{o.terms || "—"}</span>
                 </div>
                 <div>
@@ -506,7 +506,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
                   onClick={() => setSelected(o)}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
                 >
-                  <span>{o.kind === "collaboration" ? "View request details" : "View offer details"}</span>
+                  <span>View request details</span>
                   <ArrowRight size={13} />
                 </button>
                 <div className="flex items-center gap-2 self-end sm:self-auto">{actionButtons(o)}</div>
@@ -546,8 +546,8 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
                   ...(selected.documentUrl ? [{ label: "Attached document", href: selected.documentUrl, hrefLabel: "Open document" }] : []),
                 ]
               : [
-                  { label: "Offer amount", value: selected.amount },
-                  { label: "Terms", value: selected.terms },
+                  { label: "Proposed investment", value: selected.amount },
+                  { label: "Suggested terms", value: selected.terms },
                   { label: "Investor's message", value: selected.message },
                   { label: "Pitch", value: [selected.pitchTitle, selected.pitchSector, selected.pitchStage].filter(Boolean).join(" • ") },
                   { label: "Pitch target", value: selected.pitchTargetAmount },

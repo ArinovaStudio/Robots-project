@@ -124,13 +124,6 @@ export default function CompanyPitchesClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-24">
-      <header>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#172033]">Company pitches</h1>
-        <p className="mt-1 text-sm text-[#64748B]">
-          Pitches published by businesses. Rate them, read the full pitch, or send an offer request.
-        </p>
-      </header>
-
       {/* Search + sector */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="relative block w-full sm:max-w-md">
@@ -178,11 +171,6 @@ export default function CompanyPitchesClient() {
             </button>
           ))}
         </div>
-        {!loading && (
-          <span className="text-xs text-[#64748B]">
-            {filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}
-          </span>
-        )}
       </div>
 
       {/* Cards */}
@@ -384,6 +372,7 @@ export default function CompanyPitchesClient() {
           pitchId={offerTarget.id}
           pitchTitle={offerTarget.title}
           companyName={offerTarget.company.companyName}
+          targetAmount={offerTarget.targetAmount}
           onClose={() => setOfferTarget(null)}
           onSuccess={() => setOfferTarget(null)}
         />

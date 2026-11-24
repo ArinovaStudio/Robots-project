@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOnboardedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { parseAmountValue } from "@/lib/utils";
 
 export async function POST(
   req: NextRequest,
@@ -25,16 +26,8 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Offer amount is required." }, { status: 400 });
     }
 
-    // Extract numeric amount for aggregation (e.g. "$100,000" -> 100000, "50k" -> 50000)
-    let cleanVal = amount.replace(/[^0-9.kmKM]/g, "");
-    let numericAmount = 0;
-    if (cleanVal.toLowerCase().endsWith("m")) {
-      numericAmount = parseFloat(cleanVal) * 1000000;
-    } else if (cleanVal.toLowerCase().endsWith("k")) {
-      numericAmount = parseFloat(cleanVal) * 1000;
-    } else {
-      numericAmount = parseFloat(cleanVal) || 0;
-    }
+    // Extract numeric amount for aggregation (e.g. "₹10 L" -> 1000000, "50k" -> 50000)
+    const numericAmount = parseAmountValue(amount);
 
     if (numericAmount <= 0) {
       return NextResponse.json({ success: false, message: "Offer amount must be a positive number." }, { status: 400 });
@@ -73,8 +66,8 @@ export async function POST(
           userId: pitchOwnerId,
           actorId: user.id,
           type: "INVESTOR_OFFER",
-          content: `${user.name || "An investor"} made an investment offer of ${amount.trim()} for your pitch: "${pitches[0].title}"`,
-          link: "/company/pitches"
+          content: `${user.name || "An investor"} sent an offer request of ${amount.trim()} for your pitch: "${pitches[0].title}"`,
+          link: "/collaboration-requests?tab=investor"
         }
       });
     });

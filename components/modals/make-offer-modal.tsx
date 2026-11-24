@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2, IndianRupee, FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { formatTargetAmount } from "@/lib/utils";
 
@@ -9,26 +9,41 @@ interface MakeOfferModalProps {
   pitchId: string;
   pitchTitle: string;
   companyName: string;
+  /** Target raise published by the business; pre-fills "Proposed investment". */
+  targetAmount?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
+const INTEREST_OPTIONS = ["Investment offer"];
+
+const inputClass =
+  "w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-3 text-sm text-[#172033] placeholder:text-[#94A3B8] focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-blue-200";
+const labelClass = "mb-1.5 block text-sm font-bold text-[#172033]";
+
 export default function MakeOfferModal({
   pitchId,
-  pitchTitle,
   companyName,
+  targetAmount,
   onClose,
   onSuccess,
 }: MakeOfferModalProps) {
-  const [amount, setAmount] = useState("");
-  const [terms, setTerms] = useState("SAFE (Valuation cap)");
+  const [interest, setInterest] = useState(INTEREST_OPTIONS[0]);
+  const [amount, setAmount] = useState(targetAmount ? formatTargetAmount(targetAmount) : "");
+  const [terms, setTerms] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !loading && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [loading, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount.trim()) {
-      toast.error("Please enter the offer amount.");
+      toast.error("Please enter the proposed investment.");
       return;
     }
 
@@ -39,18 +54,18 @@ export default function MakeOfferModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: amount.trim(),
-          terms: terms.trim(),
+          terms: terms.trim() || undefined,
           message: message.trim() || undefined,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || "Offer submitted to founder!");
+        toast.success(data.message || "Offer request sent!");
         onSuccess();
         onClose();
       } else {
-        toast.error(data.message || "Failed to submit offer.");
+        toast.error(data.message || "Failed to send offer request.");
       }
     } catch {
       toast.error("An error occurred. Please try again.");
@@ -60,87 +75,106 @@ export default function MakeOfferModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={() => !loading && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="offer-request-title"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[92vh] w-full max-w-[640px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150 sm:p-8"
+      >
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Make Investment Offer</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Pitch: <strong className="text-gray-800">{pitchTitle}</strong> ({companyName})
-            </p>
+            <h3 id="offer-request-title" className="text-2xl font-extrabold tracking-tight text-[#172033]">
+              Send an offer request
+            </h3>
+            <p className="mt-1 text-sm text-[#64748B]">Share your interest with {companyName}.</p>
           </div>
-          <button onClick={onClose} className="rounded-full p-1 text-gray-400 hover:bg-gray-100">
-            <X size={18} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full p-1 text-[#64748B] hover:bg-gray-100"
+          >
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Offer Amount *
+            <label htmlFor="offer-interest" className={labelClass}>
+              I’m interested in
             </label>
-            <div className="relative">
-              <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <select
+              id="offer-interest"
+              value={interest}
+              onChange={(e) => setInterest(e.target.value)}
+              className={`${inputClass} px-4`}
+            >
+              {INTEREST_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="offer-amount" className={labelClass}>
+                Proposed investment
+              </label>
               <input
+                id="offer-amount"
                 type="text"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 onBlur={() => setAmount((prev) => (prev ? formatTargetAmount(prev) : ""))}
-                placeholder="e.g. ₹100,000 or ₹250k"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. ₹10L"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="offer-terms" className={labelClass}>
+                Suggested terms
+              </label>
+              <input
+                id="offer-terms"
+                type="text"
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                placeholder="e.g. Equity or SAFE"
+                className={inputClass}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Investment Structure / Terms
+            <label htmlFor="offer-message" className={labelClass}>
+              Message to the business
             </label>
-            <select
-              value={terms}
-              onChange={(e) => setTerms(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="SAFE (Valuation cap)">SAFE (Valuation cap)</option>
-              <option value="Priced Equity Round">Priced Equity Round</option>
-              <option value="Convertible Note">Convertible Note</option>
-              <option value="Strategic Pilot / Capital">Strategic Pilot / Capital</option>
-            </select>
+            <textarea
+              id="offer-message"
+              rows={5}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Share a little about your interest or the collaboration you have in mind."
+              className={`${inputClass} resize-y`}
+            />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Message / Term Sheet Note (Optional)
-            </label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <textarea
-                rows={3}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Outline valuation expectations, target close date, and syndicate details..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition"
-            >
-              Cancel
-            </button>
+          <div className="flex justify-end border-t border-[#E5E7EB] pt-5">
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4FD7] disabled:opacity-60"
             >
-              {loading && <Loader2 size={14} className="animate-spin" />}
-              Send Investment Offer
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              Send offer request
             </button>
           </div>
         </form>

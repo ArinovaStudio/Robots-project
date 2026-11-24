@@ -55,3 +55,35 @@ export function formatTargetAmount(val: string | number | null | undefined): str
 }
 
 
+
+/**
+ * Converts amounts like "₹10 L", "₹5 Cr", "250k", "2M" or "1,00,000" into a plain number.
+ * Returns 0 when the value cannot be parsed.
+ */
+export function parseAmountValue(val: string | number | null | undefined): number {
+  if (val === null || val === undefined) return 0;
+  const str = String(val).trim().replace(/^[$₹€£]\s*/, "").replace(/,/g, "");
+  const match = str.match(/^(\d+(?:\.\d+)?)\s*(cr|crore|crores|l|lac|lacs|lakh|lakhs|k|m|b)?\.?$/i);
+  if (!match) return parseFloat(str.replace(/[^0-9.]/g, "")) || 0;
+  const num = parseFloat(match[1]);
+  switch ((match[2] || "").toLowerCase()) {
+    case "cr":
+    case "crore":
+    case "crores":
+      return num * 10_000_000;
+    case "l":
+    case "lac":
+    case "lacs":
+    case "lakh":
+    case "lakhs":
+      return num * 100_000;
+    case "k":
+      return num * 1_000;
+    case "m":
+      return num * 1_000_000;
+    case "b":
+      return num * 1_000_000_000;
+    default:
+      return num;
+  }
+}
