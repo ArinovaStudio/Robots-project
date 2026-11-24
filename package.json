@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/ensure-redis.js",
+    "redis": "node scripts/ensure-redis.js",
     "dev": "ts-node --project tsconfig.server.json server.ts",
     "build": "prisma generate && next build",
     "start": "ts-node --project tsconfig.server.json server.ts",
