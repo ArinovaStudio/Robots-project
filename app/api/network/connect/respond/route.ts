@@ -37,45 +37,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: `Request is already ${connection.status.toLowerCase()}` }, { status: 400 });
     }
 
-    await prisma.connection.update({
-      where: { id: connectionId },
-      data: { status: action }
-    });
-
-    await prisma.notification.updateMany({
-      where: {
-        userId: user.id,
-        actorId: connection.senderId,
-        type: "CONNECTION_REQUEST",
-        isRead: false,
-      },
-      data: { isRead: true },
-    });
-
-    if (action === "ACCEPTED") {
-      // Create mutual follows
-      await prisma.follow.createMany({
-        data: [
-          { followerId: user.id, followingId: connection.senderId },
-          { followerId: connection.senderId, followingId: user.id }
-        ],
-        skipDuplicates: true
+    await prisma.$transaction(async (tx) => {
+      await tx.connection.update({
+        where: { id: connectionId },
+        data: { status: action },
       });
 
-      // Send notification to the sender
-      const notification = await prisma.notification.create({
-        data: {
-          userId: connection.senderId,
-          actorId: user.id,
-          type: "CONNECTION_ACCEPTED",
-          content: `${user.name || "Someone"} accepted your connection request`,
-          link: `/profile/${user.id}`,
-        }
+      await tx.notification.updateMany({
+        where: {
+          userId: user.id,
+          actorId: connection.senderId,
+          type: "CONNECTION_REQUEST",
+          isRead: false,
+        },
+        data: { isRead: true },
       });
 
-      // We could ideally emit real-time notification here if we had access to globalSocket or Redis
-      // But for now it'll be in the DB and visible on refresh or polling.
-    }
+      if (action === "REJECTED") {
+        // Declining undoes the follow the sender got by sending the request
+        await tx.follow.deleteMany({
+          where: { followerId: connection.senderId, followingId: user.id },
+        });
+      }
+
+      if (action === "ACCEPTED") {
+        // LinkedIn-style: the sender already follows the receiver from the request;
+        // accepting makes it mutual so both become followers of each other.
+        await tx.follow.createMany({
+          data: [
+            { followerId: connection.senderId, followingId: user.id },
+            { followerId: user.id, followingId: connection.senderId },
+          ],
+          skipDuplicates: true,
+        });
+
+        await tx.notification.create({
+          data: {
+            userId: connection.senderId,
+            actorId: user.id,
+            type: "CONNECTION_ACCEPTED",
+            content: `${user.name || "Someone"} accepted your connection request`,
+            link: `/profile/${user.id}`,
+          },
+        });
+      }
+    });
 
     return NextResponse.json({ success: true, message: `Connection request ${action.toLowerCase()} successfully` }, { status: 200 });
 

@@ -1889,6 +1889,13 @@ export default function ProfileView({ userId }: ProfileViewProps) {
           onClose={() => setShowConnectModal(false)}
           onSuccess={(message) => {
             setConnectionStatus("PENDING");
+            // Sending a request also follows the user (LinkedIn-style)
+            if (!isFollowing) {
+              setIsFollowing(true);
+              setProfile((prev: any) =>
+                prev ? { ...prev, stats: { ...prev.stats, followers: prev.stats.followers + 1 } } : prev
+              );
+            }
             toast.success(message);
           }}
         />

@@ -60,6 +60,12 @@ export async function POST(req: NextRequest) {
             },
           });
 
+          // LinkedIn-style: sending a connection request makes the sender follow the receiver
+          await tx.follow.createMany({
+            data: [{ followerId: user.id, followingId: receiverId }],
+            skipDuplicates: true,
+          });
+
           await tx.notification.create({
             data: {
               userId: receiverId,
@@ -83,6 +89,12 @@ export async function POST(req: NextRequest) {
           message: message || null,
           status: "PENDING",
         },
+      });
+
+      // LinkedIn-style: sending a connection request makes the sender follow the receiver
+      await tx.follow.createMany({
+        data: [{ followerId: user.id, followingId: receiverId }],
+        skipDuplicates: true,
       });
 
       await tx.notification.create({

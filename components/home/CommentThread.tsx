@@ -6,14 +6,14 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   const [editContent, setEditContent] = useState(comment.content);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
-  
+
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
 
   const [reaction, setReaction] = useState<"LIKE" | null>(comment.userReaction === "LIKE" ? "LIKE" : null);
   const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
-  
+
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -35,23 +35,30 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [showMenu]);
-  const [isUpdating, setIsUpdating] = useState(false);
 
+  const [isUpdating, setIsUpdating] = useState(false);
   const [timeDisplay, setTimeDisplay] = useState("");
 
-  const authorName = comment.author?.company?.companyName || comment.author?.name || comment.author?.investor?.firmName || "User";
+  const authorName =
+    comment.author?.company?.companyName ||
+    comment.author?.name ||
+    comment.author?.investor?.firmName ||
+    "User";
   const authorImage = comment.author?.company?.logoUrl || comment.author?.image;
   const isOwner = currentUser?.id === comment.authorId;
+
+  const currentUserAvatar = currentUser?.company?.logoUrl || currentUser?.image;
+  const currentUserAlt = currentUser?.company?.companyName || currentUser?.name || "User";
 
   const handleReact = async (type: "LIKE") => {
     if (!currentUser) return alert("Please log in to react to comments.");
 
     if (reaction === type) {
       setReaction(null);
-      setLikesCount((prev: any) => prev - 1);
+      setLikesCount((prev: number) => prev - 1);
     } else {
       setReaction(type);
-      setLikesCount((prev: any) => prev + 1);
+      setLikesCount((prev: number) => prev + 1);
     }
 
     try {
@@ -64,7 +71,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   };
 
   const handleDelete = async () => {
-    if (!currentUser) return alert("Please log in to delete to comments.");
+    if (!currentUser) return alert("Please log in to delete comments.");
     if (!confirm("Are you sure you want to delete this comment?")) return;
     try {
       const res = await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
@@ -75,7 +82,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
   };
 
   const handleEdit = async () => {
-    if (!currentUser) return alert("Please log in to edit to comments.");
+    if (!currentUser) return alert("Please log in to edit comments.");
     if (!editContent.trim() || editContent === comment.content) return setIsEditing(false);
     setIsUpdating(true);
     try {
@@ -87,7 +94,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
       if (res.ok) {
         comment.content = editContent;
         comment.isEdited = true;
-        comment.updatedAt = new Date().toISOString(); 
+        comment.updatedAt = new Date().toISOString();
         setIsEditing(false);
       }
     } finally {
@@ -124,7 +131,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
       if (res.ok) {
         setReplyContent("");
         setIsReplying(false);
-        fetchNestedReplies(); 
+        fetchNestedReplies();
         setShowReplies(true);
       }
     } finally {
@@ -159,26 +166,26 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 60000); 
-    
+    const interval = setInterval(updateTime, 60000);
+
     return () => clearInterval(interval);
-  }, [comment.createdAt]);
+  }, [comment.createdAt, comment.isEdited, comment.updatedAt]);
 
   return (
     <div className="flex gap-3 text-sm">
       {/* Avatar */}
       {authorImage ? (
-        <img 
-          src={authorImage} 
-          alt={authorName} 
-          className="h-8 w-8 shrink-0 rounded-full object-cover border border-slate-100" 
+        <img
+          src={authorImage}
+          alt={authorName}
+          className="h-8 w-8 shrink-0 rounded-full object-cover border border-slate-100"
         />
       ) : (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-500">
           {authorName.charAt(0)}
         </div>
       )}
-      
+
       <div className="flex-1">
         {/* Author & Time */}
         <div className="flex items-center gap-2 mb-1">
@@ -189,7 +196,7 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
               <span className="text-[10px] italic text-slate-400">(edited)</span>
             )}
           </div>
-          
+
           {/* Options Menu (Edit/Delete) */}
           {isOwner && (
             <div className="relative ml-auto" ref={menuRef}>
@@ -228,13 +235,12 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         ) : (
           <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
         )}
-        
+
         {/* Action Bar (Like, Dislike, Reply) */}
         {!isEditing && (
           <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500">
-            {/* Display likes count accurately */}
             <button onClick={() => handleReact("LIKE")} className={`flex items-center gap-1.5 transition hover:text-blue-600 ${reaction === "LIKE" ? "text-blue-600" : ""}`}>
-              <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} /> 
+              <ThumbsUp size={14} className={reaction === "LIKE" ? "fill-current" : ""} />
               {likesCount > 0 && likesCount}
             </button>
 
@@ -247,15 +253,15 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {/* Inline Reply Input */}
         {isReplying && (
           <div className="flex gap-2 mt-3 animate-in fade-in slide-in-from-top-2">
-            {currentUser?.image || currentUser?.company?.logoUrl ? (
-              <img 
-                src={currentUser.company.logoUrl || currentUser.image} 
-                alt={currentUser?.company?.companyName || currentUser?.name || "User"} 
-                className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100" 
+            {currentUserAvatar ? (
+              <img
+                src={currentUserAvatar}
+                alt={currentUserAlt}
+                className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-100"
               />
             ) : (
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
-                {(currentUser?.company?.companyName || currentUser?.name || "U").charAt(0).toUpperCase()}
+                {currentUserAlt.charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1">
@@ -279,12 +285,12 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
         {/* View Nested Replies Toggle */}
         {comment._count?.replies > 0 && (
           <div className="mt-2">
-            <button 
-              onClick={toggleReplies} 
+            <button
+              onClick={toggleReplies}
               className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-full transition"
             >
               {showReplies ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {showReplies ? "Hide replies" : `${comment._count.replies} ${comment._count.replies === 1 ? 'reply' : 'replies'}`}
+              {showReplies ? "Hide replies" : `${comment._count.replies} ${comment._count.replies === 1 ? "reply" : "replies"}`}
             </button>
           </div>
         )}
@@ -295,13 +301,13 @@ export function CommentThread({ comment, postId, currentUser, onDelete }: { comm
             {loadingReplies ? (
               <Loader2 className="animate-spin text-slate-300 h-5 w-5 ml-2" />
             ) : (
-              replies.map(reply => (
-                <CommentThread 
-                  key={reply.id} 
-                  comment={reply} 
-                  postId={postId} 
-                  currentUser={currentUser} 
-                  onDelete={(id) => setReplies(prev => prev.filter(r => r.id !== id))}
+              replies.map((reply) => (
+                <CommentThread
+                  key={reply.id}
+                  comment={reply}
+                  postId={postId}
+                  currentUser={currentUser}
+                  onDelete={(id) => setReplies((prev) => prev.filter((r) => r.id !== id))}
                 />
               ))
             )}

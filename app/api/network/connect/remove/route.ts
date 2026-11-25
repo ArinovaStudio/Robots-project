@@ -53,17 +53,35 @@ async function handleRemove(req: NextRequest) {
       return NextResponse.json({ success: false, message: "No connection or request found" }, { status: 404 });
     }
 
-    // Clean up notifications related to this request
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [
-          { userId: existingConnection.receiverId, actorId: existingConnection.senderId, type: "CONNECTION_REQUEST" },
-          { userId: existingConnection.senderId, actorId: existingConnection.receiverId, type: "CONNECTION_REQUEST" },
-        ]
-      }
-    });
+    const { senderId, receiverId } = existingConnection;
+    const wasAccepted = existingConnection.status === "ACCEPTED";
 
-    await prisma.connection.delete({ where: { id: existingConnection.id } });
+    await prisma.$transaction(async (tx) => {
+      // Clean up notifications related to this request
+      await tx.notification.deleteMany({
+        where: {
+          OR: [
+            { userId: receiverId, actorId: senderId, type: "CONNECTION_REQUEST" },
+            { userId: senderId, actorId: receiverId, type: "CONNECTION_REQUEST" },
+          ]
+        }
+      });
+
+      await tx.connection.delete({ where: { id: existingConnection.id } });
+
+      // Undo the follows: a cancelled/declined request drops the sender's follow,
+      // removing an accepted connection drops both directions.
+      await tx.follow.deleteMany({
+        where: wasAccepted
+          ? {
+              OR: [
+                { followerId: senderId, followingId: receiverId },
+                { followerId: receiverId, followingId: senderId },
+              ],
+            }
+          : { followerId: senderId, followingId: receiverId },
+      });
+    });
 
     const message = existingConnection.status === "PENDING"
       ? "Connection request cancelled"

@@ -9,7 +9,6 @@ interface MakeOfferModalProps {
   pitchId: string;
   pitchTitle: string;
   companyName: string;
-  /** Target raise published by the business; pre-fills "Proposed investment". */
   targetAmount?: string | null;
   onClose: () => void;
   onSuccess: () => void;
