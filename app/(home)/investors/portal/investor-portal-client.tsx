@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, useLayoutEffect } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef, useLayoutEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -45,6 +45,7 @@ import ConfirmModal from "@/components/modals/confirm-modal";
 import VerificationBadge from "@/components/ui/VerificationBadge";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
+import { PITCH_SECTORS } from "@/lib/pitch-sectors";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,10 +120,36 @@ interface PreferenceCompany {
   performanceScore: number;
   matchPercentage: number;
   badges: string[];
+  pitchTypes?: string[];
+  fundingStages?: string[];
   connectionStatus: string | null;
   connectionId?: string | null;
   isConnectionSender?: boolean;
 }
+
+interface BusinessFilters {
+  pitchType: "ALL" | "PITCH" | "PRODUCT" | "IDEA";
+  stage: string;
+  sector: string;
+  industry: string;
+  q: string;
+}
+
+const DEFAULT_BUSINESS_FILTERS: BusinessFilters = {
+  pitchType: "ALL",
+  stage: "ALL",
+  sector: "ALL",
+  industry: "ALL",
+  q: "",
+};
+
+const BUSINESS_PAGE_SIZE = 10;
+const FUNDING_STAGES = ["Pre-seed", "Seed", "Series A", "Series B+"];
+const PITCH_TYPE_LABELS: Record<string, string> = {
+  PITCH: "Pitch Deck",
+  PRODUCT: "Live Product",
+  IDEA: "Early Idea",
+};
 
 function formatDescription(value: string) {
   return value
@@ -196,6 +223,18 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
   const [renderCount, setRenderCount] = useState(PITCH_CHUNK);
   const pitchSentinelRef = useRef<HTMLDivElement | null>(null);
   const [loadingPerformers, setLoadingPerformers] = useState(true);
+
+  // Business Collaboration list: server-side filters + infinite scroll (10 per page)
+  const [businessFilters, setBusinessFilters] = useState<BusinessFilters>(DEFAULT_BUSINESS_FILTERS);
+  const [filterOptions, setFilterOptions] = useState<{ industries: string[] }>({ industries: [] });
+  const [searchInput, setSearchInput] = useState("");
+  const [hasMoreBusinesses, setHasMoreBusinesses] = useState(false);
+  const [loadingMoreBusinesses, setLoadingMoreBusinesses] = useState(false);
+  const [businessLoadError, setBusinessLoadError] = useState(false);
+  const businessSentinelRef = useRef<HTMLDivElement | null>(null);
+  const businessRequestRef = useRef(0);
+  const businessLoadingRef = useRef(false);
+  const businessOffsetRef = useRef(0);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<"ALL" | "PITCH" | "PRODUCT" | "IDEA">("ALL");
@@ -447,31 +486,132 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
     }
   };
 
-  // Fetch Companies Doing Good in Preferences
-  const fetchPerformers = async () => {
-    setLoadingPerformers(true);
-    try {
-      const res = await fetch("/api/investor/preference-matches");
-      const json = await res.json();
-      if (json.success) {
-        setPerformers(json.data);
-        setPreferences(json.preferences);
+  // Load one page of business profiles (reset = start again from the first page)
+  const loadBusinesses = useCallback(
+    async (reset: boolean) => {
+      if (!reset && businessLoadingRef.current) return;
+      const requestId = ++businessRequestRef.current;
+      businessLoadingRef.current = true;
+      setBusinessLoadError(false);
+      if (reset) {
+        setLoadingPerformers(true);
+        setLoadingMoreBusinesses(false);
+      } else {
+        setLoadingMoreBusinesses(true);
       }
-    } catch {
-      // ignore
-    } finally {
-      setLoadingPerformers(false);
-    }
-  };
+
+      try {
+        const params = new URLSearchParams({
+          limit: String(BUSINESS_PAGE_SIZE),
+          offset: String(reset ? 0 : businessOffsetRef.current),
+        });
+        if (businessFilters.q) params.set("q", businessFilters.q);
+        if (businessFilters.pitchType !== "ALL") params.set("pitchType", businessFilters.pitchType);
+        if (businessFilters.stage !== "ALL") params.set("stage", businessFilters.stage);
+        if (businessFilters.sector !== "ALL") params.set("sector", businessFilters.sector);
+        if (businessFilters.industry !== "ALL") params.set("industry", businessFilters.industry);
+
+        const res = await fetch(`/api/investor/businesses?${params.toString()}`);
+        const json = await res.json();
+        if (requestId !== businessRequestRef.current) return; // filters changed meanwhile
+
+        if (!json.success) throw new Error(json.message || "Request failed");
+        const incoming: PreferenceCompany[] = json.data;
+        setPerformers((prev) => {
+          if (reset) return incoming;
+          const seen = new Set(prev.map((c) => c.id));
+          return [...prev, ...incoming.filter((c) => !seen.has(c.id))];
+        });
+        businessOffsetRef.current = json.nextOffset;
+        setHasMoreBusinesses(Boolean(json.hasMore));
+      } catch {
+        if (requestId !== businessRequestRef.current) return;
+        setBusinessLoadError(true);
+        if (reset) {
+          setPerformers([]);
+          setHasMoreBusinesses(false);
+        }
+        toast.error("Failed to load businesses");
+      } finally {
+        if (requestId === businessRequestRef.current) {
+          businessLoadingRef.current = false;
+          setLoadingPerformers(false);
+          setLoadingMoreBusinesses(false);
+        }
+      }
+    },
+    [businessFilters]
+  );
 
   useEffect(() => {
     if (view === "pitches") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchPitches();
     } else {
-      fetchPerformers();
+      // Runs on mount and again whenever the search or a filter changes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadBusinesses(true);
     }
+  }, [view, loadBusinesses]);
+
+  // Filter dropdown options (industries / sectors businesses actually use)
+  useEffect(() => {
+    if (view !== "performers") return;
+    let active = true;
+    fetch("/api/investor/businesses/filters")
+      .then((res) => res.json())
+      .then((json) => {
+        if (active && json.success) setFilterOptions(json.data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [view]);
+
+  // Infinite scroll: fetch the next 10 businesses when the bottom sentinel nears the viewport
+  useEffect(() => {
+    const el = businessSentinelRef.current;
+    if (
+      view !== "performers" ||
+      !el ||
+      !hasMoreBusinesses ||
+      loadingPerformers ||
+      loadingMoreBusinesses ||
+      businessLoadError
+    ) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadBusinesses(false);
+      },
+      { rootMargin: "400px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [view, hasMoreBusinesses, loadingPerformers, loadingMoreBusinesses, businessLoadError, loadBusinesses]);
+
+  // Wait for a pause in typing before searching by business name
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchInput.trim();
+      setBusinessFilters((f) => (f.q === next ? f : { ...f, q: next }));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const resetBusinessFilters = () => {
+    setSearchInput("");
+    setBusinessFilters(DEFAULT_BUSINESS_FILTERS);
+  };
+
+  const businessFiltersActive =
+    businessFilters.q !== "" ||
+    businessFilters.pitchType !== "ALL" ||
+    businessFilters.stage !== "ALL" ||
+    businessFilters.sector !== "ALL" ||
+    businessFilters.industry !== "ALL";
 
   const filteredPitches = useMemo(() => {
     return pitches.filter(p => {
@@ -946,20 +1086,95 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
 
       {view === "performers" && (
         <section className="space-y-6">
-          <div className="rounded-2xl border border-[#E5E7EB] bg-[#EFF6FF] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-[#172033] flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-[#2563EB]" />
-                Company Doing Good
-              </h2>
-              <p className="text-xs text-[#64748B] mt-1">
-                Ranked by accepted connections, posts, comments, pitches, and accepted investment offers.
-              </p>
+          {/* Search & filters (applied on the server, then the list loads 10 at a time) */}
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 space-y-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+              {(["ALL", "PITCH", "PRODUCT", "IDEA"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setBusinessFilters((f) => ({ ...f, pitchType: t }))}
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition whitespace-nowrap ${
+                    businessFilters.pitchType === t
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {t === "ALL" ? "All Businesses" : t === "PITCH" ? "Pitch Decks" : t === "PRODUCT" ? "Live Products" : "Early Ideas"}
+                </button>
+              ))}
             </div>
-            <div className="rounded-xl bg-white px-4 py-2 border border-[#E5E7EB] shrink-0 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB]">Traction Ranking</span>
-              <p className="text-xs font-extrabold text-[#172033] mt-0.5">Top 1% Network Leaders</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] gap-3 pt-2 border-t border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  aria-label="Search businesses by name"
+                  placeholder="Search businesses by name..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50/50 pl-9 pr-9 py-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setSearchInput("")}
+                    className="absolute right-2.5 top-2 rounded p-0.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <select
+                aria-label="Funding stage"
+                value={businessFilters.stage}
+                onChange={(e) => setBusinessFilters((f) => ({ ...f, stage: e.target.value }))}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">All Funding Stages</option>
+                {FUNDING_STAGES.map((st) => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+
+              <select
+                aria-label="Sector"
+                value={businessFilters.sector}
+                onChange={(e) => setBusinessFilters((f) => ({ ...f, sector: e.target.value }))}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">All Sectors</option>
+                {PITCH_SECTORS.map((sec) => (
+                  <option key={sec} value={sec}>{sec}</option>
+                ))}
+              </select>
+
+              <select
+                aria-label="Industry"
+                value={businessFilters.industry}
+                onChange={(e) => setBusinessFilters((f) => ({ ...f, industry: e.target.value }))}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">All Industries</option>
+                {filterOptions.industries.map((ind) => (
+                  <option key={ind} value={ind}>{ind}</option>
+                ))}
+              </select>
+
             </div>
+
+            {businessFiltersActive && (
+              <div className="flex justify-end">
+                <button
+                  onClick={resetBusinessFilters}
+                  className="text-xs font-semibold text-blue-700 hover:underline"
+                >
+                  Reset filters
+                </button>
+              </div>
+            )}
           </div>
 
           {loadingPerformers ? (
@@ -982,13 +1197,37 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
           ) : performers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500">
               <TrendingUp className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-              <h3 className="text-base font-bold text-gray-800">No preference matches calculated yet</h3>
-              <p className="mt-1 text-xs text-gray-500">Update your investor sectors in your profile settings.</p>
+              <h3 className="text-base font-bold text-gray-800">
+                {businessLoadError ? "Couldn't load businesses" : "No businesses found"}
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                {businessLoadError
+                  ? "Something went wrong while loading. Please try again."
+                  : businessFiltersActive
+                  ? "No businesses match your search or filters. Try loosening them."
+                  : "Check back soon as new businesses join."}
+              </p>
+              {businessLoadError ? (
+                <button
+                  onClick={() => loadBusinesses(true)}
+                  className="mt-4 rounded-lg bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                >
+                  Retry
+                </button>
+              ) : businessFiltersActive && (
+                <button
+                  onClick={resetBusinessFilters}
+                  className="mt-4 rounded-lg bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                >
+                  Reset filters
+                </button>
+              )}
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {performers.map((company, index) => (
-                <ScrollReveal key={company.id} direction="up" delay={0.05 * index}>
+                <ScrollReveal key={company.id} direction="up" delay={0.05 * (index % BUSINESS_PAGE_SIZE)}>
                   <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 hover:border-gray-300 transition duration-150 flex flex-col justify-between h-full">
                     <div>
                       {/* Top Bar with Score */}
@@ -1042,6 +1281,22 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                             className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200"
                           >
                             {badge}
+                          </span>
+                        ))}
+                        {company.pitchTypes?.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-md bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#2563EB] border border-blue-200"
+                          >
+                            {PITCH_TYPE_LABELS[t] ?? t}
+                          </span>
+                        ))}
+                        {company.fundingStages?.map((st) => (
+                          <span
+                            key={st}
+                            className="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-700 border border-neutral-200"
+                          >
+                            {st}
                           </span>
                         ))}
                       </div>
@@ -1117,6 +1372,25 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                 </ScrollReveal>
               ))}
             </div>
+
+            {hasMoreBusinesses && (
+              <div ref={businessSentinelRef} className="flex justify-center py-4">
+                {businessLoadError ? (
+                  <button
+                    onClick={() => loadBusinesses(false)}
+                    className="rounded-lg bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                  >
+                    Couldn&apos;t load more businesses. Retry
+                  </button>
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                )}
+              </div>
+            )}
+            {!hasMoreBusinesses && performers.length > 0 && (
+              <p className="py-4 text-center text-xs text-gray-400">You&apos;ve reached the end of the list.</p>
+            )}
+            </>
           )}
         </section>
       )}
@@ -1363,8 +1637,17 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
           onSuccess={(msg) => {
             toast.success(msg);
             setSelectedConnectCompany(null);
-            fetchPitches();
-            fetchPerformers();
+            if (view === "pitches") {
+              fetchPitches();
+            } else {
+              // Update the card in place so the scroll position and loaded pages are kept
+              const targetId = selectedConnectCompany.id;
+              setPerformers((prev) =>
+                prev.map((c) =>
+                  c.userId === targetId ? { ...c, connectionStatus: "PENDING", isConnectionSender: true } : c
+                )
+              );
+            }
           }}
         />
       )}

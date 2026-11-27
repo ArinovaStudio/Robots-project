@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import InvestorPortalClient from "./investor-portal-client";
 
 export const metadata: Metadata = {
-  title: "Investor Portal - Ideas, Products & Pitches | Connecto",
-  description: "Browse curated startup ideas, live products, and investment pitches. Discover high-performing companies matching your preferred sectors and stages.",
+  title: "Business Collaboration (I2B) | Connecto",
+  description: "Browse all business profiles, view their details, and connect with companies directly.",
   alternates: {
     canonical: "/investors/portal",
   },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function InvestorPortalPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-sm text-gray-500">Loading portal...</div>}>
-      <InvestorPortalClient view="pitches" />
+      <InvestorPortalClient view="performers" />
     </Suspense>
   );
 }

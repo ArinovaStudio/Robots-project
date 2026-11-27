@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Loader2, Sparkles, IndianRupee, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatTargetAmount } from "@/lib/utils";
+import { PITCH_SECTORS } from "@/lib/pitch-sectors";
 
 export interface EditablePitch {
   id: string;
@@ -199,15 +200,9 @@ export default function AddPitchModal({ pitch, onClose, onSuccess }: AddPitchMod
                 onChange={(e) => setSector(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
-                <option value="AI & Machine Learning">AI & Machine Learning</option>
-                <option value="Robotics & Automation">Robotics & Automation</option>
-                <option value="Fintech">Fintech</option>
-                <option value="SaaS & Enterprise Software">SaaS & Enterprise Software</option>
-                <option value="Healthcare & Biotech">Healthcare & Biotech</option>
-                <option value="Clean Energy & Climate">Clean Energy & Climate</option>
-                <option value="Cybersecurity">Cybersecurity</option>
-                <option value="E-Commerce & Supply Chain">E-Commerce & Supply Chain</option>
-                <option value="Hardware & IoT">Hardware & IoT</option>
+                {PITCH_SECTORS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </div>
 
