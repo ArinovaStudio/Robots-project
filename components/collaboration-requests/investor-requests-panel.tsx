@@ -12,6 +12,7 @@ import { formatRelativeTime } from "./utils";
 import SendPitchRequestModal, { type ExistingPitchRequest } from "@/components/modals/send-pitch-request-modal";
 import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
 import InfoRequestAction from "@/components/info-requests/info-request-action";
+import ActionConfirmDialog from "@/components/ui/action-confirm-dialog";
 
 // An investor -> business request = an investment offer made on one of the business's pitches.
 interface ReceivedOffer {
@@ -126,6 +127,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
   const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<ReceivedOffer | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; action: "cancel" | "decline" } | null>(null);
   const [editing, setEditing] = useState<ReceivedOffer | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view"; type: InfoType } | null>(null);
@@ -273,7 +275,6 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
 
   const cancelPitch = async (id: string) => {
     const isCollab = offers.find((o) => o.id === id)?.kind === "collaboration";
-    if (!window.confirm(`Cancel this ${isCollab ? "collaboration request" : "pitch request"}? It will be removed for the investor too.`)) return;
     setProcessingId(id);
     try {
       const res = await fetch(isCollab ? `/api/marketplace/collaborate?id=${id}` : `/api/pitch-requests?id=${id}`, { method: "DELETE" });
@@ -291,6 +292,14 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const confirmPendingAction = () => {
+    if (!confirmAction) return;
+    const pending = confirmAction;
+    setConfirmAction(null);
+    if (pending.action === "cancel") void cancelPitch(pending.id);
+    else void respond(pending.id, "DECLINED");
   };
 
   const nameOf = (o: ReceivedOffer) => o.name || o.firmName || "Investor";
@@ -314,7 +323,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
             <button
               type="button"
               disabled={busy}
-              onClick={() => cancelPitch(o.id)}
+              onClick={() => setConfirmAction({ id: o.id, action: "cancel" })}
               className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
             >
               {busy ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
@@ -352,7 +361,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
       <button
         type="button"
         disabled={busy}
-        onClick={() => respond(o.id, "DECLINED")}
+        onClick={() => setConfirmAction({ id: o.id, action: "decline" })}
         className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
       >
         <X size={13} />
@@ -378,7 +387,7 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
           <button
             type="button"
             disabled={busy}
-            onClick={() => respond(o.id, "DECLINED")}
+            onClick={() => setConfirmAction({ id: o.id, action: "decline" })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <X size={13} />
@@ -541,6 +550,18 @@ export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRe
       )}
 
       {infoDialog && <InfoRequestDialog requestId={infoDialog.id} requestType={infoDialog.type} mode={infoDialog.mode} onClose={() => setInfoDialog(null)} />}
+
+      <ActionConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.action === "decline" ? "Decline this request?" : "Cancel this request?"}
+        description={confirmAction?.action === "decline"
+          ? "The request will be marked as declined. The other party will see this decision."
+          : "This request will be removed for both you and the other party. This action cannot be undone."}
+        confirmLabel={confirmAction?.action === "decline" ? "Decline request" : "Cancel request"}
+        loading={!!processingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={confirmPendingAction}
+      />
 
       {selected && (
         <RequestDetailsModal

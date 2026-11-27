@@ -30,6 +30,7 @@ import StatusBadge from "./status-badge";
 import { formatRelativeTime } from "./utils";
 import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
 import InfoRequestAction from "@/components/info-requests/info-request-action";
+import ActionConfirmDialog from "@/components/ui/action-confirm-dialog";
 export interface B2BRequest {
   id: string;
   requesterId: string;
@@ -97,6 +98,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
   const [selected, setSelected] = useState<B2BRequest | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; action: "cancel" | "decline" } | null>(null);
   const [infoDialog, setInfoDialog] = useState<{ id: string; mode: "ask" | "answer" | "view" } | null>(null);
 
   useEffect(() => {
@@ -238,6 +240,14 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
     }
   };
 
+  const confirmPendingAction = () => {
+    if (!confirmAction) return;
+    const pending = confirmAction;
+    setConfirmAction(null);
+    if (pending.action === "cancel") void cancelProposal(pending.id);
+    else void updateStatus(pending.id, "DECLINED");
+  };
+
   const blockBusiness = async (id: string, requesterId: string, name: string) => {
     setProcessingId(id);
     try {
@@ -266,7 +276,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
           <button
             type="button"
             disabled={busy}
-            onClick={() => cancelProposal(req.id)}
+            onClick={() => setConfirmAction({ id: req.id, action: "cancel" })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             {busy ? <Loader2 size={13} className="animate-spin text-red-500" /> : <X size={13} className="text-red-500" />}
@@ -298,7 +308,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
           <button
             type="button"
             disabled={busy}
-            onClick={() => updateStatus(req.id, "DECLINED")}
+            onClick={() => setConfirmAction({ id: req.id, action: "decline" })}
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <X size={13} className="text-red-500" />
@@ -347,7 +357,7 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => updateStatus(req.id, "DECLINED")}
+                onClick={() => setConfirmAction({ id: req.id, action: "decline" })}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
               >
                 <X size={13} className="text-red-500" />
@@ -576,6 +586,18 @@ export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRe
           onClose={() => setReportTarget(null)}
         />
       )}
+
+      <ActionConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.action === "decline" ? "Decline this request?" : "Cancel this collaboration request?"}
+        description={confirmAction?.action === "decline"
+          ? "The request will be marked as declined. The other party will see this decision."
+          : "This request will be removed for both you and the other business. This action cannot be undone."}
+        confirmLabel={confirmAction?.action === "decline" ? "Decline request" : "Cancel request"}
+        loading={!!processingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={confirmPendingAction}
+      />
     </>
   );
 }

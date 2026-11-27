@@ -33,6 +33,7 @@ import ViewPitchModal, {
 import ReportCompanyModal from "@/components/modals/report-company-modal";
 import InfoRequestDialog from "@/components/info-requests/info-request-dialog";
 import InfoRequestAction from "@/components/info-requests/info-request-action";
+import ActionConfirmDialog from "@/components/ui/action-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -117,6 +118,7 @@ export default function InvestorRequestsClient() {
   const [selectedPitch, setSelectedPitch] = useState<PitchRequestItem | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string; pitchRequestId?: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; action: "delete" | "decline" } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -406,6 +408,17 @@ export default function InvestorRequestsClient() {
       return 0;
     });
   }, [activeRequests, activeTab, sortBy, searchQuery]);
+
+  const requestDeleteConfirmation = (id: string) => setConfirmAction({ id, action: "delete" });
+  const requestDeclineConfirmation = (id: string) => setConfirmAction({ id, action: "decline" });
+
+  const confirmPendingAction = () => {
+    if (!confirmAction) return;
+    const pending = confirmAction;
+    setConfirmAction(null);
+    if (pending.action === "delete") void handleDelete(pending.id);
+    else void handleUpdateStatus(pending.id, "DECLINED");
+  };
 
   const handleUpdateStatus = async (id: string, newStatus: "ACCEPTED" | "DECLINED" | "REVIEWED") => {
     setProcessingId(id);
@@ -911,7 +924,7 @@ export default function InvestorRequestsClient() {
                       <DropdownMenuContent align="end" className="w-44 bg-white border border-gray-200 p-1 rounded-xl shadow-lg">
                         {(!isBizCollab || req.status === "PENDING") && (
                         <DropdownMenuItem
-                          onSelect={() => handleDelete(req.id)}
+                          onSelect={() => requestDeleteConfirmation(req.id)}
                           className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
                         >
                           <Trash2 size={14} className="text-red-500" />
@@ -1043,7 +1056,7 @@ export default function InvestorRequestsClient() {
                         <button
                           type="button"
                           disabled={isProcessing}
-                          onClick={() => handleDelete(req.id)}
+                          onClick={() => requestDeleteConfirmation(req.id)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                         >
                           <X size={13} className="text-red-500" />
@@ -1054,7 +1067,7 @@ export default function InvestorRequestsClient() {
                           <button
                             type="button"
                             disabled={isProcessing}
-                            onClick={() => handleUpdateStatus(req.id, "DECLINED")}
+                            onClick={() => requestDeclineConfirmation(req.id)}
                             className="inline-flex items-center gap-1.5 rounded-lg border  bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                           >
                             <X size={13} className="text-red-500" />
@@ -1116,7 +1129,7 @@ export default function InvestorRequestsClient() {
                             <button
                               type="button"
                               disabled={isProcessing}
-                              onClick={() => handleUpdateStatus(req.id, "DECLINED")}
+                              onClick={() => requestDeclineConfirmation(req.id)}
                               className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-600 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                             >
                               <X size={13} className="text-red-500" />
@@ -1173,6 +1186,18 @@ export default function InvestorRequestsClient() {
           onClose={() => setReportTarget(null)}
         />
       )}
+
+      <ActionConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.action === "decline" ? "Decline this request?" : "Delete or cancel this request?"}
+        description={confirmAction?.action === "decline"
+          ? "The request will be marked as declined. The other party will see this decision."
+          : "This request will be removed from your requests. Where supported, it will also be removed for the other party. This action cannot be undone."}
+        confirmLabel={confirmAction?.action === "decline" ? "Decline request" : "Confirm"}
+        loading={!!processingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={confirmPendingAction}
+      />
     </div>
   );
 }
