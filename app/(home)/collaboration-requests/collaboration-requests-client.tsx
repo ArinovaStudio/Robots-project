@@ -13,6 +13,8 @@ export default function CollaborationRequestsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const user = useUserStore((s) => s.user);
+  const deepLinkRequestId = searchParams.get("requestId");
+  const initialDirection = searchParams.get("direction") === "sent" ? "sent" : "received";
 
   const [division, setDivision] = useState<Division>(
     searchParams.get("tab") === "investor" ? "investor" : "business"
@@ -71,10 +73,18 @@ export default function CollaborationRequestsClient() {
 
       {/* Both panels stay mounted so each tab's pending count is known up front */}
       <div className={division === "business" ? "" : "hidden"} role="tabpanel">
-        <BusinessRequestsPanel onPendingCountChange={onBusinessPending} />
+        <BusinessRequestsPanel
+          onPendingCountChange={onBusinessPending}
+          deepLinkRequestId={division === "business" ? deepLinkRequestId : null}
+          initialDirection={initialDirection}
+        />
       </div>
       <div className={division === "investor" ? "" : "hidden"} role="tabpanel">
-        <InvestorRequestsPanel onPendingCountChange={onInvestorPending} />
+        <InvestorRequestsPanel
+          onPendingCountChange={onInvestorPending}
+          deepLinkRequestId={division === "investor" ? deepLinkRequestId : null}
+          initialDirection={initialDirection}
+        />
       </div>
     </div>
   );

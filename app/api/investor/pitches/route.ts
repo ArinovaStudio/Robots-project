@@ -11,6 +11,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
+    if (user.accountType === "INVESTOR" && user.verificationStatus !== "VERIFIED") {
+      return NextResponse.json(
+        { success: false, message: "Account verification is required to access this section." },
+        { status: 403 }
+      );
+    }
+
+
     const { searchParams } = req.nextUrl;
     const type = searchParams.get("type"); // "ALL", "PITCH", "PRODUCT", "IDEA"
     const sector = searchParams.get("sector");

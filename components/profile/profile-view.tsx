@@ -728,7 +728,9 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                       ? "border-[#0a66c2] text-[#0a66c2] hover:bg-blue-50/70"
                       : profile.verificationStatus === "PENDING"
                         ? "border-amber-500 bg-white text-amber-600 hover:bg-amber-50/50"
-                        : "border-red-500 bg-white text-red-600 hover:bg-red-50"
+                        : profile.verificationStatus === "MORE_INFO_REQUIRED"
+                          ? "border-purple-500 bg-white text-purple-700 hover:bg-purple-50"
+                          : "border-red-500 bg-white text-red-600 hover:bg-red-50"
                       }`}
                   >
                     {isVerified ? (
@@ -736,7 +738,13 @@ export default function ProfileView({ userId }: ProfileViewProps) {
                     ) : (
                       <ShieldCheck size={15} />
                     )}
-                    {isVerified ? "Verified" : profile.verificationStatus === "PENDING" ? "Pending Review" : "Apply for verification"}
+                    {isVerified
+                      ? "Verified"
+                      : profile.verificationStatus === "PENDING"
+                        ? "Pending Review"
+                        : profile.verificationStatus === "MORE_INFO_REQUIRED"
+                          ? "Update verification"
+                          : "Apply for verification"}
                   </Link>
 
                   {renderMoreMenu()}

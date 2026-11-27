@@ -297,7 +297,7 @@ export default function VerificationPage() {
               </p>
             )}
             <p className="text-[11px] text-purple-600 mt-2">
-              Please review your details or upload the requested document below and click <strong>Submit Verification Request</strong> to resubmit.
+              Your application is editable below. Update the requested details or replace the document, then click <strong>Update &amp; Resubmit Verification</strong>.
             </p>
           </div>
         </div>
@@ -741,7 +741,7 @@ export default function VerificationPage() {
                 </>
               ) : (
                 <>
-                  <ShieldCheck size={18} /> Submit Verification Request
+                  <ShieldCheck size={18} /> {userStatus === "MORE_INFO_REQUIRED" ? "Update & Resubmit Verification" : "Submit Verification Request"}
                 </>
               )}
             </button>

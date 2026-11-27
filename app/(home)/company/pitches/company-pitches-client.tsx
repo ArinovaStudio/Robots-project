@@ -24,6 +24,14 @@ import {
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import AddPitchModal from "@/components/modals/add-pitch-modal";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { formatTargetAmount } from "@/lib/utils";
@@ -122,6 +130,7 @@ export default function CompanyPitchesClient() {
     null
   );
   const [deletingPitchId, setDeletingPitchId] = useState<string | null>(null);
+  const [confirmingDeletePitch, setConfirmingDeletePitch] = useState<PitchData | null>(null);
 
   const fetchPitches = async () => {
     try {
@@ -221,14 +230,8 @@ export default function CompanyPitchesClient() {
     }
   };
 
-  // Delete pitch
+  // Delete pitch after confirmation in the in-app dialog.
   const handleDeletePitch = async (pitch: PitchData) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${pitch.title}"? This action cannot be undone.`
-    );
-
-    if (!confirmed) return;
-
     setDeletingPitchId(pitch.id);
     setOpenMenuPitchId(null);
 
@@ -241,6 +244,7 @@ export default function CompanyPitchesClient() {
 
       if (res.ok && data.success) {
         toast.success(data.message || "Pitch deleted successfully.");
+        setConfirmingDeletePitch(null);
 
         setPitches((prev) => prev.filter((p) => p.id !== pitch.id));
 
@@ -570,7 +574,10 @@ export default function CompanyPitchesClient() {
                               {/* DELETE */}
                               <button
                                 type="button"
-                                onClick={() => handleDeletePitch(pitch)}
+                                onClick={() => {
+                                  setOpenMenuPitchId(null);
+                                  setConfirmingDeletePitch(pitch);
+                                }}
                                 disabled={deletingPitchId === pitch.id}
                                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
                               >
@@ -1547,6 +1554,48 @@ export default function CompanyPitchesClient() {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={Boolean(confirmingDeletePitch)}
+        onOpenChange={(open) => {
+          if (!open && !deletingPitchId) setConfirmingDeletePitch(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl border border-red-100 bg-white p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#172033]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <Trash2 size={18} />
+              </span>
+              Delete this pitch?
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm leading-relaxed text-[#64748B]">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#172033]">{confirmingDeletePitch?.title ? `“${confirmingDeletePitch.title}”` : "this pitch"}</span>?
+              This action cannot be undone. Its views, offers, and ratings will also be removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex flex-col-reverse gap-2 border-0 bg-transparent p-0 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setConfirmingDeletePitch(null)}
+              disabled={Boolean(deletingPitchId)}
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => confirmingDeletePitch && handleDeletePitch(confirmingDeletePitch)}
+              disabled={!confirmingDeletePitch || Boolean(deletingPitchId)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {deletingPitchId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              {deletingPitchId ? "Deleting…" : "Delete pitch"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ADD / EDIT PITCH MODAL */}
       {(showAddModal || editingPitch) && (

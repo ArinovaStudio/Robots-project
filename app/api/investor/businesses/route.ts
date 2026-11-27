@@ -33,6 +33,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
 
+    if (user.accountType === "INVESTOR" && user.verificationStatus !== "VERIFIED") {
+      return NextResponse.json(
+        { success: false, message: "Account verification is required to access this section." },
+        { status: 403 }
+      );
+    }
+
+
     const sp = req.nextUrl.searchParams;
     const offset = Math.max(parseInt(sp.get("offset") || "0", 10) || 0, 0);
     const limit = Math.min(

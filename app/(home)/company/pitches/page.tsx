@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import VerificationAccessGate from "@/components/VerificationAccessGate";
 import CompanyPitchesClient from "./company-pitches-client";
 
 export const metadata: Metadata = {
@@ -14,5 +15,9 @@ export const metadata: Metadata = {
 };
 
 export default function CompanyPitchesPage() {
-  return <CompanyPitchesClient />;
+  return (
+    <VerificationAccessGate accountType="BUSINESS" mode="blur">
+      <CompanyPitchesClient />
+    </VerificationAccessGate>
+  );
 }

@@ -83,14 +83,16 @@ function getSortOptions(direction: "received" | "sent") {
 
 interface BusinessRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
+  deepLinkRequestId?: string | null;
+  initialDirection?: "received" | "sent";
 }
 
-export default function BusinessRequestsPanel({ onPendingCountChange }: BusinessRequestsPanelProps) {
+export default function BusinessRequestsPanel({ onPendingCountChange, deepLinkRequestId, initialDirection = "received" }: BusinessRequestsPanelProps) {
   const [requests, setRequests] = useState<B2BRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
-  const [direction, setDirection] = useState<"received" | "sent">("received");
+  const [direction, setDirection] = useState<"received" | "sent">(initialDirection);
   const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<B2BRequest | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -120,6 +122,15 @@ export default function BusinessRequestsPanel({ onPendingCountChange }: Business
       active = false;
     };
   }, [direction]);
+
+  useEffect(() => {
+    if (!deepLinkRequestId || loading) return;
+    const target = requests.find((request) => request.id === deepLinkRequestId);
+    if (target) {
+      setActiveFilter("ALL");
+      setInfoDialog({ id: target.id, mode: "view" });
+    }
+  }, [deepLinkRequestId, loading, requests]);
 
   const stats = useMemo(
     () => ({

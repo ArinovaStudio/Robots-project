@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import VerificationAccessGate from "@/components/VerificationAccessGate";
 import { Suspense } from "react";
 import InvestorPortalClient from "./investor-portal-client";
 
@@ -16,8 +17,10 @@ export const metadata: Metadata = {
 
 export default function InvestorPortalPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-sm text-gray-500">Loading portal...</div>}>
-      <InvestorPortalClient view="performers" />
-    </Suspense>
+    <VerificationAccessGate accountType="INVESTOR" mode="blur">
+      <Suspense fallback={<div className="p-8 text-center text-sm text-gray-500">Loading portal...</div>}>
+        <InvestorPortalClient view="performers" />
+      </Suspense>
+    </VerificationAccessGate>
   );
 }

@@ -137,6 +137,20 @@ export async function POST(
           },
         }),
       ]);
+
+      // Notify the applicant so they know they need to update their submission.
+      await prisma.notification.create({
+        data: {
+          userId: application.userId,
+          actorId: admin.id,
+          type: "SYSTEM",
+          content: `${admin.name || "An administrator"} requested more information for your verification application: ${infoRequestMessage.trim()}`,
+          link: "/verification",
+        },
+      }).catch((notificationError) => {
+        // A notification failure must not undo the administrator's review action.
+        console.error("Verification info-request notification failed:", notificationError);
+      });
     }
 
     return NextResponse.json({

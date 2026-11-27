@@ -1325,41 +1325,26 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
                       </span>
 
                       <div className="flex items-center gap-2">
-                        {company.connectionStatus === "ACCEPTED" ? (
+                        {company.connectionStatus === "ACCEPTED" && (
                           <Link
                             href={`/messages/${company.userId}`}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
+                            className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-blue-700 border border-blue-200 hover:bg-blue-50 transition"
                           >
                             <MessageSquare size={12} /> Message
                           </Link>
-                        ) : company.connectionStatus === "PENDING" ? (
-                          <button
-                            onClick={() =>
-                              setConfirmCancelTarget({
-                                userId: company.userId,
-                                connectionId: company.connectionId,
-                                name: company.companyName,
-                              })
-                            }
-                            disabled={cancellingUserId === company.userId}
-                            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-amber-600 border border-amber-500 hover:bg-amber-50 hover:border-amber-600 transition disabled:opacity-50 cursor-pointer"
-                            title="Connection request is pending. Click to cancel request."
-                          >
-                            {cancellingUserId === company.userId ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              <Clock size={12} />
-                            )}
-                            Pending
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedConnectCompany({ id: company.userId, name: company.companyName })}
-                            className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
-                          >
-                            Connect
-                          </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCollaborationTarget({
+                              recipientId: company.userId,
+                              companyName: company.companyName,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
+                        >
+                          <Handshake size={12} /> Collaboration Request
+                        </button>
                         <Link
                           href={`/profile/${company.userId}`}
                           className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-50"
@@ -1445,41 +1430,28 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
             </div>
 
             <DialogFooter className="flex flex-wrap justify-start gap-2 border-t border-[#E5E7EB] pt-4 sm:justify-start">
-              {selectedPerformer.connectionStatus === "ACCEPTED" ? (
+              {selectedPerformer.connectionStatus === "ACCEPTED" && (
                 <Link
                   href={`/messages/${selectedPerformer.userId}`}
                   onClick={() => setSelectedPerformer(null)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
                 >
                   <MessageSquare size={14} /> Message
                 </Link>
-              ) : selectedPerformer.connectionStatus === "PENDING" ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirmCancelTarget({
-                      userId: selectedPerformer.userId,
-                      connectionId: selectedPerformer.connectionId,
-                      name: selectedPerformer.companyName,
-                    });
-                    setSelectedPerformer(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500 bg-white px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50"
-                >
-                  <Clock size={14} /> Cancel pending request
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedConnectCompany({ id: selectedPerformer.userId, name: selectedPerformer.companyName });
-                    setSelectedPerformer(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  <Send size={14} /> Connect
-                </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setCollaborationTarget({
+                    recipientId: selectedPerformer.userId,
+                    companyName: selectedPerformer.companyName,
+                  });
+                  setSelectedPerformer(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                <Handshake size={14} /> Collaboration Request
+              </button>
               <Link
                 href={`/profile/${selectedPerformer.userId}`}
                 onClick={() => setSelectedPerformer(null)}
@@ -1729,6 +1701,7 @@ export default function InvestorPortalClient({ view }: { view: "pitches" | "perf
           onSuccess={() => {
             setCollaborationTarget(null);
             fetchPitches();
+            loadBusinesses(true);
           }}
         />
       )}

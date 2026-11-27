@@ -75,6 +75,7 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
               image: user.image,
               role: user.role,
               accountType: user.accountType,
+              isVerified: user.verificationStatus === "VERIFIED",
               company: user.company,
               investor: user.investor,
             });

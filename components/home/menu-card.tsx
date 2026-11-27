@@ -157,13 +157,15 @@ export default function MenuCard() {
         return (
           <Link
             key={item.label}
-            href={item.href}
+            href={item.locked ? "/verification" : item.href}
+            aria-disabled={item.locked || undefined}
+            title={item.locked ? "Verification required" : undefined}
             className={`
               flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
               ${
                 isActive
                   ? "bg-blue-50 text-blue-700 font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  : item.locked ? "cursor-not-allowed text-gray-400 opacity-60" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }
             `}
           >
@@ -183,6 +185,9 @@ export default function MenuCard() {
                 {item.badge}
               </span>
             )}
+            {item.locked && (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Verify</span>
+            )}
           </Link>
         );
       })}
@@ -194,13 +199,15 @@ export default function MenuCard() {
         return (
           <Link
             key={item.label}
-            href={item.href}
+            href={item.locked ? "/verification" : item.href}
+            aria-disabled={item.locked || undefined}
+            title={item.locked ? "Verification required" : undefined}
             className={`
               flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
               ${
                 isActive
                   ? "bg-blue-50 text-blue-700 font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  : item.locked ? "cursor-not-allowed text-gray-400 opacity-60" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }
             `}
           >
@@ -219,6 +226,9 @@ export default function MenuCard() {
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
                 {item.badge}
               </span>
+            )}
+            {item.locked && (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Verify</span>
             )}
           </Link>
         );

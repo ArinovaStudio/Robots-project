@@ -94,11 +94,14 @@ function parseAmountValue(str: string): number {
 export default function InvestorRequestsClient() {
   const user = useUserStore((s) => s.user);
   const searchParams = useSearchParams();
-  const collaborationId = searchParams.get("collaborationId");
-  // Notification links carry ?collaborationId=..., so open the Investor tab for them.
-  const [division, setDivision] = useState<"business" | "investor">(collaborationId ? "investor" : "business");
-  const [infoDialog, setInfoDialog] = useState<{ id: string; type: "PITCH_REQUEST" | "INVESTOR_COLLABORATION"; mode: "ask" | "answer" | "view" } | null>(null);
-  const [direction, setDirection] = useState<"received" | "sent">("received");
+  const requestId = searchParams.get("requestId") || searchParams.get("collaborationId");
+  const requestedTab = searchParams.get("tab");
+  const requestedDirection = searchParams.get("direction");
+  const [division, setDivision] = useState<"business" | "investor">(
+    requestedTab === "investor" || (!requestedTab && searchParams.has("collaborationId")) ? "investor" : "business"
+  );
+  const [infoDialog, setInfoDialog] = useState<{ id: string; type: "PITCH_REQUEST" | "INVESTOR_COLLABORATION" | "BUSINESS_COLLABORATION" | "INVESTMENT_OFFER"; mode: "ask" | "answer" | "view" } | null>(null);
+  const [direction, setDirection] = useState<"received" | "sent">(requestedDirection === "sent" ? "sent" : "received");
   const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState<PitchRequestItem[]>([]);
   const [collabSent, setCollabSent] = useState<any[]>([]);
@@ -109,7 +112,7 @@ export default function InvestorRequestsClient() {
   const [offersSent, setOffersSent] = useState<any[]>([]);
   const [expandedCollabId, setExpandedCollabId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<FilterTab>("PENDING");
+  const [activeTab, setActiveTab] = useState<FilterTab>(requestId ? "ALL" : "PENDING");
   const [sortBy, setSortBy] = useState<SortOption>("NEWEST");
   const [selectedPitch, setSelectedPitch] = useState<PitchRequestItem | null>(null);
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string; pitchRequestId?: string } | null>(null);
@@ -334,6 +337,22 @@ export default function InvestorRequestsClient() {
     }
     return [];
   }, [division, direction, requests, collabSent, collabReceived, bizCollabSent, offersSent, user?.id]);
+
+  useEffect(() => {
+    if (!requestId || loading) return;
+    const target = activeRequests.find((request) => request.id === requestId);
+    if (!target) return;
+    setActiveTab("ALL");
+    const collab = (target as any).collab;
+    const requestType = !collab
+      ? "PITCH_REQUEST"
+      : collab.isPitchOffer
+        ? "INVESTMENT_OFFER"
+        : collab.isBusinessCollab
+          ? "BUSINESS_COLLABORATION"
+          : "INVESTOR_COLLABORATION";
+    setInfoDialog({ id: requestId, type: requestType, mode: "view" });
+  }, [requestId, loading, activeRequests]);
 
   // Compute stat counts
   const stats = useMemo(() => {

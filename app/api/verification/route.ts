@@ -82,6 +82,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "You must confirm the accuracy declaration before submitting." }, { status: 400 });
     }
 
+    // Keep the existing application available so resubmissions can retain files
+    // that the applicant does not need to replace.
+    const existingApplication = await prisma.verificationApplication.findUnique({
+      where: { userId: user.id },
+    });
+
     // Handle Identity Document upload
     const idDocument = formData.get("idDocument") as File | null;
     let idDocumentUrl = "";
@@ -95,12 +101,9 @@ export async function POST(req: NextRequest) {
       idDocumentName = idDocument.name;
     } else {
       // Check if updating an existing application with existing doc
-      const existingApp = await prisma.verificationApplication.findUnique({
-        where: { userId: user.id }
-      });
-      if (existingApp?.idDocumentUrl) {
-        idDocumentUrl = existingApp.idDocumentUrl;
-        idDocumentName = existingApp.idDocumentName;
+      if (existingApplication?.idDocumentUrl) {
+        idDocumentUrl = existingApplication.idDocumentUrl;
+        idDocumentName = existingApplication.idDocumentName;
       } else {
         return NextResponse.json({ success: false, message: "Identity verification document is required." }, { status: 400 });
       }
@@ -118,62 +121,81 @@ export async function POST(req: NextRequest) {
       supportingDocUrl = await uploadFile(supportingDoc, "verification/supporting");
       supportingDocName = supportingDoc.name;
     } else {
-      const existingApp = await prisma.verificationApplication.findUnique({
-        where: { userId: user.id }
-      });
-      if (existingApp?.supportingDocUrl) {
-        supportingDocUrl = existingApp.supportingDocUrl;
-        supportingDocName = existingApp.supportingDocName;
+      if (existingApplication?.supportingDocUrl) {
+        supportingDocUrl = existingApplication.supportingDocUrl;
+        supportingDocName = existingApplication.supportingDocName;
       }
     }
 
-    // Upsert verification application record
-    const application = await prisma.verificationApplication.upsert({
-      where: { userId: user.id },
-      create: {
-        userId: user.id,
-        fullName,
-        username,
-        email,
-        phone,
-        dob,
-        location,
-        reason,
-        accountUsage,
-        accountType,
-        additionalInfo,
-        socialLinks,
-        idDocumentUrl,
-        idDocumentName,
-        supportingDocUrl,
-        supportingDocName,
-        status: "PENDING",
-      },
-      update: {
-        fullName,
-        username,
-        email,
-        phone,
-        dob,
-        location,
-        reason,
-        accountUsage,
-        accountType,
-        additionalInfo,
-        socialLinks,
-        idDocumentUrl,
-        idDocumentName,
-        supportingDocUrl,
-        supportingDocName,
-        status: "PENDING",
-        rejectionReason: null,
-      },
-    });
+    // Save the edited application and its status/history together. In particular,
+    // clear the previous admin request so it does not remain visible after resubmission.
+    const application = await prisma.$transaction(async (tx) => {
+      const updatedApplication = await tx.verificationApplication.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          fullName,
+          username,
+          email,
+          phone,
+          dob,
+          location,
+          reason,
+          accountUsage,
+          accountType,
+          additionalInfo,
+          socialLinks,
+          idDocumentUrl,
+          idDocumentName,
+          supportingDocUrl,
+          supportingDocName,
+          status: "PENDING",
+        },
+        update: {
+          fullName,
+          username,
+          email,
+          phone,
+          dob,
+          location,
+          reason,
+          accountUsage,
+          accountType,
+          additionalInfo,
+          socialLinks,
+          idDocumentUrl,
+          idDocumentName,
+          supportingDocUrl,
+          supportingDocName,
+          status: "PENDING",
+          rejectionReason: null,
+          infoRequestMessage: null,
+          reviewedBy: null,
+          reviewedAt: null,
+        },
+      });
 
-    // Update User verificationStatus to PENDING
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { verificationStatus: "PENDING" },
+      await tx.user.update({
+        where: { id: user.id },
+        data: { verificationStatus: "PENDING" },
+      });
+
+      if (existingApplication) {
+        await tx.verificationHistory.create({
+          data: {
+            applicationId: updatedApplication.id,
+            action: "Verification Application Resubmitted",
+            previousStatus: existingApplication.status,
+            newStatus: "PENDING",
+            message: existingApplication.status === "MORE_INFO_REQUIRED"
+              ? "Applicant updated the requested information and resubmitted the application."
+              : "Applicant updated and resubmitted the verification application.",
+            performedBy: user.name || user.email || "Applicant",
+          },
+        });
+      }
+
+      return updatedApplication;
     });
 
     return NextResponse.json({

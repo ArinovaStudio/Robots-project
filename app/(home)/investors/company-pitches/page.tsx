@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import VerificationAccessGate from "@/components/VerificationAccessGate";
 import { Suspense } from "react";
 import CompanyPitchesClient from "./company-pitches-client";
 
@@ -17,10 +18,12 @@ export const metadata: Metadata = {
 
 export default function CompanyPitchesPage() {
   return (
-    <Suspense
-      fallback={<div className="p-8 text-center text-sm text-gray-500">Loading company pitches...</div>}
-    >
-      <CompanyPitchesClient />
-    </Suspense>
+    <VerificationAccessGate accountType="INVESTOR" mode="blur">
+      <Suspense
+        fallback={<div className="p-8 text-center text-sm text-gray-500">Loading company pitches...</div>}
+      >
+        <CompanyPitchesClient />
+      </Suspense>
+    </VerificationAccessGate>
   );
 }

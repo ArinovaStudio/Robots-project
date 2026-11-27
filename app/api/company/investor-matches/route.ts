@@ -8,6 +8,13 @@ export async function GET(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
     }
+
+    if (user.accountType === "BUSINESS" && user.verificationStatus !== "VERIFIED") {
+      return NextResponse.json(
+        { success: false, message: "Account verification is required to access this section." },
+        { status: 403 }
+      );
+    }
     if (user.accountType !== "BUSINESS") {
       return NextResponse.json({ success: false, message: "Business account required" }, { status: 403 });
     }

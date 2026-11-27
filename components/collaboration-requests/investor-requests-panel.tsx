@@ -113,14 +113,16 @@ function getSortOptions(direction: "received" | "sent") {
 
 interface InvestorRequestsPanelProps {
   onPendingCountChange?: (count: number) => void;
+  deepLinkRequestId?: string | null;
+  initialDirection?: "received" | "sent";
 }
 
-export default function InvestorRequestsPanel({ onPendingCountChange }: InvestorRequestsPanelProps) {
+export default function InvestorRequestsPanel({ onPendingCountChange, deepLinkRequestId, initialDirection = "received" }: InvestorRequestsPanelProps) {
   const [offers, setOffers] = useState<ReceivedOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("PENDING");
   const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
-  const [direction, setDirection] = useState<"received" | "sent">("received");
+  const [direction, setDirection] = useState<"received" | "sent">(initialDirection);
   const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<ReceivedOffer | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -188,6 +190,15 @@ export default function InvestorRequestsPanel({ onPendingCountChange }: Investor
       active = false;
     };
   }, [direction, reloadKey]);
+
+  useEffect(() => {
+    if (!deepLinkRequestId || loading) return;
+    const target = offers.find((offer) => offer.id === deepLinkRequestId);
+    if (target) {
+      setActiveFilter("ALL");
+      setInfoDialog({ id: target.id, mode: "view", type: infoTypeOf(target) });
+    }
+  }, [deepLinkRequestId, loading, offers]);
 
   const stats = useMemo(
     () => ({

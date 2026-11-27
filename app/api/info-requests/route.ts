@@ -78,7 +78,28 @@ export async function POST(req: NextRequest) {
       if (requestType === "BUSINESS_COLLABORATION") await tx.marketplaceCollaboration.update({ where: { id: requestId }, data: { status } });
       return info;
     });
-    await prisma.notification.create({ data: { userId: participants.second, actorId: user.id, type: "SYSTEM", content: `${user.name || "A user"} sent you questions in information request round ${roundNumber}.`, link: requestType === "INVESTOR_COLLABORATION" ? `/investors/requests` : requestType === "PITCH_REQUEST" ? `/collaboration-requests?tab=investor` : `/collaboration-requests` } }).catch((e) => console.error("Info request notification failed:", e));
+    const answeringUser = await prisma.user.findUnique({
+      where: { id: participants.second },
+      select: { accountType: true },
+    });
+    const answerLink = requestType === "BUSINESS_COLLABORATION"
+      ? answeringUser?.accountType === "INVESTOR"
+        ? `/investors/requests?tab=business&direction=sent&requestId=${encodeURIComponent(requestId)}`
+        : `/collaboration-requests?tab=business&direction=sent&requestId=${encodeURIComponent(requestId)}`
+      : requestType === "INVESTOR_COLLABORATION"
+        ? `/investors/requests?tab=investor&direction=sent&requestId=${encodeURIComponent(requestId)}`
+        : requestType === "PITCH_REQUEST"
+          ? `/collaboration-requests?tab=investor&direction=sent&requestId=${encodeURIComponent(requestId)}`
+          : `/investors/requests?tab=business&direction=sent&requestId=${encodeURIComponent(requestId)}`;
+    await prisma.notification.create({
+      data: {
+        userId: participants.second,
+        actorId: user.id,
+        type: "SYSTEM",
+        content: `${user.name || "A user"} sent you questions in information request round ${roundNumber}.`,
+        link: answerLink,
+      },
+    }).catch((e) => console.error("Info request notification failed:", e));
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (e: any) {
     if (e?.code === "P2002") return fail("Another information request round was created at the same time. Refresh and try again.", 409);
@@ -104,7 +125,22 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.infoRequest.updateMany({ where: { id, answeringUserId: user.id, status: "PENDING" }, data: { answers: answers.map((a: string) => a.trim()), status: "ANSWERED", answeredAt: new Date() } });
     if (updated.count !== 1) return fail("These questions have already been answered.", 409);
     const result = await prisma.infoRequest.findUnique({ where: { id } });
-    await prisma.notification.create({ data: { userId: existing.askedById, actorId: user.id, type: "SYSTEM", content: `${user.name || "The recipient"} answered information request round ${existing.roundNumber}.`, link: existing.requestType === "PITCH_REQUEST" || existing.requestType === "INVESTOR_COLLABORATION" ? `/investors/requests` : `/collaboration-requests` } }).catch((e) => console.error("Info answer notification failed:", e));
+    const answerReviewLink = existing.requestType === "BUSINESS_COLLABORATION"
+      ? `/collaboration-requests?tab=business&direction=received&requestId=${encodeURIComponent(existing.requestId)}`
+      : existing.requestType === "INVESTOR_COLLABORATION"
+        ? `/investors/requests?tab=investor&direction=received&requestId=${encodeURIComponent(existing.requestId)}`
+        : existing.requestType === "PITCH_REQUEST"
+          ? `/investors/requests?tab=business&direction=received&requestId=${encodeURIComponent(existing.requestId)}`
+          : `/company/pitches?requestId=${encodeURIComponent(existing.requestId)}`;
+    await prisma.notification.create({
+      data: {
+        userId: existing.askedById,
+        actorId: user.id,
+        type: "SYSTEM",
+        content: `${user.name || "The recipient"} answered information request round ${existing.roundNumber}.`,
+        link: answerReviewLink,
+      },
+    }).catch((e) => console.error("Info answer notification failed:", e));
     return NextResponse.json({ success: true, data: result });
   } catch (e) {
     console.error("Submit info answers failed:", e);

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useUserStore } from "@/store/AuthStore";
+import VerificationAccessGate from "@/components/VerificationAccessGate";
 
 function BusinessCollaborationClient() {
   const { status } = useSession();
@@ -141,5 +142,9 @@ export default function CollaborateClient() {
   }, [accountType, router]);
 
   if (accountType === "INVESTOR") return null;
-  return <BusinessCollaborationClient />;
+  return (
+    <VerificationAccessGate accountType="BUSINESS" mode="blur">
+      <BusinessCollaborationClient />
+    </VerificationAccessGate>
+  );
 }
